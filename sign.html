@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>手寫去背貼章工具</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --line:#e3e6ea; --line2:#eef0f3;
+  --ink:#1a1d21; --sub:#6b7280; --accent:#2563eb; --accent-soft:#eff4ff;
+  --ok:#0f9d58; --warn:#b45309; --danger:#dc2626;
+  --r:12px; --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:15px; line-height:1.6;
+  padding-bottom:calc(70px + env(safe-area-inset-bottom));
+}
+header{
+  position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92);
+  backdrop-filter:saturate(180%) blur(10px); border-bottom:1px solid var(--line);
+  padding:10px 14px calc(10px); padding-top:calc(10px + env(safe-area-inset-top));
+}
+header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em}
+header p{margin:2px 0 0;font-size:12px;color:var(--sub)}
+main{padding:14px; max-width:900px; margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 4px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:600;flex:0 0 auto}
+.hint{font-size:12px;color:var(--sub);margin:0 0 10px}
+button{font:inherit;cursor:pointer}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);
+  border-radius:10px;padding:10px 14px;font-size:14px;font-weight:500;min-height:44px;
+}
+.btn:active{background:#f2f4f7}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:active{background:#1d4ed8}
+.btn.ghost{background:transparent;border-style:dashed}
+.btn.danger{color:var(--danger);border-color:#f3c9c9}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>.grow{flex:1 1 140px}
+label.file{display:block}
+input[type=file]{display:none}
+.slider{margin:10px 0}
+.slider label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);margin-bottom:2px}
+.slider label b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:28px;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--line);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.18);margin-top:-10px}
+input[type=range]::-moz-range-track{height:4px;background:var(--line);border-radius:2px}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:9px 4px;font-size:13px;color:var(--sub);min-height:40px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.checker{
+  background-color:#fff;
+  background-image:linear-gradient(45deg,#eceff3 25%,transparent 25%),linear-gradient(-45deg,#eceff3 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eceff3 75%),linear-gradient(-45deg,transparent 75%,#eceff3 75%);
+  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0;
+}
+#inkStage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none;user-select:none}
+#inkStage canvas{display:block;width:100%;height:auto}
+#selBox{position:absolute;border:2px solid var(--accent);background:rgba(37,99,235,.12);display:none;pointer-events:none;border-radius:2px}
+.assets{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
+.asset{flex:0 0 auto;width:118px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff}
+.asset .thumb{height:56px;display:flex;align-items:center;justify-content:center;border-radius:6px;overflow:hidden}
+.asset .thumb img{max-width:100%;max-height:56px;object-fit:contain}
+.asset .nm{font-size:11.5px;color:var(--sub);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asset .acts{display:flex;gap:4px;margin-top:5px}
+.asset .acts button{flex:1;font-size:11px;padding:5px 0;border-radius:6px;border:1px solid var(--line);background:#fff;min-height:30px}
+.empty{font-size:12.5px;color:var(--sub);border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
+#docWrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:pan-y}
+#docStage{position:relative;display:block;margin:0 auto;touch-action:none}
+#docStage canvas{display:block;width:100%;height:auto}
+.stamp{position:absolute;touch-action:none;cursor:move}
+.stamp img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
+.stamp.sel{outline:1.5px dashed var(--accent);outline-offset:2px}
+.stamp .h{
+  position:absolute;width:30px;height:30px;right:-15px;bottom:-15px;border-radius:50%;
+  background:var(--accent);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);display:none;
+}
+.stamp.sel .h{display:block}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;font-size:13px;color:var(--sub)}
+nav.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav.tabbar button{flex:1;border:0;background:transparent;padding:9px 2px 8px;font-size:11.5px;color:var(--sub);min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.tabbar button .ic{font-size:19px;line-height:1}
+nav.tabbar button.on{color:var(--accent);font-weight:600}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));
+  background:#111827;color:#fff;padding:10px 16px;border-radius:20px;font-size:13px;z-index:100;
+  opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center
+}
+.toast.show{opacity:.95}
+.note{background:#fffbeb;border:1px solid #fde68a;color:#7c5a10;font-size:12.5px;border-radius:8px;padding:9px 11px;margin:8px 0}
+.note.blue{background:var(--accent-soft);border-color:#c7dbff;color:#1e40af}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;margin-bottom:10px}
+details summary{font-size:13.5px;font-weight:600;cursor:pointer}
+details p,details li{font-size:13px;color:#374151}
+kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+.busy{position:fixed;inset:0;background:rgba(255,255,255,.75);display:none;align-items:center;justify-content:center;z-index:200;font-size:14px;color:var(--sub)}
+.busy.show{display:flex}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>手寫去背貼章工具</h1>
+  <p>拍紙上手寫 → 自動去背 → 貼到 PDF／圖片 → 直接下載上傳．全程在你手機本機處理</p>
+</header>
+
+<main>
+
+<!-- ============ 手寫素材 ============ -->
+<section class="panel active" id="p-ink">
+
+  <div class="card">
+    <h2><span class="step">1</span>拍下手寫的紙</h2>
+    <p class="hint">白紙黑筆、光線平均、盡量正對拍攝。一張紙可以同時寫簽名、日期、身分證字號，稍後再分開框選。</p>
+    <div class="row">
+      <label class="file grow"><span class="btn primary" style="width:100%">📷 拍照 / 選圖<input type="file" id="inkFile" accept="image/*"></span></label>
+    </div>
+  </div>
+
+  <div class="card" id="inkCard" style="display:none">
+    <h2><span class="step">2</span>調整去背</h2>
+    <p class="hint">棋盤格＝透明。目標是紙的紋路和陰影都消失，只剩乾淨筆跡。</p>
+
+    <div id="inkStage" class="checker">
+      <canvas id="inkCanvas"></canvas>
+      <div id="selBox"></div>
+    </div>
+
+    <div class="slider">
+      <label>去背強度 <b id="vSens">18</b></label>
+      <input type="range" id="sens" min="4" max="60" value="18">
+    </div>
+    <div class="slider">
+      <label>筆跡柔邊 <b id="vSoft">22</b></label>
+      <input type="range" id="soft" min="2" max="70" value="22">
+    </div>
+    <div class="slider">
+      <label>陰影容忍度 <b id="vRad">30</b></label>
+      <input type="range" id="rad" min="6" max="80" value="30">
+    </div>
+    <div class="slider">
+      <label>雜點清除 <b id="vDen">1</b></label>
+      <input type="range" id="den" min="0" max="4" value="1">
+    </div>
+
+    <p class="hint" style="margin:10px 0 4px">筆跡顏色</p>
+    <div class="seg" id="inkSeg">
+      <button data-ink="orig" class="on">原色</button>
+      <button data-ink="black">純黑</button>
+      <button data-ink="blue">藍筆</button>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm grow" id="btnAuto">✨ 自動調一次</button>
+      <button class="btn sm grow" id="btnRotate">↻ 旋轉 90°</button>
+    </div>
+  </div>
+
+  <div class="card" id="cropCard" style="display:none">
+    <h2><span class="step">3</span>框選、存成素材</h2>
+    <p class="hint">在上面的預覽圖上用手指拖出一個框（只框住要用的那一塊），再按下面的按鈕存起來。</p>
+    <div class="row">
+      <button class="btn primary grow" id="btnSaveSel">✂️ 存下框選範圍</button>
+      <button class="btn grow" id="btnSaveAll">整張都存</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>我的手寫素材</h2>
+    <p class="hint">素材只存在這個分頁裡，關掉就消失。常用的（例如簽名）請按「存 PNG」下載到手機相簿，下次用「載入素材」直接叫回來。</p>
+    <div class="assets" id="assetList"></div>
+    <div class="empty" id="assetEmpty">還沒有素材</div>
+    <div class="row" style="margin-top:10px">
+      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 載入已存的透明 PNG<input type="file" id="loadPng" accept="image/png" multiple></span></label>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ 貼到文件 ============ -->
+<section class="panel" id="p-doc">
+
+  <div class="card">
+    <h2><span class="step">4</span>打開要簽的文件</h2>
+    <p class="hint">支援 PDF 與圖片（JPG／PNG）。Word 檔請先「另存新檔／匯出成 PDF」再進來。</p>
+    <div class="row">
+      <label class="file grow"><span class="btn primary" style="width:100%">📄 選擇 PDF / 圖片<input type="file" id="docFile" accept="application/pdf,image/*"></span></label>
+    </div>
+    <div id="docInfo" class="hint" style="margin:10px 0 0"></div>
+  </div>
+
+  <div class="card" id="docCard" style="display:none">
+    <h2><span class="step">5</span>貼上手寫</h2>
+    <p class="hint">點下面的素材加到頁面上 → 用手指拖到定位 → 拖右下角藍點縮放。</p>
+    <div class="assets" id="assetPick"></div>
+    <div class="empty" id="pickEmpty">請先到「手寫素材」做出素材</div>
+
+    <div class="pager" id="pager" style="display:none">
+      <button class="btn sm" id="prevPg">‹ 上一頁</button>
+      <span id="pgLabel">1 / 1</span>
+      <button class="btn sm" id="nextPg">下一頁 ›</button>
+    </div>
+
+    <div id="docWrap"><div id="docStage"><canvas id="docCanvas"></canvas></div></div>
+
+    <div id="selTools" style="display:none;margin-top:10px">
+      <div class="slider">
+        <label>大小 <b id="vSize">—</b></label>
+        <input type="range" id="szRange" min="3" max="100" value="25">
+      </div>
+      <div class="slider">
+        <label>角度 <b id="vRot">0°</b></label>
+        <input type="range" id="rotRange" min="-30" max="30" value="0">
+      </div>
+      <div class="row">
+        <button class="btn sm danger grow" id="btnDelStamp">🗑 刪除這個</button>
+        <button class="btn sm grow" id="btnDeselect">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="expCard" style="display:none">
+    <h2><span class="step">6</span>匯出</h2>
+    <p class="hint">PDF 會保留原本的文字與畫質，只把手寫疊上去。</p>
+    <div class="row">
+      <button class="btn primary grow" id="btnExport">⬇️ 下載完成的檔案</button>
+      <button class="btn grow" id="btnClearAll">清掉本頁手寫</button>
+    </div>
+    <div class="note">手機下載後，通常在「檔案」App 的「下載項目」裡，直接從那裡上傳給公家機關即可。</div>
+  </div>
+
+</section>
+
+<!-- ============ 說明 ============ -->
+<section class="panel" id="p-help">
+  <div class="card">
+    <h2>怎麼用（第一次看這裡）</h2>
+    <p class="hint" style="color:#374151">
+      ① 拿一張白紙，用黑筆把要簽的東西都寫上去：簽名、日期、身分證字號、電話…寫大一點、彼此隔開。<br>
+      ② 手機拍照 →「手寫素材」上傳 → 調到只剩筆跡 → 一塊一塊框起來存。<br>
+      ③ 到「貼到文件」開 PDF → 點素材 → 拖到欄位上 → 匯出下載 → 上傳。<br>
+      ④ 簽名記得按「存 PNG」下載，以後就不用再拍了。
+    </p>
+  </div>
+
+  <details>
+    <summary>去背調不乾淨怎麼辦？</summary>
+    <p><b>還看得到灰灰的紙／陰影</b>：把「去背強度」往右拉。<br>
+    <b>筆跡變斷斷續續、太細</b>：把「去背強度」往左拉，或把「筆跡柔邊」往右拉。<br>
+    <b>只有某個角落髒髒的</b>：那多半是陰影，把「陰影容忍度」往左拉（讓它用更小的範圍判斷）。<br>
+    <b>有一顆一顆小黑點</b>：把「雜點清除」拉到 2～3。<br>
+    <b>最有效的一招</b>：重拍。把紙放在光線平均的地方，不要讓自己的影子壓在紙上，手機正上方垂直拍。</p>
+  </details>
+
+  <details>
+    <summary>Word 檔怎麼辦？</summary>
+    <p>兩條路，選一條：<br>
+    <b>A（推薦）</b>：Word 裡「另存新檔 → PDF」，再用本工具貼上、匯出 PDF 上傳。多數機關收 PDF。<br>
+    <b>B</b>：在「手寫素材」按素材下面的「存 PNG」下載透明圖，回到 Word「插入 → 圖片」，把文繞圖設成「文字在前」或「浮於文字上方」，再拖到欄位上。</p>
+  </details>
+
+  <details>
+    <summary>安全性：我的身分證字號會外流嗎？</summary>
+    <p>不會。這個頁面沒有任何後端，也不會把檔案傳出去 —— 照片、PDF、手寫圖全部在你手機的瀏覽器記憶體裡處理，關掉分頁就清空。你可以開飛航模式測試：載入頁面後斷網，功能照樣運作。<br>
+    但仍請注意：<b>下載到手機的透明簽名 PNG 等同你的印章</b>，別放在會自動同步分享的相簿或雲端資料夾。</p>
+  </details>
+
+  <details>
+    <summary>法律上這樣算不算親簽？</summary>
+    <p>本工具做的是「把你本人手寫的筆跡，用影像方式放到文件上」，和你自己列印簽名後掃描回傳，在影像結果上是一樣的。<br>
+    但各機關規定不同：有些明確要求「正本親簽」或「浮水印／騎縫」，有些會要求同時檢附身分證影本。<b>送件前建議先看該機關的須知，或打電話問一句「掃描電子檔的簽名可以嗎」</b>，避免退件。這是提醒不是法律意見。</p>
+  </details>
+
+  <details>
+    <summary>離線使用</summary>
+    <p>本頁需要在第一次載入時取得 PDF 處理函式庫。若只處理「圖片文件」或只做「去背存 PNG」，完全不需要網路。要離線也能處理 PDF 的話，把這個 HTML 存到手機、並在有網路時先開一次讓瀏覽器快取即可。</p>
+  </details>
+</section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-tab="p-ink" class="on"><span class="ic">✍️</span>手寫素材</button>
+  <button data-tab="p-doc"><span class="ic">📄</span>貼到文件</button>
+  <button data-tab="p-help"><span class="ic">💡</span>說明</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<div class="busy" id="busy"><div>處理中…</div></div>
+
+<script>
+/* ============================================================
+   手寫去背貼章工具 — 單檔、純前端、無後端、無外傳
+   積木歸屬：入口 + 展示積木 + 邏輯積木（去背/座標換算）+ 檔案積木
+   ============================================================ */
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+function toast(msg, ms=2000){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), ms);
+}
+function busy(on){ $('#busy').classList.toggle('show', !!on); }
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ---------- 分頁切換 ---------- */
+$$('nav.tabbar button').forEach(b=>{
+  b.onclick = ()=>{
+    $$('nav.tabbar button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    $$('.panel').forEach(p=>p.classList.remove('active'));
+    $('#'+b.dataset.tab).classList.add('active');
+    window.scrollTo(0,0);
+    if(b.dataset.tab==='p-doc') renderPick();
+  };
+});
+
+/* ---------- 外部函式庫（多來源備援，只在需要 PDF 時載入） ---------- */
+const CDN = [
+  'https://cdnjs.cloudflare.com/ajax/libs',
+  'https://cdn.jsdelivr.net/npm',
+  'https://unpkg.com'
+];
+function loadScript(url){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=url; s.onload=()=>res(url); s.onerror=()=>rej(new Error(url));
+    document.head.appendChild(s);
+  });
+}
+async function tryLoad(paths){
+  for(const p of paths){ try{ await loadScript(p); return p; }catch(e){} }
+  throw new Error('載入失敗');
+}
+let pdfjsReady=null, pdflibReady=null;
+function ensurePdfjs(){
+  if(pdfjsReady) return pdfjsReady;
+  pdfjsReady = (async()=>{
+    if(window.pdfjsLib) return;
+    const base = await tryLoad([
+      CDN[0]+'/pdf.js/3.11.174/pdf.min.js',
+      CDN[1]+'/pdfjs-dist@3.11.174/build/pdf.min.js',
+      CDN[2]+'/pdfjs-dist@3.11.174/build/pdf.min.js'
+    ]);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = base.replace(/pdf\.min\.js$/,'pdf.worker.min.js');
+  })();
+  return pdfjsReady;
+}
+function ensurePdflib(){
+  if(pdflibReady) return pdflibReady;
+  pdflibReady = (async()=>{
+    if(window.PDFLib) return;
+    await tryLoad([
+      CDN[0]+'/pdf-lib/1.17.1/pdf-lib.min.js',
+      CDN[1]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+      CDN[2]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js'
+    ]);
+  })();
+  return pdflibReady;
+}
+
+/* ============================================================
+   一、去背引擎（邏輯積木）
+   做法：局部自適應閾值。用積分圖 O(n) 求每個像素周圍的平均亮度，
+   比周圍平均「暗過門檻」的才算墨水，因此紙張漸層陰影會被自動抵銷。
+   alpha 用軟斜坡而非硬二值，筆畫邊緣才不會鋸齒。
+   ============================================================ */
+
+const MAXDIM = 2000;            // 處理上限，兼顧手機記憶體
+let srcCanvas = null;           // 原圖（已縮放/旋轉）
+let outCanvas = null;           // 去背結果（RGBA）
+let inkMode = 'orig';
+
+function imgToCanvas(img, rotate=0){
+  let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+  const sc = Math.min(1, MAXDIM/Math.max(w,h));
+  w=Math.round(w*sc); h=Math.round(h*sc);
+  const c=document.createElement('canvas');
+  if(rotate%180===0){ c.width=w; c.height=h; } else { c.width=h; c.height=w; }
+  const x=c.getContext('2d');
+  x.save();
+  x.translate(c.width/2,c.height/2);
+  x.rotate(rotate*Math.PI/180);
+  x.drawImage(img,-w/2,-h/2,w,h);
+  x.restore();
+  return c;
+}
+
+function buildIntegral(gray,w,h){
+  const I=new Float64Array((w+1)*(h+1));
+  for(let y=0;y<h;y++){
+    let run=0;
+    const ro=(y+1)*(w+1), po=y*(w+1);
+    for(let x=0;x<w;x++){
+      run+=gray[y*w+x];
+      I[ro+x+1]=I[po+x+1]+run;
+    }
+  }
+  return I;
+}
+
+function processInk(){
+  if(!srcCanvas) return;
+  const w=srcCanvas.width, h=srcCanvas.height;
+  const sctx=srcCanvas.getContext('2d',{willReadFrequently:true});
+  const src=sctx.getImageData(0,0,w,h);
+  const d=src.data;
+
+  const gray=new Float32Array(w*h);
+  for(let p=0,i=0;p<w*h;p++,i+=4){
+    gray[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  }
+  const I=buildIntegral(gray,w,h);
+
+  const sens = +$('#sens').value;                     // 門檻偏移 C
+  const soft = Math.max(1,+$('#soft').value);         // alpha 斜坡寬度
+  const radPct = +$('#rad').value;                    // 局部視窗半徑（%o of 短邊）
+  const r = Math.max(3, Math.round(Math.min(w,h)*radPct/500));
+
+  const out=sctx.createImageData(w,h);
+  const od=out.data;
+  const W1=w+1;
+
+  let inkR=0,inkG=0,inkB=0,fixed=false;
+  if(inkMode==='black'){ inkR=17;inkG=17;inkB=20;fixed=true; }
+  else if(inkMode==='blue'){ inkR=20;inkG=44;inkB=122;fixed=true; }
+
+  const alpha=new Float32Array(w*h);
+  for(let y=0;y<h;y++){
+    const y0=y-r<0?0:y-r, y1=y+r>h-1?h-1:y+r;
+    const rowA=y0*W1, rowB=(y1+1)*W1;
+    for(let x=0;x<w;x++){
+      const x0=x-r<0?0:x-r, x1=x+r>w-1?w-1:x+r;
+      const area=(x1-x0+1)*(y1-y0+1);
+      const s=I[rowB+x1+1]-I[rowA+x1+1]-I[rowB+x0]+I[rowA+x0];
+      const mean=s/area;
+      const g=gray[y*w+x];
+      let a=(mean-sens-g)/soft;
+      a = a<0?0 : a>1?1:a;
+      alpha[y*w+x]=a;
+    }
+  }
+
+  // 雜點清除：把孤立的小 alpha 點抹掉（3x3 鄰居總和過低就歸零）
+  const den=+$('#den').value;
+  if(den>0){
+    const cp=Float32Array.from(alpha);
+    const need=den*0.9;
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        const p=y*w+x;
+        if(cp[p]<=0) continue;
+        const sum=cp[p-w-1]+cp[p-w]+cp[p-w+1]+cp[p-1]+cp[p+1]+cp[p+w-1]+cp[p+w]+cp[p+w+1];
+        if(sum<need) alpha[p]=0;
+      }
+    }
+  }
+
+  for(let p=0,i=0;p<w*h;p++,i+=4){
+    const a=alpha[p];
+    if(a<=0.06){ od[i+3]=0; continue; }   // 低於此值視為紙面，直接全透明
+    if(fixed){ od[i]=inkR; od[i+1]=inkG; od[i+2]=inkB; }
+    else {
+      // 原色：把筆跡加深，避免拍照泛灰
+      const k=0.72;
+      od[i]  = Math.max(0, d[i]  *k);
+      od[i+1]= Math.max(0, d[i+1]*k);
+      od[i+2]= Math.max(0, d[i+2]*k);
+    }
+    od[i+3]=Math.round(a*255);
+  }
+
+  if(!outCanvas) outCanvas=document.createElement('canvas');
+  outCanvas.width=w; outCanvas.height=h;
+  outCanvas.getContext('2d').putImageData(out,0,0);
+
+  const view=$('#inkCanvas');
+  view.width=w; view.height=h;
+  view.getContext('2d').putImageData(out,0,0);
+}
+
+/* 自動調參：以整張的暗像素比例做粗略搜尋，目標覆蓋率 1.5%～6% */
+function autoTune(){
+  if(!srcCanvas) return;
+  const cands=[8,12,16,20,26,32,40,50];
+  const MINCOV=0.008;           // 低於此值代表筆跡已被吃掉
+  let best=cands[0], bestScore=1e9, strongest=null;
+  const w=srcCanvas.width,h=srcCanvas.height;
+  const ctx=srcCanvas.getContext('2d',{willReadFrequently:true});
+  const d=ctx.getImageData(0,0,w,h).data;
+  const gray=new Float32Array(w*h);
+  for(let p=0,i=0;p<w*h;p++,i+=4) gray[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  const I=buildIntegral(gray,w,h);
+  const r=Math.max(3,Math.round(Math.min(w,h)*(+$('#rad').value)/500));
+  const W1=w+1;
+  const step=Math.max(1,Math.round(Math.min(w,h)/300));
+  for(const c of cands){
+    let hit=0,tot=0;
+    for(let y=0;y<h;y+=step){
+      const y0=y-r<0?0:y-r,y1=y+r>h-1?h-1:y+r;
+      const rowA=y0*W1,rowB=(y1+1)*W1;
+      for(let x=0;x<w;x+=step){
+        const x0=x-r<0?0:x-r,x1=x+r>w-1?w-1:x+r;
+        const area=(x1-x0+1)*(y1-y0+1);
+        const s=I[rowB+x1+1]-I[rowA+x1+1]-I[rowB+x0]+I[rowA+x0];
+        if(gray[y*w+x] < s/area - c) hit++;
+        tot++;
+      }
+    }
+    const cov=hit/tot;
+    if(cov>=MINCOV && cov<=0.35) strongest=c;      // 候選由小到大，最後一個符合的就是最乾淨的
+    const score=Math.abs(cov-0.03);
+    if(score<bestScore){ bestScore=score; best=c; }
+  }
+  if(strongest!==null) best=strongest;
+  $('#sens').value=best; $('#vSens').textContent=best;
+  processInk();
+  toast('已自動調整（可再手動微調）');
+}
+
+/* ---------- 去背 UI 綁定 ---------- */
+let curRotate=0, curImg=null;
+
+$('#inkFile').onchange = async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  busy(true); await sleep(30);
+  const img=new Image();
+  img.onload=()=>{
+    curImg=img; curRotate=0;
+    srcCanvas=imgToCanvas(img,0);
+    $('#inkCard').style.display='block';
+    $('#cropCard').style.display='block';
+    autoTune();
+    busy(false);
+    $('#inkCard').scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  img.onerror=()=>{ busy(false); toast('這張圖讀不進來，換一張試試'); };
+  img.src=URL.createObjectURL(f);
+  e.target.value='';
+};
+
+['sens','soft','rad','den'].forEach(id=>{
+  const el=$('#'+id), lab=$('#v'+id[0].toUpperCase()+id.slice(1));
+  let t=null;
+  el.addEventListener('input',()=>{
+    lab.textContent=el.value;
+    clearTimeout(t); t=setTimeout(()=>{ busy(true); setTimeout(()=>{processInk();busy(false);},15); },120);
+  });
+});
+$('#inkSeg').onclick=e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  $$('#inkSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); inkMode=b.dataset.ink; processInk();
+};
+$('#btnAuto').onclick=()=>{ busy(true); setTimeout(()=>{autoTune();busy(false);},15); };
+$('#btnRotate').onclick=()=>{
+  if(!curImg) return;
+  busy(true);
+  setTimeout(()=>{
+    curRotate=(curRotate+90)%360;
+    srcCanvas=imgToCanvas(curImg,curRotate);
+    clearSel(); processInk(); busy(false);
+  },15);
+};
+
+/* ---------- 框選 ---------- */
+let sel=null;
+const stage=$('#inkStage'), selBox=$('#selBox');
+function clearSel(){ sel=null; selBox.style.display='none'; }
+function stagePt(ev){
+  const r=stage.getBoundingClientRect();
+  return { x:(ev.clientX-r.left)/r.width, y:(ev.clientY-r.top)/r.height };
+}
+let dragStart=null;
+stage.addEventListener('pointerdown',ev=>{
+  if(!outCanvas) return;
+  stage.setPointerCapture(ev.pointerId);
+  dragStart=stagePt(ev); sel=null;
+  selBox.style.display='block';
+  selBox.style.left=(dragStart.x*100)+'%'; selBox.style.top=(dragStart.y*100)+'%';
+  selBox.style.width='0px'; selBox.style.height='0px';
+  ev.preventDefault();
+});
+stage.addEventListener('pointermove',ev=>{
+  if(!dragStart) return;
+  const p=stagePt(ev);
+  const x=Math.min(p.x,dragStart.x), y=Math.min(p.y,dragStart.y);
+  const w=Math.abs(p.x-dragStart.x), h=Math.abs(p.y-dragStart.y);
+  selBox.style.left=(x*100)+'%'; selBox.style.top=(y*100)+'%';
+  selBox.style.width=(w*100)+'%'; selBox.style.height=(h*100)+'%';
+  sel={x,y,w,h};
+  ev.preventDefault();
+});
+stage.addEventListener('pointerup',ev=>{
+  dragStart=null;
+  if(sel && (sel.w<0.01||sel.h<0.01)) clearSel();
+});
+stage.addEventListener('pointercancel',()=>{dragStart=null;});
+
+/* ---------- 素材庫 ---------- */
+let assets=[];       // {id,name,url,w,h}
+let assetSeq=0;
+
+function trimTransparent(cv){
+  const ctx=cv.getContext('2d',{willReadFrequently:true});
+  const {width:w,height:h}=cv;
+  const d=ctx.getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(d[(y*w+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  }
+  if(x1<0) return null;
+  const pad=Math.max(2,Math.round(Math.min(w,h)*0.01));
+  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
+  x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
+  const o=document.createElement('canvas');
+  o.width=x1-x0+1; o.height=y1-y0+1;
+  o.getContext('2d').drawImage(cv,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o;
+}
+
+function addAsset(cv,name){
+  const t=trimTransparent(cv);
+  if(!t){ toast('這個範圍裡沒有偵測到筆跡'); return; }
+  const url=t.toDataURL('image/png');
+  assets.push({id:++assetSeq, name:name||('手寫'+assetSeq), url, w:t.width, h:t.height});
+  renderAssets(); renderPick();
+  toast('已存成素材');
+}
+
+function renderAssets(){
+  const box=$('#assetList'); box.innerHTML='';
+  $('#assetEmpty').style.display = assets.length? 'none':'block';
+  assets.forEach(a=>{
+    const el=document.createElement('div'); el.className='asset';
+    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div>
+      <div class="nm"></div>
+      <div class="acts"><button data-a="dl">存PNG</button><button data-a="rn">改名</button><button data-a="rm">刪</button></div>`;
+    el.querySelector('.nm').textContent=a.name;
+    el.querySelector('[data-a=dl]').onclick=()=>downloadDataURL(a.url, a.name+'.png');
+    el.querySelector('[data-a=rn]').onclick=()=>{
+      const n=prompt('素材名稱', a.name); if(n){ a.name=n.slice(0,24); renderAssets(); renderPick(); }
+    };
+    el.querySelector('[data-a=rm]').onclick=()=>{
+      assets=assets.filter(x=>x.id!==a.id); renderAssets(); renderPick();
+    };
+    box.appendChild(el);
+  });
+}
+
+$('#btnSaveSel').onclick=()=>{
+  if(!outCanvas){ toast('先上傳照片'); return; }
+  if(!sel){ toast('請先在預覽圖上拖出一個框'); return; }
+  const w=outCanvas.width,h=outCanvas.height;
+  const sx=Math.round(sel.x*w), sy=Math.round(sel.y*h);
+  const sw=Math.max(1,Math.round(sel.w*w)), sh=Math.max(1,Math.round(sel.h*h));
+  const c=document.createElement('canvas'); c.width=sw; c.height=sh;
+  c.getContext('2d').drawImage(outCanvas,sx,sy,sw,sh,0,0,sw,sh);
+  const n=prompt('這塊叫什麼？（例：簽名、日期、身分證字號）','手寫'+(assetSeq+1));
+  if(n===null) return;
+  addAsset(c,n.trim());
+  clearSel();
+};
+$('#btnSaveAll').onclick=()=>{
+  if(!outCanvas){ toast('先上傳照片'); return; }
+  const n=prompt('這張叫什麼？','手寫'+(assetSeq+1));
+  if(n===null) return;
+  addAsset(outCanvas,n.trim());
+};
+$('#loadPng').onchange=e=>{
+  const files=Array.from(e.target.files||[]);
+  files.forEach(f=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+      c.getContext('2d').drawImage(img,0,0);
+      assets.push({id:++assetSeq,name:f.name.replace(/\.png$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height});
+      renderAssets(); renderPick();
+    };
+    img.src=URL.createObjectURL(f);
+  });
+  e.target.value='';
+  toast('已載入');
+};
+
+function downloadDataURL(url,name){
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function downloadBlob(blob,name){
+  const u=URL.createObjectURL(blob);
+  downloadDataURL(u,name);
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+
+/* ============================================================
+   二、文件層
+   ============================================================ */
+let docKind=null;        // 'pdf' | 'img'
+let pdfDoc=null, pdfBytes=null, pageCount=1, curPage=1;
+let imgEl=null;
+let pageBase={w:0,h:0};  // 目前頁面在 scale=1 下的顯示尺寸（pdf: viewport；img: 像素）
+let placements={};       // { pageNum: [ {assetId,x,y,w,h,rot} ] }  座標為 scale1 顯示座標
+let selStamp=null;
+
+$('#docFile').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  busy(true);
+  try{
+    placements={}; curPage=1; selStamp=null;
+    if(f.type==='application/pdf' || /\.pdf$/i.test(f.name)){
+      await ensurePdfjs();
+      pdfBytes=new Uint8Array(await f.arrayBuffer());
+      pdfDoc=await window.pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;
+      pageCount=pdfDoc.numPages; docKind='pdf'; imgEl=null;
+      $('#pager').style.display = pageCount>1 ? 'flex':'none';
+      $('#docInfo').textContent=`已載入 PDF：${f.name}（${pageCount} 頁）`;
+    } else {
+      const img=new Image();
+      await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=URL.createObjectURL(f); });
+      imgEl=img; docKind='img'; pdfDoc=null; pageCount=1;
+      $('#pager').style.display='none';
+      $('#docInfo').textContent=`已載入圖片：${f.name}（${img.naturalWidth}×${img.naturalHeight}）`;
+    }
+    $('#docCard').style.display='block';
+    $('#expCard').style.display='block';
+    await renderPage();
+    renderPick();
+    $('#docCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){
+    console.error(err);
+    $('#docInfo').textContent='';
+    toast('讀不到這個檔案，或 PDF 函式庫載入失敗（請確認有網路）', 3500);
+  }
+  busy(false);
+  e.target.value='';
+};
+
+async function renderPage(){
+  const cv=$('#docCanvas'); const ctx=cv.getContext('2d');
+  if(docKind==='pdf'){
+    const page=await pdfDoc.getPage(curPage);
+    const vp1=page.getViewport({scale:1});
+    pageBase={w:vp1.width,h:vp1.height};
+    const target=Math.min(1600, Math.max(900, window.devicePixelRatio*900));
+    const scale=target/vp1.width;
+    const vp=page.getViewport({scale});
+    cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    $('#pgLabel').textContent=`${curPage} / ${pageCount}`;
+  } else if(docKind==='img'){
+    pageBase={w:imgEl.naturalWidth,h:imgEl.naturalHeight};
+    cv.width=imgEl.naturalWidth; cv.height=imgEl.naturalHeight;
+    ctx.drawImage(imgEl,0,0);
+  }
+  redrawStamps();
+}
+$('#prevPg').onclick=async()=>{ if(curPage>1){ curPage--; selStamp=null; busy(true); await renderPage(); busy(false);} };
+$('#nextPg').onclick=async()=>{ if(curPage<pageCount){ curPage++; selStamp=null; busy(true); await renderPage(); busy(false);} };
+
+function renderPick(){
+  const box=$('#assetPick'); box.innerHTML='';
+  $('#pickEmpty').style.display = assets.length? 'none':'block';
+  assets.forEach(a=>{
+    const el=document.createElement('div'); el.className='asset';
+    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div><div class="nm"></div>
+      <div class="acts"><button data-a="add">貼上</button></div>`;
+    el.querySelector('.nm').textContent=a.name;
+    el.querySelector('[data-a=add]').onclick=()=>addStamp(a);
+    box.appendChild(el);
+  });
+}
+
+function addStamp(a){
+  if(!docKind){ toast('請先選擇文件'); return; }
+  const list = placements[curPage] || (placements[curPage]=[]);
+  const w = pageBase.w*0.28;
+  const h = w * a.h / a.w;
+  const st = {uid:'s'+Date.now()+Math.round(Math.random()*999), assetId:a.id,
+              x:pageBase.w*0.12, y:pageBase.h*0.5, w, h, rot:0};
+  list.push(st);
+  selStamp=st.uid;
+  redrawStamps();
+  toast('已貼上，用手指拖到定位');
+}
+
+function redrawStamps(){
+  const st=$('#docStage');
+  Array.from(st.querySelectorAll('.stamp')).forEach(n=>n.remove());
+  const list=placements[curPage]||[];
+  list.forEach(p=>{
+    const a=assets.find(x=>x.id===p.assetId);
+    if(!a) return;
+    const el=document.createElement('div');
+    el.className='stamp'+(selStamp===p.uid?' sel':'');
+    el.dataset.uid=p.uid;
+    el.style.left=(p.x/pageBase.w*100)+'%';
+    el.style.top=(p.y/pageBase.h*100)+'%';
+    el.style.width=(p.w/pageBase.w*100)+'%';
+    el.style.height=(p.h/pageBase.h*100)+'%';
+    el.style.transform=`rotate(${p.rot}deg)`;
+    el.innerHTML=`<img src="${a.url}"><div class="h"></div>`;
+    st.appendChild(el);
+    attachStampEvents(el,p);
+  });
+  updateSelTools();
+}
+
+function updateSelTools(){
+  const p=(placements[curPage]||[]).find(x=>x.uid===selStamp);
+  $('#selTools').style.display = p? 'block':'none';
+  if(p){
+    $('#szRange').value=Math.round(p.w/pageBase.w*100);
+    $('#vSize').textContent=Math.round(p.w/pageBase.w*100)+'%';
+    $('#rotRange').value=Math.round(p.rot);
+    $('#vRot').textContent=Math.round(p.rot)+'°';
+  }
+}
+
+function attachStampEvents(el,p){
+  const handle=el.querySelector('.h');
+  let mode=null, start=null;
+
+  const box=()=>$('#docStage').getBoundingClientRect();
+
+  function down(ev,m){
+    ev.stopPropagation(); ev.preventDefault();
+    selStamp=p.uid;
+    $$('#docStage .stamp').forEach(n=>n.classList.toggle('sel', n.dataset.uid===p.uid));
+    updateSelTools();
+    mode=m;
+    const r=box();
+    start={cx:ev.clientX, cy:ev.clientY, x:p.x, y:p.y, w:p.w, h:p.h, sx:pageBase.w/r.width, sy:pageBase.h/r.height};
+    el.setPointerCapture(ev.pointerId);
+  }
+  function move(ev){
+    if(!mode) return;
+    ev.preventDefault();
+    const dx=(ev.clientX-start.cx)*start.sx, dy=(ev.clientY-start.cy)*start.sy;
+    if(mode==='move'){
+      p.x=Math.max(-p.w*0.5, Math.min(pageBase.w-p.w*0.5, start.x+dx));
+      p.y=Math.max(-p.h*0.5, Math.min(pageBase.h-p.h*0.5, start.y+dy));
+    } else {
+      const nw=Math.max(pageBase.w*0.02, start.w+dx);
+      p.h=nw*start.h/start.w; p.w=nw;
+    }
+    el.style.left=(p.x/pageBase.w*100)+'%';
+    el.style.top=(p.y/pageBase.h*100)+'%';
+    el.style.width=(p.w/pageBase.w*100)+'%';
+    el.style.height=(p.h/pageBase.h*100)+'%';
+    if(mode!=='move') updateSelTools();
+  }
+  function up(ev){ mode=null; try{el.releasePointerCapture(ev.pointerId);}catch(e){} }
+
+  el.addEventListener('pointerdown',ev=>{ if(ev.target===handle) return; down(ev,'move'); });
+  handle.addEventListener('pointerdown',ev=>down(ev,'size'));
+  el.addEventListener('pointermove',move);
+  el.addEventListener('pointerup',up);
+  el.addEventListener('pointercancel',up);
+}
+
+$('#docStage').addEventListener('pointerdown',()=>{ /* 點空白處不取消，避免誤觸 */ });
+
+$('#szRange').oninput=()=>{
+  const p=(placements[curPage]||[]).find(x=>x.uid===selStamp); if(!p) return;
+  const nw=pageBase.w*(+$('#szRange').value)/100;
+  p.h=nw*p.h/p.w; p.w=nw;
+  $('#vSize').textContent=$('#szRange').value+'%';
+  redrawStamps();
+};
+$('#rotRange').oninput=()=>{
+  const p=(placements[curPage]||[]).find(x=>x.uid===selStamp); if(!p) return;
+  p.rot=+$('#rotRange').value;
+  $('#vRot').textContent=p.rot+'°';
+  const el=$(`#docStage .stamp[data-uid="${p.uid}"]`);
+  if(el) el.style.transform=`rotate(${p.rot}deg)`;
+};
+$('#btnDelStamp').onclick=()=>{
+  placements[curPage]=(placements[curPage]||[]).filter(x=>x.uid!==selStamp);
+  selStamp=null; redrawStamps();
+};
+$('#btnDeselect').onclick=()=>{ selStamp=null; redrawStamps(); };
+$('#btnClearAll').onclick=()=>{ placements[curPage]=[]; selStamp=null; redrawStamps(); toast('已清除本頁'); };
+
+/* ============================================================
+   三、匯出
+   PDF：用 pdf-lib 疊圖，原始頁面內容完全不動（文字仍可選取、畫質不損）
+        座標用 pdf.js viewport.convertToPdfPoint 換算，自動處理頁面 /Rotate
+   圖片：畫到 canvas 後輸出 PNG
+   ============================================================ */
+async function dataURLtoBytes(u){
+  const r=await fetch(u); const b=await r.arrayBuffer(); return new Uint8Array(b);
+}
+
+$('#btnExport').onclick=async()=>{
+  const total=Object.values(placements).reduce((n,l)=>n+l.length,0);
+  if(!docKind){ toast('請先選擇文件'); return; }
+  if(total===0 && !confirm('目前沒有貼上任何手寫，還是要匯出嗎？')) return;
+  busy(true);
+  try{
+    if(docKind==='pdf'){
+      await ensurePdflib();
+      const {PDFDocument, degrees}=window.PDFLib;
+      const out=await PDFDocument.load(pdfBytes.slice());
+      const embedded={};
+      for(const a of assets){
+        const list=Object.values(placements).flat();
+        if(list.some(p=>p.assetId===a.id)) embedded[a.id]=await out.embedPng(await dataURLtoBytes(a.url));
+      }
+      for(const [pnStr,list] of Object.entries(placements)){
+        if(!list.length) continue;
+        const pn=+pnStr;
+        const jsPage=await pdfDoc.getPage(pn);
+        const vp=jsPage.getViewport({scale:1});
+        const page=out.getPage(pn-1);
+        for(const p of list){
+          const img=embedded[p.assetId]; if(!img) continue;
+          // 顯示座標的三個角 → PDF user space
+          const rad=p.rot*Math.PI/180;
+          const cx=p.x+p.w/2, cy=p.y+p.h/2;
+          const rot=(dx,dy)=>({
+            x:cx+dx*Math.cos(rad)-dy*Math.sin(rad),
+            y:cy+dx*Math.sin(rad)+dy*Math.cos(rad)
+          });
+          const BL=rot(-p.w/2, p.h/2);      // 顯示空間左下
+          const BR=rot( p.w/2, p.h/2);      // 顯示空間右下
+          const TL=rot(-p.w/2,-p.h/2);      // 顯示空間左上
+          const uBL=vp.convertToPdfPoint(BL.x,BL.y);
+          const uBR=vp.convertToPdfPoint(BR.x,BR.y);
+          const uTL=vp.convertToPdfPoint(TL.x,TL.y);
+          const wVec=[uBR[0]-uBL[0], uBR[1]-uBL[1]];
+          const hVec=[uTL[0]-uBL[0], uTL[1]-uBL[1]];
+          const wLen=Math.hypot(wVec[0],wVec[1]);
+          const hLen=Math.hypot(hVec[0],hVec[1]);
+          const ang=Math.atan2(wVec[1],wVec[0])*180/Math.PI;
+          page.drawImage(img,{ x:uBL[0], y:uBL[1], width:wLen, height:hLen, rotate:degrees(ang) });
+        }
+      }
+      const bytes=await out.save();
+      downloadBlob(new Blob([bytes],{type:'application/pdf'}), '已簽署_'+stamp()+'.pdf');
+    } else {
+      const cv=document.createElement('canvas');
+      cv.width=imgEl.naturalWidth; cv.height=imgEl.naturalHeight;
+      const ctx=cv.getContext('2d');
+      ctx.drawImage(imgEl,0,0);
+      for(const p of (placements[1]||[])){
+        const a=assets.find(x=>x.id===p.assetId); if(!a) continue;
+        const im=new Image();
+        await new Promise(r=>{ im.onload=r; im.src=a.url; });
+        ctx.save();
+        ctx.translate(p.x+p.w/2, p.y+p.h/2);
+        ctx.rotate(p.rot*Math.PI/180);
+        ctx.drawImage(im,-p.w/2,-p.h/2,p.w,p.h);
+        ctx.restore();
+      }
+      const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+      downloadBlob(blob,'已簽署_'+stamp()+'.png');
+    }
+    toast('已下載，去「檔案」App 找它');
+  }catch(err){
+    console.error(err);
+    toast('匯出失敗：'+(err.message||'未知錯誤'),4000);
+  }
+  busy(false);
+};
+
+function stamp(){
+  const d=new Date(), z=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`;
+}
+
+renderAssets(); renderPick();
+</script>
+</body>
+</html>
