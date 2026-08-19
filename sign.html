@@ -185,12 +185,14 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
 
   <div class="card">
     <h2>我的手寫素材</h2>
-    <p class="hint">素材只存在這個分頁裡，關掉就消失。常用的（例如簽名）請按「存 PNG」下載到手機相簿，下次用「載入素材」直接叫回來。</p>
+    <p class="hint" id="storeHint">素材會自動存在這台裝置的瀏覽器裡，關掉再開還在。想備份或拿去別的地方用，按「分享／存檔」。</p>
     <div class="assets" id="assetList"></div>
     <div class="empty" id="assetEmpty">還沒有素材</div>
     <div class="row" style="margin-top:10px">
-      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 載入已存的透明 PNG<input type="file" id="loadPng" accept="image/png" multiple></span></label>
+      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 載入透明 PNG<input type="file" id="loadPng" accept="image/*" multiple></span></label>
+      <button class="btn sm danger grow" id="btnClearAssets">清空全部素材</button>
     </div>
+    <div class="note" style="margin-top:10px">從「<b>檔案</b>」App 載入 PNG 才會保留透明；從「<b>照片</b>」相簿選會被轉檔，背景會變白。載到白底的話我會提醒你。</div>
   </div>
 
 </section>
@@ -616,9 +618,97 @@ stage.addEventListener('pointerup',ev=>{
 });
 stage.addEventListener('pointercancel',()=>{dragStart=null;});
 
-/* ---------- 素材庫 ---------- */
+/* ---------- 素材庫（存在本機 IndexedDB，換頁／關掉都還在） ---------- */
 let assets=[];       // {id,name,url,w,h}
 let assetSeq=0;
+let storeOK=false;
+
+const DB='handstamp', ST='assets';
+function openDB(){
+  return new Promise((res,rej)=>{
+    let r;
+    try{ r=indexedDB.open(DB,1); }catch(e){ return rej(e); }
+    r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains(ST)) r.result.createObjectStore(ST,{keyPath:'id'}); };
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error||new Error('idb'));
+  });
+}
+function tx(db,mode){ return db.transaction(ST,mode).objectStore(ST); }
+async function storeLoad(){
+  try{
+    const db=await openDB();
+    const out=await new Promise((res,rej)=>{ const q=tx(db,'readonly').getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); });
+    storeOK=true;
+    return out.sort((a,b)=>a.id-b.id);
+  }catch(e){ storeOK=false; return []; }
+}
+async function storePut(a){
+  if(!storeOK) return;
+  try{ const db=await openDB(); tx(db,'readwrite').put(a); }catch(e){}
+}
+async function storeDel(id){
+  if(!storeOK) return;
+  try{ const db=await openDB(); tx(db,'readwrite').delete(id); }catch(e){}
+}
+async function storeClear(){
+  if(!storeOK) return;
+  try{ const db=await openDB(); tx(db,'readwrite').clear(); }catch(e){}
+}
+
+/* 存檔／分享：iOS Safari 對 data: URL 的 download 會靜默失敗，
+   所以一律轉 Blob，並優先走系統分享單（可存到「檔案」或「照片」）。 */
+function dataURLtoBlob(u){
+  const [head,b64]=u.split(',');
+  const mime=(head.match(/:(.*?);/)||[,'application/octet-stream'])[1];
+  const bin=atob(b64); const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:mime});
+}
+/* 檔名只用 ASCII：中文檔名在部分瀏覽器／系統會被丟掉，
+   下載後會變成沒有副檔名的 "download"，就再也叫不回來。 */
+function safeName(n,ext,id){
+  let x=(n||'').replace(/[^A-Za-z0-9._-]/g,'');   // 非 ASCII 一律拿掉
+  x=x.replace(/^[._-]+/,'').slice(0,24);
+  if(!x) x='handwriting'+(id?'-'+id:'');
+  return x+'-'+stamp()+ext;
+}
+async function saveOut(blob,name){
+  // 1) 系統分享單（手機首選）
+  try{
+    const file=new File([blob],name,{type:blob.type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:name});
+      return 'shared';
+    }
+  }catch(e){ if(e && e.name==='AbortError') return 'cancel'; }
+  // 2) 傳統下載
+  try{
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=u; a.download=name; a.rel='noopener';
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    // 不要馬上移除：部分瀏覽器會在移除後才讀 download 屬性，檔名會變成 "download"
+    setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u); },15000);
+    return 'download';
+  }catch(e){}
+  // 3) 最後手段：開新分頁讓使用者長按儲存
+  try{
+    const u=URL.createObjectURL(blob);
+    const w=window.open(u,'_blank');
+    if(w) return 'opened';
+  }catch(e){}
+  return 'fail';
+}
+function reportSave(r,fn){
+  const nm=fn? '　檔名：'+fn : '';
+  if(r==='shared') toast('已送到分享單，選「儲存到檔案」就好'+nm, 4000);
+  else if(r==='download') toast('已下載，在「檔案」App 的下載項目'+nm, 4500);
+  else if(r==='opened') toast('已開在新分頁，長按圖片選「加入照片」或「儲存到檔案」', 4500);
+  else if(r==='cancel') toast('已取消');
+  else toast('存檔失敗，請改用截圖，或告訴我你的瀏覽器', 4500);
+}
 
 function trimTransparent(cv){
   const ctx=cv.getContext('2d',{willReadFrequently:true});
@@ -642,9 +732,10 @@ function addAsset(cv,name){
   const t=trimTransparent(cv);
   if(!t){ toast('這個範圍裡沒有偵測到筆跡'); return; }
   const url=t.toDataURL('image/png');
-  assets.push({id:++assetSeq, name:name||('手寫'+assetSeq), url, w:t.width, h:t.height});
+  const a={id:++assetSeq, name:name||('手寫'+assetSeq), url, w:t.width, h:t.height};
+  assets.push(a); storePut(a);
   renderAssets(); renderPick();
-  toast('已存成素材');
+  toast(storeOK? '已存成素材（已保存在這台裝置）':'已存成素材');
 }
 
 function renderAssets(){
@@ -654,13 +745,20 @@ function renderAssets(){
     const el=document.createElement('div'); el.className='asset';
     el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div>
       <div class="nm"></div>
-      <div class="acts"><button data-a="dl">存PNG</button><button data-a="rn">改名</button><button data-a="rm">刪</button></div>`;
+      <div class="acts"><button data-a="dl">分享／存檔</button></div>
+      <div class="acts"><button data-a="rn">改名</button><button data-a="rm">刪</button></div>`;
     el.querySelector('.nm').textContent=a.name;
-    el.querySelector('[data-a=dl]').onclick=()=>downloadDataURL(a.url, a.name+'.png');
+    el.querySelector('[data-a=dl]').onclick=async()=>{
+      const fn=safeName(a.name,'.png',a.id);
+      const r=await saveOut(dataURLtoBlob(a.url), fn);
+      reportSave(r, fn);
+    };
     el.querySelector('[data-a=rn]').onclick=()=>{
-      const n=prompt('素材名稱', a.name); if(n){ a.name=n.slice(0,24); renderAssets(); renderPick(); }
+      const n=prompt('素材名稱', a.name);
+      if(n){ a.name=n.slice(0,24); storePut(a); renderAssets(); renderPick(); }
     };
     el.querySelector('[data-a=rm]').onclick=()=>{
+      storeDel(a.id);
       assets=assets.filter(x=>x.id!==a.id); renderAssets(); renderPick();
     };
     box.appendChild(el);
@@ -688,29 +786,37 @@ $('#btnSaveAll').onclick=()=>{
 };
 $('#loadPng').onchange=e=>{
   const files=Array.from(e.target.files||[]);
+  let warned=false;
   files.forEach(f=>{
     const img=new Image();
     img.onload=()=>{
       const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
-      c.getContext('2d').drawImage(img,0,0);
-      assets.push({id:++assetSeq,name:f.name.replace(/\.png$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height});
+      const cx=c.getContext('2d',{willReadFrequently:true});
+      cx.drawImage(img,0,0);
+      // 檢查是否真的有透明區域（相簿轉檔會變成白底）
+      let clear=false;
+      try{
+        const d=cx.getImageData(0,0,c.width,c.height).data;
+        for(let i=3;i<d.length;i+=4){ if(d[i]<200){ clear=true; break; } }
+      }catch(err){ clear=true; }
+      if(!clear && !warned){ warned=true; toast('這張是白底不是透明，貼上去會蓋住表格。請從「檔案」App 載入原始 PNG', 5000); }
+      const a={id:++assetSeq,name:f.name.replace(/\.(png|jpe?g|heic)$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height};
+      assets.push(a); storePut(a);
       renderAssets(); renderPick();
     };
     img.src=URL.createObjectURL(f);
   });
   e.target.value='';
-  toast('已載入');
 };
 
-function downloadDataURL(url,name){
-  const a=document.createElement('a'); a.href=url; a.download=name;
-  document.body.appendChild(a); a.click(); a.remove();
-}
-function downloadBlob(blob,name){
-  const u=URL.createObjectURL(blob);
-  downloadDataURL(u,name);
-  setTimeout(()=>URL.revokeObjectURL(u),4000);
-}
+$('#btnClearAssets').onclick=async()=>{
+  if(!assets.length){ toast('目前沒有素材'); return; }
+  if(!confirm('確定要清掉全部 '+assets.length+' 個素材？這台裝置上保存的也會一起刪除。')) return;
+  await storeClear();
+  assets=[]; renderAssets(); renderPick();
+  toast('已清空');
+};
+
 
 /* ============================================================
    二、文件層
@@ -956,7 +1062,8 @@ $('#btnExport').onclick=async()=>{
         }
       }
       const bytes=await out.save();
-      downloadBlob(new Blob([bytes],{type:'application/pdf'}), '已簽署_'+stamp()+'.pdf');
+      const r=await saveOut(new Blob([bytes],{type:'application/pdf'}), 'signed_'+stamp()+'.pdf');
+      busy(false); reportSave(r); return;
     } else {
       const cv=document.createElement('canvas');
       cv.width=imgEl.naturalWidth; cv.height=imgEl.naturalHeight;
@@ -973,9 +1080,9 @@ $('#btnExport').onclick=async()=>{
         ctx.restore();
       }
       const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
-      downloadBlob(blob,'已簽署_'+stamp()+'.png');
+      const r2=await saveOut(blob,'signed_'+stamp()+'.png');
+      busy(false); reportSave(r2); return;
     }
-    toast('已下載，去「檔案」App 找它');
   }catch(err){
     console.error(err);
     toast('匯出失敗：'+(err.message||'未知錯誤'),4000);
@@ -988,7 +1095,18 @@ function stamp(){
   return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`;
 }
 
-renderAssets(); renderPick();
+(async()=>{
+  const saved=await storeLoad();
+  if(saved.length){
+    assets=saved;
+    assetSeq=Math.max(...saved.map(a=>a.id));
+  }
+  if(!storeOK){
+    const h=$('#storeHint');
+    if(h) h.textContent='這個瀏覽器不能保存素材（可能開了無痕模式），素材關掉分頁就會消失。常用的請按「分享／存檔」存到「檔案」App。';
+  }
+  renderAssets(); renderPick();
+})();
 </script>
 </body>
 </html>
