@@ -185,14 +185,27 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
 
   <div class="card">
     <h2>我的手寫素材</h2>
-    <p class="hint" id="storeHint">素材會自動存在這台裝置的瀏覽器裡，關掉再開還在。想備份或拿去別的地方用，按「分享／存檔」。</p>
+    <p class="hint" id="storeHint">素材<b>只活在這個分頁</b>，關掉就沒了，瀏覽器不留任何痕跡。常用的請按下面「匯出素材備份」存成一個檔，下次一鍵載回來。</p>
     <div class="assets" id="assetList"></div>
     <div class="empty" id="assetEmpty">還沒有素材</div>
+
     <div class="row" style="margin-top:10px">
-      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 載入透明 PNG<input type="file" id="loadPng" accept="image/*" multiple></span></label>
-      <button class="btn sm danger grow" id="btnClearAssets">清空全部素材</button>
+      <label class="file grow"><span class="btn primary" style="width:100%">📂 載入素材備份<input type="file" id="loadKit" accept=".json,application/json"></span></label>
+      <button class="btn grow" id="btnBackup">💾 匯出素材備份</button>
     </div>
-    <div class="note" style="margin-top:10px">從「<b>檔案</b>」App 載入 PNG 才會保留透明；從「<b>照片</b>」相簿選會被轉檔，背景會變白。載到白底的話我會提醒你。</div>
+    <div class="row" style="margin-top:8px">
+      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 改載入單張透明 PNG<input type="file" id="loadPng" accept="image/*" multiple></span></label>
+      <button class="btn sm danger grow" id="btnClearAssets">立刻清空</button>
+    </div>
+
+    <div class="note blue" style="margin-top:10px">
+      <b>備份檔怎麼用</b>：按「匯出素材備份」會產生一個 <code>.json</code> 檔，裡面含你所有素材和名稱。
+      存到「檔案」App（<b>不要</b>放會自動同步分享的資料夾），下次開工具按「載入素材備份」選它，簽名、日期、字號一次全回來。
+    </div>
+    <div class="note" style="margin-top:8px">
+      這個備份檔就是你的印章，<b>誰拿到誰就能簽你的名</b>，跟你的簽名照片一樣要收好。<br>
+      單張 PNG 要從「<b>檔案</b>」App 載入才會保留透明；從「<b>照片</b>」相簿選會被轉檔變白底。
+    </div>
   </div>
 
 </section>
@@ -259,7 +272,8 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
       ① 拿一張白紙，用黑筆把要簽的東西都寫上去：簽名、日期、身分證字號、電話…寫大一點、彼此隔開。<br>
       ② 手機拍照 →「手寫素材」上傳 → 調到只剩筆跡 → 一塊一塊框起來存。<br>
       ③ 到「貼到文件」開 PDF → 點素材 → 拖到欄位上 → 匯出下載 → 上傳。<br>
-      ④ 簽名記得按「存 PNG」下載，以後就不用再拍了。
+      ④ 弄好後按「<b>匯出素材備份</b>」存一個檔到「檔案」App，以後開工具直接「載入素材備份」，不用再拍紙了。<br>
+      ⑤ 這個工具<b>不會在瀏覽器留下你的簽名</b>，關掉分頁就乾淨了，手機借人也不怕。
     </p>
   </div>
 
@@ -281,8 +295,10 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
 
   <details>
     <summary>安全性：我的身分證字號會外流嗎？</summary>
-    <p>不會。這個頁面沒有任何後端，也不會把檔案傳出去 —— 照片、PDF、手寫圖全部在你手機的瀏覽器記憶體裡處理，關掉分頁就清空。你可以開飛航模式測試：載入頁面後斷網，功能照樣運作。<br>
-    但仍請注意：<b>下載到手機的透明簽名 PNG 等同你的印章</b>，別放在會自動同步分享的相簿或雲端資料夾。</p>
+    <p>不會。這個頁面沒有任何後端，也不會把檔案傳出去 —— 照片、PDF、手寫圖全部在你手機的瀏覽器記憶體裡處理，<b>關掉分頁就清空</b>。你可以開飛航模式測試：載入頁面後斷網，功能照樣運作。</p>
+    <p><b>刻意不做本機保存。</b>本工具不用 localStorage 也不用 IndexedDB。原因是 GitHub Pages 上 <code>p60732.github.io</code> 底下所有專案在瀏覽器眼中是同一個來源，任何一頁的程式碼都讀得到同來源的儲存；不存就沒有這個問題，手機借人也不會留下簽名。</p>
+    <p>把網址給別人用完全安全 —— 儲存是綁裝置不是綁網站，別人開的是空的。<br>
+    真正要收好的是你的<b>素材備份檔和透明簽名 PNG</b>：誰拿到誰就能簽你的名，別放在會自動同步分享的相簿或雲端資料夾。</p>
   </details>
 
   <details>
@@ -621,39 +637,11 @@ stage.addEventListener('pointercancel',()=>{dragStart=null;});
 /* ---------- 素材庫（存在本機 IndexedDB，換頁／關掉都還在） ---------- */
 let assets=[];       // {id,name,url,w,h}
 let assetSeq=0;
-let storeOK=false;
-
-const DB='handstamp', ST='assets';
-function openDB(){
-  return new Promise((res,rej)=>{
-    let r;
-    try{ r=indexedDB.open(DB,1); }catch(e){ return rej(e); }
-    r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains(ST)) r.result.createObjectStore(ST,{keyPath:'id'}); };
-    r.onsuccess=()=>res(r.result);
-    r.onerror=()=>rej(r.error||new Error('idb'));
-  });
-}
-function tx(db,mode){ return db.transaction(ST,mode).objectStore(ST); }
-async function storeLoad(){
-  try{
-    const db=await openDB();
-    const out=await new Promise((res,rej)=>{ const q=tx(db,'readonly').getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); });
-    storeOK=true;
-    return out.sort((a,b)=>a.id-b.id);
-  }catch(e){ storeOK=false; return []; }
-}
-async function storePut(a){
-  if(!storeOK) return;
-  try{ const db=await openDB(); tx(db,'readwrite').put(a); }catch(e){}
-}
-async function storeDel(id){
-  if(!storeOK) return;
-  try{ const db=await openDB(); tx(db,'readwrite').delete(id); }catch(e){}
-}
-async function storeClear(){
-  if(!storeOK) return;
-  try{ const db=await openDB(); tx(db,'readwrite').clear(); }catch(e){}
-}
+let backedUp=false;  // 這批素材是否已匯出備份（決定關頁前要不要提醒）
+/* 刻意不做任何本機保存（不用 localStorage / IndexedDB）：
+   關掉分頁 = 資料消失。要留住素材請用「匯出素材備份」存成檔案，自己保管。
+   原因：GitHub Pages 上 p60732.github.io 底下所有專案是同一個來源，
+   任何一頁的程式碼都讀得到同來源的瀏覽器儲存，所以乾脆不存。 */
 
 /* 存檔／分享：iOS Safari 對 data: URL 的 download 會靜默失敗，
    所以一律轉 Blob，並優先走系統分享單（可存到「檔案」或「照片」）。 */
@@ -733,9 +721,9 @@ function addAsset(cv,name){
   if(!t){ toast('這個範圍裡沒有偵測到筆跡'); return; }
   const url=t.toDataURL('image/png');
   const a={id:++assetSeq, name:name||('手寫'+assetSeq), url, w:t.width, h:t.height};
-  assets.push(a); storePut(a);
+  assets.push(a); backedUp=false;
   renderAssets(); renderPick();
-  toast(storeOK? '已存成素材（已保存在這台裝置）':'已存成素材');
+  toast('已存成素材');
 }
 
 function renderAssets(){
@@ -755,10 +743,9 @@ function renderAssets(){
     };
     el.querySelector('[data-a=rn]').onclick=()=>{
       const n=prompt('素材名稱', a.name);
-      if(n){ a.name=n.slice(0,24); storePut(a); renderAssets(); renderPick(); }
+      if(n){ a.name=n.slice(0,24); renderAssets(); renderPick(); }
     };
     el.querySelector('[data-a=rm]').onclick=()=>{
-      storeDel(a.id);
       assets=assets.filter(x=>x.id!==a.id); renderAssets(); renderPick();
     };
     box.appendChild(el);
@@ -801,7 +788,7 @@ $('#loadPng').onchange=e=>{
       }catch(err){ clear=true; }
       if(!clear && !warned){ warned=true; toast('這張是白底不是透明，貼上去會蓋住表格。請從「檔案」App 載入原始 PNG', 5000); }
       const a={id:++assetSeq,name:f.name.replace(/\.(png|jpe?g|heic)$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height};
-      assets.push(a); storePut(a);
+      assets.push(a); backedUp=false;
       renderAssets(); renderPick();
     };
     img.src=URL.createObjectURL(f);
@@ -809,12 +796,48 @@ $('#loadPng').onchange=e=>{
   e.target.value='';
 };
 
-$('#btnClearAssets').onclick=async()=>{
+$('#btnClearAssets').onclick=()=>{
   if(!assets.length){ toast('目前沒有素材'); return; }
-  if(!confirm('確定要清掉全部 '+assets.length+' 個素材？這台裝置上保存的也會一起刪除。')) return;
-  await storeClear();
+  if(!confirm('確定要清掉全部 '+assets.length+' 個素材？沒匯出備份的話就找不回來了。')) return;
   assets=[]; renderAssets(); renderPick();
   toast('已清空');
+};
+
+/* ---------- 素材備份檔（一個 .json 裝全部素材，含中文名稱） ---------- */
+const KIT_TAG='handstamp-kit', KIT_VER=1;
+
+$('#btnBackup').onclick=async()=>{
+  if(!assets.length){ toast('目前沒有素材可以備份'); return; }
+  const kit={ tag:KIT_TAG, ver:KIT_VER, at:stamp(),
+              items:assets.map(a=>({name:a.name,w:a.w,h:a.h,url:a.url})) };
+  const blob=new Blob([JSON.stringify(kit)],{type:'application/json'});
+  const fn='handstamp-kit-'+stamp()+'.json';
+  const r=await saveOut(blob,fn);
+  if(r==='shared'||r==='download'||r==='opened') backedUp=true;
+  reportSave(r, fn);
+};
+
+$('#loadKit').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  busy(true);
+  try{
+    const kit=JSON.parse(await f.text());
+    if(!kit || kit.tag!==KIT_TAG || !Array.isArray(kit.items)) throw new Error('格式不對');
+    let n=0;
+    for(const it of kit.items){
+      if(typeof it.url!=='string' || !it.url.startsWith('data:image/')) continue;   // 只收圖片，不吃奇怪內容
+      assets.push({ id:++assetSeq, name:String(it.name||('手寫'+assetSeq)).slice(0,24),
+                    url:it.url, w:+it.w||1, h:+it.h||1 });
+      n++;
+    }
+    backedUp=true;   // 剛從備份載回來的，本來就有檔案在
+    renderAssets(); renderPick();
+    toast(n? ('已載回 '+n+' 個素材') : '這個備份檔裡沒有可用的素材', 3000);
+  }catch(err){
+    toast('讀不到這個備份檔（要選本工具匯出的 .json）', 4000);
+  }
+  busy(false);
 };
 
 
@@ -1095,18 +1118,19 @@ function stamp(){
   return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`;
 }
 
-(async()=>{
-  const saved=await storeLoad();
-  if(saved.length){
-    assets=saved;
-    assetSeq=Math.max(...saved.map(a=>a.id));
-  }
-  if(!storeOK){
-    const h=$('#storeHint');
-    if(h) h.textContent='這個瀏覽器不能保存素材（可能開了無痕模式），素材關掉分頁就會消失。常用的請按「分享／存檔」存到「檔案」App。';
-  }
-  renderAssets(); renderPick();
-})();
+/* 一次性清理：v1.1 曾把素材存進 IndexedDB，改版後要把舊資料刪乾淨，
+   否則舊簽名會一直留在這台裝置的瀏覽器裡。 */
+try{
+  if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('handstamp');
+  if(window.localStorage) localStorage.removeItem('handstamp');
+}catch(e){}
+
+renderAssets(); renderPick();
+
+// 有素材但還沒匯出備份時，離開才提醒（匯出過就不吵）
+window.addEventListener('beforeunload', e=>{
+  if(assets.length && !backedUp){ e.preventDefault(); e.returnValue=''; }
+});
 </script>
 </body>
 </html>
