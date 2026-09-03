@@ -4,229 +4,368 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#132840">
 <title>手寫去背貼章工具</title>
 <style>
 :root{
-  --bg:#f6f7f9; --card:#ffffff; --line:#e3e6ea; --line2:#eef0f3;
-  --ink:#1a1d21; --sub:#6b7280; --accent:#2563eb; --accent-soft:#eff4ff;
-  --ok:#0f9d58; --warn:#b45309; --danger:#dc2626;
-  --r:12px; --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+  --navy:#132840; --navy-2:#0e1f34;
+  --ink:#12263f; --body:#3c4b5e; --muted:#6b7a8d;
+  --line:#e4e9f0; --line-soft:#eef2f7;
+  --page:#f5f7fa; --card:#ffffff;
+  --blue:#4a7ab5; --blue-deep:#2f5f9e; --blue-soft:#e8eef7;
+  --danger:#c0392b;
+  --r:16px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(16,32,56,.04), 0 4px 16px rgba(16,32,56,.05);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{
-  background:var(--bg); color:var(--ink);
+  background:var(--page); color:var(--body);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
-  font-size:15px; line-height:1.6;
-  padding-bottom:calc(70px + env(safe-area-inset-bottom));
+  font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased;
 }
-header{
-  position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92);
-  backdrop-filter:saturate(180%) blur(10px); border-bottom:1px solid var(--line);
-  padding:10px 14px calc(10px); padding-top:calc(10px + env(safe-area-inset-top));
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{
+  background:linear-gradient(170deg,#162c48 0%,#122540 55%,#0e1f34 100%);
+  color:#fff; padding:calc(46px + env(safe-area-inset-top)) 0 40px;
 }
-header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em}
-header p{margin:2px 0 0;font-size:12px;color:var(--sub)}
-main{padding:14px; max-width:900px; margin:0 auto}
-.panel{display:none}
-.panel.active{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
-.card h2{margin:0 0 4px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
-.step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:600;flex:0 0 auto}
-.hint{font-size:12px;color:var(--sub);margin:0 0 10px}
-button{font:inherit;cursor:pointer}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(255,255,255,.24); border-radius:999px;
+  padding:7px 16px 7px 13px; font-size:13px; color:#dbe6f4; margin-bottom:26px;
+}
+.pill svg{width:15px;height:15px;flex:0 0 auto;stroke:#9fc0e6}
+.hero h1{
+  margin:0 0 18px; color:#fff; font-weight:700; letter-spacing:-.01em;
+  font-size:clamp(28px,7.2vw,40px); line-height:1.32;
+}
+.lede{margin:0 0 30px;color:#9fb3cc;font-size:15.5px;max-width:44ch}
+.steps{display:grid;gap:12px}
+.stepcard{
+  display:block; text-decoration:none;
+  background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.11);
+  border-radius:var(--r); padding:17px 20px;
+}
+.stepcard .n{display:block;font-size:12.5px;color:#7e97b5;letter-spacing:.06em;margin-bottom:5px}
+.stepcard b{display:block;color:#fff;font-size:16px;font-weight:600;margin-bottom:3px}
+.stepcard span.d{display:block;color:#93a8c2;font-size:13.5px}
+
+/* ---------- sections ---------- */
+main{padding:38px 0 70px}
+section{margin-bottom:34px;scroll-margin-top:14px}
+h2.sec{
+  display:flex;align-items:baseline;gap:12px;
+  margin:0 0 14px; font-size:22px; font-weight:700; color:var(--ink); letter-spacing:-.01em;
+}
+h2.sec .num{font-size:14px;font-weight:600;color:var(--blue);letter-spacing:.04em}
+
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:18px; box-shadow:var(--shadow); margin-bottom:14px;
+}
+.card.tight{padding:0;overflow:hidden}
+
+/* ---------- tabs ---------- */
+.tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+.tabs button{
+  border:0;background:#fff;padding:17px 8px;font:inherit;font-size:15px;
+  color:var(--muted);display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
+  border-bottom:2px solid transparent;
+}
+.tabs button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.tabs button.on{background:var(--blue-soft);color:var(--blue-deep);font-weight:600;border-bottom-color:var(--blue-deep)}
+.pane{display:none;padding:18px}
+.pane.on{display:block}
+
+/* ---------- dropzone ---------- */
+.drop{
+  border:1.5px dashed #cfd9e6; border-radius:14px; padding:34px 18px; text-align:center;
+  transition:border-color .15s, background .15s;
+}
+.drop.hot{border-color:var(--blue-deep);background:var(--blue-soft)}
+.drop .ic{width:30px;height:30px;stroke:var(--blue);fill:none;stroke-width:1.6;margin-bottom:12px}
+.drop b{display:block;color:var(--ink);font-size:16px;font-weight:600;margin-bottom:5px}
+.drop p{margin:0 0 18px;font-size:13.5px;color:var(--muted)}
+
+/* ---------- buttons ---------- */
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  border:1px solid var(--line);background:#fff;color:var(--ink);
-  border-radius:10px;padding:10px 14px;font-size:14px;font-weight:500;min-height:44px;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid var(--line); background:#fff; color:var(--ink);
+  border-radius:999px; padding:11px 22px; font:inherit; font-size:14.5px; font-weight:600;
+  min-height:46px; cursor:pointer;
 }
-.btn:active{background:#f2f4f7}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:active{background:#1d4ed8}
-.btn.ghost{background:transparent;border-style:dashed}
-.btn.danger{color:var(--danger);border-color:#f3c9c9}
-.btn.sm{min-height:34px;padding:6px 10px;font-size:13px;border-radius:8px}
-.btn[disabled]{opacity:.45;pointer-events:none}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-.row>.grow{flex:1 1 140px}
-label.file{display:block}
+.btn:active{transform:translateY(1px)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.blue{background:var(--blue-deep);border-color:var(--blue-deep);color:#fff}
+.btn.danger{color:var(--danger);border-color:#eccdc8}
+.btn.sm{min-height:38px;padding:8px 15px;font-size:13.5px}
+.btn[disabled]{opacity:.42;pointer-events:none}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.grow{flex:1 1 150px}
+label.file{display:inline-block;margin:0}
 input[type=file]{display:none}
-.slider{margin:10px 0}
-.slider label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);margin-bottom:2px}
-.slider label b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:28px;margin:0}
-input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--line);border-radius:2px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.18);margin-top:-10px}
-input[type=range]::-moz-range-track{height:4px;background:var(--line);border-radius:2px}
-input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line)}
-.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.seg button{flex:1;border:0;background:#fff;padding:9px 4px;font-size:13px;color:var(--sub);min-height:40px}
-.seg button+button{border-left:1px solid var(--line)}
-.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+/* ---------- preview / checker ---------- */
 .checker{
   background-color:#fff;
-  background-image:linear-gradient(45deg,#eceff3 25%,transparent 25%),linear-gradient(-45deg,#eceff3 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eceff3 75%),linear-gradient(-45deg,transparent 75%,#eceff3 75%);
-  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0;
+  background-image:linear-gradient(45deg,#e6ebf2 25%,transparent 25%),linear-gradient(-45deg,#e6ebf2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e6ebf2 75%),linear-gradient(-45deg,transparent 75%,#e6ebf2 75%);
+  background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;
 }
-#inkStage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none;user-select:none}
+#inkStage{position:relative;border-radius:12px;overflow:hidden;touch-action:none;user-select:none;min-height:150px}
 #inkStage canvas{display:block;width:100%;height:auto}
-#selBox{position:absolute;border:2px solid var(--accent);background:rgba(37,99,235,.12);display:none;pointer-events:none;border-radius:2px}
-.assets{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
-.asset{flex:0 0 auto;width:118px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff}
-.asset .thumb{height:56px;display:flex;align-items:center;justify-content:center;border-radius:6px;overflow:hidden}
-.asset .thumb img{max-width:100%;max-height:56px;object-fit:contain}
-.asset .nm{font-size:11.5px;color:var(--sub);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.asset .acts{display:flex;gap:4px;margin-top:5px}
-.asset .acts button{flex:1;font-size:11px;padding:5px 0;border-radius:6px;border:1px solid var(--line);background:#fff;min-height:30px}
-.empty{font-size:12.5px;color:var(--sub);border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
-#docWrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:pan-y}
+#inkEmpty{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#8fa1b6;font-size:14px;
+}
+#selBox{position:absolute;border:2px solid var(--blue-deep);background:rgba(47,95,158,.14);display:none;pointer-events:none;border-radius:3px}
+
+/* ---------- draw pad ---------- */
+#padWrap{border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+#pad{display:block;width:100%;height:230px;touch-action:none;cursor:crosshair}
+
+/* ---------- sliders ---------- */
+.sld{margin:20px 0}
+.sld .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.sld .top b{font-size:15px;font-weight:600;color:var(--ink)}
+.sld .top i{font-style:normal;font-size:14px;color:var(--blue);font-variant-numeric:tabular-nums}
+.sld .hint{margin:7px 0 0;font-size:13px;color:var(--muted)}
+input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:22px;margin:0;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:5px;background:#e6ebf2;border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#6a8db8;border:0;margin-top:-8.5px;box-shadow:0 1px 3px rgba(19,40,64,.3)}
+input[type=range]::-moz-range-track{height:5px;background:#e6ebf2;border-radius:3px}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#6a8db8;border:0}
+
+/* ---------- swatches ---------- */
+.fld{font-size:15px;font-weight:600;color:var(--ink);margin:22px 0 11px}
+.sw{display:flex;gap:13px}
+.sw button{
+  width:44px;height:44px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;
+  outline:2px solid transparent;outline-offset:2px;
+}
+.sw button.on{outline-color:#9db9d8}
+.sw .c-orig{background:conic-gradient(#132840,#3a5a80,#7a6a5a,#132840)}
+.sw .c-navy{background:#132840}
+.sw .c-blue{background:#24466e}
+.sw .c-lite{background:#5b86bb}
+.sw .c-black{background:#000}
+
+/* ---------- misc ---------- */
+.note{background:#fdfaf0;border:1px solid #f0e3bd;color:#7a6420;font-size:13.5px;border-radius:12px;padding:12px 15px;margin:14px 0}
+.note.blue{background:var(--blue-soft);border-color:#cfe0f3;color:#2b527f}
+.empty{font-size:13.5px;color:var(--muted);border:1.5px dashed #dbe3ec;border-radius:12px;padding:20px;text-align:center}
+.assets{display:flex;gap:11px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
+.asset{flex:0 0 auto;width:132px;border:1px solid var(--line);border-radius:13px;padding:9px;background:#fff}
+.asset .thumb{height:62px;display:flex;align-items:center;justify-content:center;border-radius:8px;overflow:hidden}
+.asset .thumb img{max-width:100%;max-height:62px;object-fit:contain}
+.asset .nm{font-size:12.5px;color:var(--ink);text-align:center;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.asset .acts{display:flex;gap:5px;margin-top:8px}
+.asset .acts button{flex:1;font:inherit;font-size:11.5px;padding:6px 0;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--body);min-height:32px;cursor:pointer}
+details.adv{border-top:1px solid var(--line-soft);margin-top:20px;padding-top:14px}
+details.adv summary{font-size:14px;font-weight:600;color:var(--blue-deep);cursor:pointer;list-style:none}
+details.adv summary::-webkit-details-marker{display:none}
+details.adv summary::before{content:"＋ ";font-weight:400}
+details.adv[open] summary::before{content:"− "}
+details.faq{border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;background:#fff;margin-bottom:11px}
+details.faq summary{font-size:15px;font-weight:600;color:var(--ink);cursor:pointer}
+details.faq p{font-size:14px;color:var(--body)}
+.tip{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin:26px 0 30px}
+.tip svg{width:17px;height:17px;flex:0 0 auto;margin-top:3px;stroke:var(--blue);fill:none;stroke-width:1.6}
+
+/* ---------- doc stage ---------- */
+#docWrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;touch-action:pan-y}
 #docStage{position:relative;display:block;margin:0 auto;touch-action:none}
 #docStage canvas{display:block;width:100%;height:auto}
 .stamp{position:absolute;touch-action:none;cursor:move}
 .stamp img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
-.stamp.sel{outline:1.5px dashed var(--accent);outline-offset:2px}
-.stamp .h{
-  position:absolute;width:30px;height:30px;right:-15px;bottom:-15px;border-radius:50%;
-  background:var(--accent);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);display:none;
-}
+.stamp.sel{outline:1.5px dashed var(--blue-deep);outline-offset:2px}
+.stamp .h{position:absolute;width:32px;height:32px;right:-16px;bottom:-16px;border-radius:50%;background:var(--blue-deep);border:2.5px solid #fff;box-shadow:0 2px 6px rgba(19,40,64,.3);display:none}
 .stamp.sel .h{display:block}
-.pager{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;font-size:13px;color:var(--sub)}
-nav.tabbar{
-  position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;
-  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);
-  padding-bottom:env(safe-area-inset-bottom);
-}
-nav.tabbar button{flex:1;border:0;background:transparent;padding:9px 2px 8px;font-size:11.5px;color:var(--sub);min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px}
-nav.tabbar button .ic{font-size:19px;line-height:1}
-nav.tabbar button.on{color:var(--accent);font-weight:600}
+.pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0;font-size:14px;color:var(--muted)}
+
 .toast{
-  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));
-  background:#111827;color:#fff;padding:10px 16px;border-radius:20px;font-size:13px;z-index:100;
-  opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center
+  position:fixed;left:50%;transform:translateX(-50%);bottom:26px;
+  background:#0e1f34;color:#fff;padding:12px 20px;border-radius:999px;font-size:14px;z-index:100;
+  opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center;
+  box-shadow:0 8px 24px rgba(14,31,52,.3)
 }
-.toast.show{opacity:.95}
-.note{background:#fffbeb;border:1px solid #fde68a;color:#7c5a10;font-size:12.5px;border-radius:8px;padding:9px 11px;margin:8px 0}
-.note.blue{background:var(--accent-soft);border-color:#c7dbff;color:#1e40af}
-details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;margin-bottom:10px}
-details summary{font-size:13.5px;font-weight:600;cursor:pointer}
-details p,details li{font-size:13px;color:#374151}
-kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
-.busy{position:fixed;inset:0;background:rgba(255,255,255,.75);display:none;align-items:center;justify-content:center;z-index:200;font-size:14px;color:var(--sub)}
+.toast.show{opacity:1}
+.busy{position:fixed;inset:0;background:rgba(245,247,250,.8);display:none;align-items:center;justify-content:center;z-index:200;font-size:15px;color:var(--muted)}
 .busy.show{display:flex}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>手寫去背貼章工具</h1>
-  <p>拍紙上手寫 → 自動去背 → 貼到 PDF／圖片 → 直接下載上傳．全程在你手機本機處理</p>
-</header>
-
-<main>
-
-<!-- ============ 手寫素材 ============ -->
-<section class="panel active" id="p-ink">
-
-  <div class="card">
-    <h2><span class="step">1</span>拍下手寫的紙</h2>
-    <p class="hint">白紙黑筆、光線平均、盡量正對拍攝。一張紙可以同時寫簽名、日期、身分證字號，稍後再分開框選。</p>
-    <div class="row">
-      <label class="file grow"><span class="btn primary" style="width:100%">📷 拍照 / 選圖<input type="file" id="inkFile" accept="image/*"></span></label>
+<header class="hero">
+  <div class="wrap">
+    <span class="pill">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 8.1-7 9-4-.9-7-4.6-7-9V6l7-3z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6"/></svg>
+      全程在你的瀏覽器處理
+    </span>
+    <h1>手寫簽名，<br>三步變成能蓋章的透明簽名。</h1>
+    <p class="lede">拍下紙上的簽名、去掉紙張背景、拖到 PDF 上蓋章。不需要註冊，也不用把文件交給別人。</p>
+    <div class="steps">
+      <a class="stepcard" href="#s1"><span class="n">01</span><b>取得簽名</b><span class="d">拍照上傳，或直接在畫面上手寫。</span></a>
+      <a class="stepcard" href="#s2"><span class="n">02</span><b>調整去背</b><span class="d">拉動滑桿去掉紙張底色，保留筆觸。</span></a>
+      <a class="stepcard" href="#s3"><span class="n">03</span><b>蓋到文件</b><span class="d">上傳 PDF，拖到位置後下載簽署檔。</span></a>
     </div>
   </div>
+</header>
 
-  <div class="card" id="inkCard" style="display:none">
-    <h2><span class="step">2</span>調整去背</h2>
-    <p class="hint">棋盤格＝透明。目標是紙的紋路和陰影都消失，只剩乾淨筆跡。</p>
+<main class="wrap">
 
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <h2 class="sec"><span class="num">01</span>取得簽名</h2>
+  <div class="card tight">
+    <div class="tabs">
+      <button id="tabUp" class="on">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        拍照 / 上傳簽名
+      </button>
+      <button id="tabDraw">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10-10-3-3L5 16z"/><path d="M14.5 5.5l3 3"/></svg>
+        直接手寫
+      </button>
+    </div>
+
+    <div class="pane on" id="paneUp">
+      <div class="drop" id="drop">
+        <svg class="ic" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 16v3h16v-3"/></svg>
+        <b>把白紙上的簽名照片拖進來</b>
+        <p>建議白紙、黑筆、平均光線，避免陰影與格線</p>
+        <div class="row" style="justify-content:center">
+          <label class="file"><span class="btn dark">選擇檔案<input type="file" id="inkFile" accept="image/*"></span></label>
+          <label class="file"><span class="btn">用相機拍<input type="file" id="inkCam" accept="image/*" capture="environment"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="paneDraw">
+      <div id="padWrap"><canvas id="pad"></canvas></div>
+      <div class="row" style="margin-top:14px;align-items:center">
+        <button class="btn blue" id="usePad" disabled>使用這個簽名</button>
+        <button class="btn" id="clearPad">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 1 1 2 5.3"/><path d="M4 5v5h5"/></svg>
+          清除
+        </button>
+        <span style="font-size:13px;color:var(--muted)">支援觸控筆、手指與滑鼠</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <h2 class="sec"><span class="num">02</span>調整去背</h2>
+  <div class="card">
     <div id="inkStage" class="checker">
       <canvas id="inkCanvas"></canvas>
       <div id="selBox"></div>
+      <div id="inkEmpty">先在上一步取得簽名</div>
     </div>
 
-    <div class="slider">
-      <label>去背強度 <b id="vSens">18</b></label>
-      <input type="range" id="sens" min="4" max="60" value="18">
+    <div class="sld">
+      <div class="top"><b>去背門檻</b><i id="vThr">150</i></div>
+      <input type="range" id="thr" min="40" max="240" value="150">
+      <p class="hint">背景還有雜點就往左，筆跡太淡就往右</p>
     </div>
-    <div class="slider">
-      <label>筆跡柔邊 <b id="vSoft">22</b></label>
-      <input type="range" id="soft" min="2" max="70" value="22">
+    <div class="sld">
+      <div class="top"><b>邊緣柔和</b><i id="vSoft">55</i></div>
+      <input type="range" id="soft" min="4" max="90" value="55">
+      <p class="hint">越大越柔順，越小越銳利</p>
     </div>
-    <div class="slider">
-      <label>陰影容忍度 <b id="vRad">30</b></label>
-      <input type="range" id="rad" min="6" max="80" value="30">
-    </div>
-    <div class="slider">
-      <label>雜點清除 <b id="vDen">1</b></label>
-      <input type="range" id="den" min="0" max="4" value="1">
-    </div>
-
-    <p class="hint" style="margin:10px 0 4px">筆跡顏色</p>
-    <div class="seg" id="inkSeg">
-      <button data-ink="orig" class="on">原色</button>
-      <button data-ink="black">純黑</button>
-      <button data-ink="blue">藍筆</button>
+    <div class="sld">
+      <div class="top"><b>筆跡濃度</b><i id="vDen">1.2</i></div>
+      <input type="range" id="den" min="60" max="220" value="120">
+      <p class="hint">加深細筆畫</p>
     </div>
 
-    <div class="row" style="margin-top:10px">
-      <button class="btn sm grow" id="btnAuto">✨ 自動調一次</button>
-      <button class="btn sm grow" id="btnRotate">↻ 旋轉 90°</button>
+    <div class="fld">墨水顏色</div>
+    <div class="sw" id="swatch">
+      <button class="c-orig on" data-ink="orig" title="原色"></button>
+      <button class="c-navy" data-ink="navy" title="深藍黑"></button>
+      <button class="c-lite" data-ink="blue" title="藍筆"></button>
+      <button class="c-black" data-ink="black" title="純黑"></button>
     </div>
-  </div>
 
-  <div class="card" id="cropCard" style="display:none">
-    <h2><span class="step">3</span>框選、存成素材</h2>
-    <p class="hint">在上面的預覽圖上用手指拖出一個框（只框住要用的那一塊），再按下面的按鈕存起來。</p>
+    <details class="adv">
+      <summary>進階調整</summary>
+      <div class="sld">
+        <div class="top"><b>陰影容忍度</b><i id="vRad">30</i></div>
+        <input type="range" id="rad" min="6" max="80" value="30">
+        <p class="hint">整片陰影吃不乾淨時往左拉</p>
+      </div>
+      <div class="sld">
+        <div class="top"><b>雜點清除</b><i id="vNoi">1</i></div>
+        <input type="range" id="noi" min="0" max="4" value="1">
+        <p class="hint">出現一顆顆小黑點時往右拉</p>
+      </div>
+      <div class="row">
+        <button class="btn sm grow" id="btnAuto">✨ 自動調一次</button>
+        <button class="btn sm grow" id="btnRotate">↻ 旋轉 90°</button>
+      </div>
+    </details>
+
+    <div class="row" style="margin-top:20px">
+      <button class="btn" id="btnPng" disabled>
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M4 17v3h16v-3"/></svg>
+        下載透明 PNG
+      </button>
+    </div>
+
+    <div class="note blue" style="margin-top:18px">
+      <b>一張紙可以簽好幾樣</b>：簽名、日期、身分證字號分開寫，然後在上面的預覽圖<b>用手指拖出一個框</b>，一塊一塊存成素材。
+    </div>
     <div class="row">
-      <button class="btn primary grow" id="btnSaveSel">✂️ 存下框選範圍</button>
-      <button class="btn grow" id="btnSaveAll">整張都存</button>
+      <button class="btn blue grow" id="btnSaveSel" disabled>✂️ 存下框選範圍</button>
+      <button class="btn grow" id="btnSaveAll" disabled>整張都存</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>我的手寫素材</h2>
-    <p class="hint" id="storeHint">素材<b>只活在這個分頁</b>，關掉就沒了，瀏覽器不留任何痕跡。常用的請按下面「匯出素材備份」存成一個檔，下次一鍵載回來。</p>
+    <div class="fld" style="margin-top:0">我的手寫素材</div>
+    <p style="margin:0 0 14px;font-size:13.5px;color:var(--muted)">素材<b>只活在這個分頁</b>，關掉就沒了，瀏覽器不留任何痕跡。常用的請匯出成備份檔，下次一鍵載回來。</p>
     <div class="assets" id="assetList"></div>
     <div class="empty" id="assetEmpty">還沒有素材</div>
 
-    <div class="row" style="margin-top:10px">
-      <label class="file grow"><span class="btn primary" style="width:100%">📂 載入素材備份<input type="file" id="loadKit" accept=".json,application/json"></span></label>
+    <div class="row" style="margin-top:14px">
+      <label class="file grow"><span class="btn blue" style="width:100%">📂 載入素材備份<input type="file" id="loadKit" accept=".json,application/json"></span></label>
       <button class="btn grow" id="btnBackup">💾 匯出素材備份</button>
     </div>
-    <div class="row" style="margin-top:8px">
-      <label class="file grow"><span class="btn sm ghost" style="width:100%">📥 改載入單張透明 PNG<input type="file" id="loadPng" accept="image/*" multiple></span></label>
+    <div class="row" style="margin-top:9px">
+      <label class="file grow"><span class="btn sm" style="width:100%">改載入單張透明 PNG<input type="file" id="loadPng" accept="image/*" multiple></span></label>
       <button class="btn sm danger grow" id="btnClearAssets">立刻清空</button>
     </div>
-
-    <div class="note blue" style="margin-top:10px">
-      <b>備份檔怎麼用</b>：按「匯出素材備份」會產生一個 <code>.json</code> 檔，裡面含你所有素材和名稱。
-      存到「檔案」App（<b>不要</b>放會自動同步分享的資料夾），下次開工具按「載入素材備份」選它，簽名、日期、字號一次全回來。
-    </div>
-    <div class="note" style="margin-top:8px">
-      這個備份檔就是你的印章，<b>誰拿到誰就能簽你的名</b>，跟你的簽名照片一樣要收好。<br>
+    <div class="note" style="margin-top:16px">
+      備份檔就是你的印章，<b>誰拿到誰就能簽你的名</b>，跟簽名照片一樣要收好，別放會自動同步分享的資料夾。<br>
       單張 PNG 要從「<b>檔案</b>」App 載入才會保留透明；從「<b>照片</b>」相簿選會被轉檔變白底。
     </div>
   </div>
-
 </section>
 
-<!-- ============ 貼到文件 ============ -->
-<section class="panel" id="p-doc">
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <h2 class="sec"><span class="num">03</span>蓋到文件</h2>
 
-  <div class="card">
-    <h2><span class="step">4</span>打開要簽的文件</h2>
-    <p class="hint">支援 PDF 與圖片（JPG／PNG）。Word 檔請先「另存新檔／匯出成 PDF」再進來。</p>
-    <div class="row">
-      <label class="file grow"><span class="btn primary" style="width:100%">📄 選擇 PDF / 圖片<input type="file" id="docFile" accept="application/pdf,image/*"></span></label>
+  <div class="card" id="docPick">
+    <div class="drop" id="docDrop">
+      <svg class="ic" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7v18h10V6z"/><path d="M14 3v3h3"/><path d="M9.5 12h5"/><path d="M9.5 15.5h5"/></svg>
+      <b>上傳要簽署的 PDF</b>
+      <p>檔案只在你的瀏覽器處理，不會上傳到任何伺服器．也支援 JPG／PNG</p>
+      <div class="row" style="justify-content:center">
+        <label class="file"><span class="btn dark">選擇檔案<input type="file" id="docFile" accept="application/pdf,image/*"></span></label>
+      </div>
     </div>
-    <div id="docInfo" class="hint" style="margin:10px 0 0"></div>
+    <p id="docInfo" style="margin:14px 0 0;font-size:13.5px;color:var(--muted);text-align:center"></p>
   </div>
 
   <div class="card" id="docCard" style="display:none">
-    <h2><span class="step">5</span>貼上手寫</h2>
-    <p class="hint">點下面的素材加到頁面上 → 用手指拖到定位 → 拖右下角藍點縮放。</p>
+    <p style="margin:0 0 12px;font-size:13.5px;color:var(--muted)">點素材加到頁面 → 用手指拖到定位 → 拖右下角藍點縮放。</p>
     <div class="assets" id="assetPick"></div>
-    <div class="empty" id="pickEmpty">請先到「手寫素材」做出素材</div>
+    <div class="empty" id="pickEmpty">請先在第二步做出素材</div>
 
     <div class="pager" id="pager" style="display:none">
       <button class="btn sm" id="prevPg">‹ 上一頁</button>
@@ -236,90 +375,66 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
 
     <div id="docWrap"><div id="docStage"><canvas id="docCanvas"></canvas></div></div>
 
-    <div id="selTools" style="display:none;margin-top:10px">
-      <div class="slider">
-        <label>大小 <b id="vSize">—</b></label>
+    <div id="selTools" style="display:none;margin-top:16px">
+      <div class="sld" style="margin:12px 0">
+        <div class="top"><b>大小</b><i id="vSize">—</i></div>
         <input type="range" id="szRange" min="3" max="100" value="25">
       </div>
-      <div class="slider">
-        <label>角度 <b id="vRot">0°</b></label>
+      <div class="sld" style="margin:12px 0">
+        <div class="top"><b>角度</b><i id="vRot">0°</i></div>
         <input type="range" id="rotRange" min="-30" max="30" value="0">
       </div>
       <div class="row">
-        <button class="btn sm danger grow" id="btnDelStamp">🗑 刪除這個</button>
+        <button class="btn sm danger grow" id="btnDelStamp">刪除這個</button>
         <button class="btn sm grow" id="btnDeselect">完成</button>
       </div>
     </div>
-  </div>
 
-  <div class="card" id="expCard" style="display:none">
-    <h2><span class="step">6</span>匯出</h2>
-    <p class="hint">PDF 會保留原本的文字與畫質，只把手寫疊上去。</p>
-    <div class="row">
-      <button class="btn primary grow" id="btnExport">⬇️ 下載完成的檔案</button>
+    <div class="row" style="margin-top:18px">
+      <button class="btn dark grow" id="btnExport">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M4 17v3h16v-3"/></svg>
+        下載完成的檔案
+      </button>
       <button class="btn grow" id="btnClearAll">清掉本頁手寫</button>
+      <button class="btn sm" id="btnOtherDoc">換一份文件</button>
     </div>
-    <div class="note">手機下載後，通常在「檔案」App 的「下載項目」裡，直接從那裡上傳給公家機關即可。</div>
   </div>
-
 </section>
 
-<!-- ============ 說明 ============ -->
-<section class="panel" id="p-help">
-  <div class="card">
-    <h2>怎麼用（第一次看這裡）</h2>
-    <p class="hint" style="color:#374151">
-      ① 拿一張白紙，用黑筆把要簽的東西都寫上去：簽名、日期、身分證字號、電話…寫大一點、彼此隔開。<br>
-      ② 手機拍照 →「手寫素材」上傳 → 調到只剩筆跡 → 一塊一塊框起來存。<br>
-      ③ 到「貼到文件」開 PDF → 點素材 → 拖到欄位上 → 匯出下載 → 上傳。<br>
-      ④ 弄好後按「<b>匯出素材備份</b>」存一個檔到「檔案」App，以後開工具直接「載入素材備份」，不用再拍紙了。<br>
-      ⑤ 這個工具<b>不會在瀏覽器留下你的簽名</b>，關掉分頁就乾淨了，手機借人也不怕。
-    </p>
-  </div>
+<p class="tip">
+  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>
+  小提醒：簽在無格線白紙上、光線平均、用黑色原子筆或鋼筆，去背效果最乾淨。
+</p>
 
-  <details>
-    <summary>去背調不乾淨怎麼辦？</summary>
-    <p><b>還看得到灰灰的紙／陰影</b>：把「去背強度」往右拉。<br>
-    <b>筆跡變斷斷續續、太細</b>：把「去背強度」往左拉，或把「筆跡柔邊」往右拉。<br>
-    <b>只有某個角落髒髒的</b>：那多半是陰影，把「陰影容忍度」往左拉（讓它用更小的範圍判斷）。<br>
-    <b>有一顆一顆小黑點</b>：把「雜點清除」拉到 2～3。<br>
-    <b>最有效的一招</b>：重拍。把紙放在光線平均的地方，不要讓自己的影子壓在紙上，手機正上方垂直拍。</p>
-  </details>
+<details class="faq">
+  <summary>去背調不乾淨怎麼辦？</summary>
+  <p><b>還看得到灰灰的紙／陰影</b>：「去背門檻」往左拉。<br>
+  <b>筆跡變斷斷續續</b>：往右拉，或把「邊緣柔和」加大。<br>
+  <b>只有某個角落髒髒的</b>：進階裡的「陰影容忍度」往左拉。<br>
+  <b>有一顆一顆小黑點</b>：進階裡的「雜點清除」拉到 2～3。<br>
+  <b>最有效的一招</b>：重拍。光線平均、影子不要壓在紙上、手機正上方垂直拍。</p>
+</details>
 
-  <details>
-    <summary>Word 檔怎麼辦？</summary>
-    <p>兩條路，選一條：<br>
-    <b>A（推薦）</b>：Word 裡「另存新檔 → PDF」，再用本工具貼上、匯出 PDF 上傳。多數機關收 PDF。<br>
-    <b>B</b>：在「手寫素材」按素材下面的「存 PNG」下載透明圖，回到 Word「插入 → 圖片」，把文繞圖設成「文字在前」或「浮於文字上方」，再拖到欄位上。</p>
-  </details>
+<details class="faq">
+  <summary>Word 檔怎麼辦？</summary>
+  <p><b>A（推薦）</b>：Word 裡「另存新檔 → PDF」，再用本工具貼上、匯出 PDF 上傳。多數機關收 PDF。<br>
+  <b>B</b>：按「下載透明 PNG」，回到 Word「插入 → 圖片」，文繞圖設成「浮於文字上方」，再拖到欄位上。</p>
+</details>
 
-  <details>
-    <summary>安全性：我的身分證字號會外流嗎？</summary>
-    <p>不會。這個頁面沒有任何後端，也不會把檔案傳出去 —— 照片、PDF、手寫圖全部在你手機的瀏覽器記憶體裡處理，<b>關掉分頁就清空</b>。你可以開飛航模式測試：載入頁面後斷網，功能照樣運作。</p>
-    <p><b>刻意不做本機保存。</b>本工具不用 localStorage 也不用 IndexedDB。原因是 GitHub Pages 上 <code>p60732.github.io</code> 底下所有專案在瀏覽器眼中是同一個來源，任何一頁的程式碼都讀得到同來源的儲存；不存就沒有這個問題，手機借人也不會留下簽名。</p>
-    <p>把網址給別人用完全安全 —— 儲存是綁裝置不是綁網站，別人開的是空的。<br>
-    真正要收好的是你的<b>素材備份檔和透明簽名 PNG</b>：誰拿到誰就能簽你的名，別放在會自動同步分享的相簿或雲端資料夾。</p>
-  </details>
+<details class="faq">
+  <summary>我的身分證字號會外流嗎？</summary>
+  <p>不會。這個頁面沒有任何後端，也不會把檔案傳出去 —— 照片、PDF、手寫圖全部在你的瀏覽器記憶體裡處理，<b>關掉分頁就清空</b>。載入頁面後斷網，功能照樣運作。</p>
+  <p><b>刻意不做本機保存。</b>不用 localStorage 也不用 IndexedDB。因為同一個網域底下所有專案在瀏覽器眼中是同一個來源，任何一頁的程式碼都讀得到同來源的儲存；不存就沒有這個問題，手機借人也不會留下簽名。</p>
+  <p>把網址給別人用完全安全 —— 儲存是綁裝置不是綁網站，別人開的是空的。真正要收好的是你的<b>備份檔和透明簽名 PNG</b>。</p>
+</details>
 
-  <details>
-    <summary>法律上這樣算不算親簽？</summary>
-    <p>本工具做的是「把你本人手寫的筆跡，用影像方式放到文件上」，和你自己列印簽名後掃描回傳，在影像結果上是一樣的。<br>
-    但各機關規定不同：有些明確要求「正本親簽」或「浮水印／騎縫」，有些會要求同時檢附身分證影本。<b>送件前建議先看該機關的須知，或打電話問一句「掃描電子檔的簽名可以嗎」</b>，避免退件。這是提醒不是法律意見。</p>
-  </details>
-
-  <details>
-    <summary>離線使用</summary>
-    <p>本頁需要在第一次載入時取得 PDF 處理函式庫。若只處理「圖片文件」或只做「去背存 PNG」，完全不需要網路。要離線也能處理 PDF 的話，把這個 HTML 存到手機、並在有網路時先開一次讓瀏覽器快取即可。</p>
-  </details>
-</section>
+<details class="faq">
+  <summary>法律上這樣算不算親簽？</summary>
+  <p>本工具做的是「把你本人手寫的筆跡，用影像方式放到文件上」，和你自己列印簽名後掃描回傳，在影像結果上是一樣的。<br>
+  但各機關規定不同：有些明確要求「正本親簽」或浮水印騎縫，有些會要求同時檢附身分證影本。<b>送件前建議先看該機關的須知，或打電話問一句「掃描電子檔的簽名可以嗎」</b>，避免退件。這是提醒不是法律意見。</p>
+</details>
 
 </main>
-
-<nav class="tabbar">
-  <button data-tab="p-ink" class="on"><span class="ic">✍️</span>手寫素材</button>
-  <button data-tab="p-doc"><span class="ic">📄</span>貼到文件</button>
-  <button data-tab="p-help"><span class="ic">💡</span>說明</button>
-</nav>
 
 <div class="toast" id="toast"></div>
 <div class="busy" id="busy"><div>處理中…</div></div>
@@ -327,140 +442,99 @@ kbd{background:#f3f4f6;border:1px solid var(--line);border-radius:4px;padding:1p
 <script>
 /* ============================================================
    手寫去背貼章工具 — 單檔、純前端、無後端、無外傳
-   積木歸屬：入口 + 展示積木 + 邏輯積木（去背/座標換算）+ 檔案積木
+   積木歸屬：入口 + 展示 + 邏輯（去背／座標換算）+ 檔案
    ============================================================ */
-
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
-
-function toast(msg, ms=2000){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), ms);
+function toast(msg, ms=2400){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), ms);
 }
 function busy(on){ $('#busy').classList.toggle('show', !!on); }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
-/* ---------- 分頁切換 ---------- */
-$$('nav.tabbar button').forEach(b=>{
-  b.onclick = ()=>{
-    $$('nav.tabbar button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    $$('.panel').forEach(p=>p.classList.remove('active'));
-    $('#'+b.dataset.tab).classList.add('active');
-    window.scrollTo(0,0);
-    if(b.dataset.tab==='p-doc') renderPick();
-  };
-});
+/* 一次性清理：舊版曾把素材存進 IndexedDB，改版後要刪乾淨 */
+try{
+  if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('handstamp');
+  if(window.localStorage) localStorage.removeItem('handstamp');
+}catch(e){}
 
 /* ---------- 外部函式庫（多來源備援，只在需要 PDF 時載入） ---------- */
-const CDN = [
-  'https://cdnjs.cloudflare.com/ajax/libs',
-  'https://cdn.jsdelivr.net/npm',
-  'https://unpkg.com'
-];
-function loadScript(url){
-  return new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src=url; s.onload=()=>res(url); s.onerror=()=>rej(new Error(url));
-    document.head.appendChild(s);
-  });
-}
-async function tryLoad(paths){
-  for(const p of paths){ try{ await loadScript(p); return p; }catch(e){} }
-  throw new Error('載入失敗');
-}
-let pdfjsReady=null, pdflibReady=null;
+const CDN=['https://cdnjs.cloudflare.com/ajax/libs','https://cdn.jsdelivr.net/npm','https://unpkg.com'];
+function loadScript(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=()=>res(url);s.onerror=()=>rej(new Error(url));document.head.appendChild(s);});}
+async function tryLoad(paths){for(const p of paths){try{await loadScript(p);return p;}catch(e){}}throw new Error('載入失敗');}
+let pdfjsReady=null,pdflibReady=null;
 function ensurePdfjs(){
   if(pdfjsReady) return pdfjsReady;
-  pdfjsReady = (async()=>{
+  pdfjsReady=(async()=>{
     if(window.pdfjsLib) return;
-    const base = await tryLoad([
-      CDN[0]+'/pdf.js/3.11.174/pdf.min.js',
-      CDN[1]+'/pdfjs-dist@3.11.174/build/pdf.min.js',
-      CDN[2]+'/pdfjs-dist@3.11.174/build/pdf.min.js'
-    ]);
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = base.replace(/pdf\.min\.js$/,'pdf.worker.min.js');
+    const base=await tryLoad([CDN[0]+'/pdf.js/3.11.174/pdf.min.js',CDN[1]+'/pdfjs-dist@3.11.174/build/pdf.min.js',CDN[2]+'/pdfjs-dist@3.11.174/build/pdf.min.js']);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc=base.replace(/pdf\.min\.js$/,'pdf.worker.min.js');
   })();
   return pdfjsReady;
 }
 function ensurePdflib(){
   if(pdflibReady) return pdflibReady;
-  pdflibReady = (async()=>{
+  pdflibReady=(async()=>{
     if(window.PDFLib) return;
-    await tryLoad([
-      CDN[0]+'/pdf-lib/1.17.1/pdf-lib.min.js',
-      CDN[1]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-      CDN[2]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js'
-    ]);
+    await tryLoad([CDN[0]+'/pdf-lib/1.17.1/pdf-lib.min.js',CDN[1]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js',CDN[2]+'/pdf-lib@1.17.1/dist/pdf-lib.min.js']);
   })();
   return pdflibReady;
 }
 
 /* ============================================================
-   一、去背引擎（邏輯積木）
-   做法：局部自適應閾值。用積分圖 O(n) 求每個像素周圍的平均亮度，
-   比周圍平均「暗過門檻」的才算墨水，因此紙張漸層陰影會被自動抵銷。
-   alpha 用軟斜坡而非硬二值，筆畫邊緣才不會鋸齒。
+   一、去背引擎
+   局部自適應閾值：用積分圖 O(n) 求每像素周圍平均亮度，
+   比周圍平均暗過門檻才算墨水 → 紙張漸層陰影自動被抵銷。
+   alpha 用軟斜坡不用硬二值，筆畫邊緣才不鋸齒。
    ============================================================ */
+const MAXDIM=2000;
+let srcCanvas=null, outCanvas=null, inkMode='orig', curImg=null, curRotate=0;
 
-const MAXDIM = 2000;            // 處理上限，兼顧手機記憶體
-let srcCanvas = null;           // 原圖（已縮放/旋轉）
-let outCanvas = null;           // 去背結果（RGBA）
-let inkMode = 'orig';
-
-function imgToCanvas(img, rotate=0){
+function imgToCanvas(img,rotate=0){
   let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
-  const sc = Math.min(1, MAXDIM/Math.max(w,h));
+  const sc=Math.min(1,MAXDIM/Math.max(w,h));
   w=Math.round(w*sc); h=Math.round(h*sc);
   const c=document.createElement('canvas');
-  if(rotate%180===0){ c.width=w; c.height=h; } else { c.width=h; c.height=w; }
+  if(rotate%180===0){c.width=w;c.height=h;}else{c.width=h;c.height=w;}
   const x=c.getContext('2d');
-  x.save();
-  x.translate(c.width/2,c.height/2);
-  x.rotate(rotate*Math.PI/180);
-  x.drawImage(img,-w/2,-h/2,w,h);
-  x.restore();
+  x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
+  x.save(); x.translate(c.width/2,c.height/2); x.rotate(rotate*Math.PI/180);
+  x.drawImage(img,-w/2,-h/2,w,h); x.restore();
   return c;
 }
-
 function buildIntegral(gray,w,h){
   const I=new Float64Array((w+1)*(h+1));
   for(let y=0;y<h;y++){
-    let run=0;
-    const ro=(y+1)*(w+1), po=y*(w+1);
-    for(let x=0;x<w;x++){
-      run+=gray[y*w+x];
-      I[ro+x+1]=I[po+x+1]+run;
-    }
+    let run=0; const ro=(y+1)*(w+1), po=y*(w+1);
+    for(let x=0;x<w;x++){ run+=gray[y*w+x]; I[ro+x+1]=I[po+x+1]+run; }
   }
   return I;
 }
+/* 顯示用「去背門檻」(40..240) → 內部 sens (4..60)，方向相反：門檻往左＝去得更兇 */
+const thr2sens = t => 4 + (240-t)/200*56;
+const sens2thr = s => Math.round(240 - (s-4)/56*200);
 
 function processInk(){
   if(!srcCanvas) return;
-  const w=srcCanvas.width, h=srcCanvas.height;
+  const w=srcCanvas.width,h=srcCanvas.height;
   const sctx=srcCanvas.getContext('2d',{willReadFrequently:true});
-  const src=sctx.getImageData(0,0,w,h);
-  const d=src.data;
+  const src=sctx.getImageData(0,0,w,h), d=src.data;
 
   const gray=new Float32Array(w*h);
-  for(let p=0,i=0;p<w*h;p++,i+=4){
-    gray[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
-  }
+  for(let p=0,i=0;p<w*h;p++,i+=4) gray[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
   const I=buildIntegral(gray,w,h);
 
-  const sens = +$('#sens').value;                     // 門檻偏移 C
-  const soft = Math.max(1,+$('#soft').value);         // alpha 斜坡寬度
-  const radPct = +$('#rad').value;                    // 局部視窗半徑（%o of 短邊）
-  const r = Math.max(3, Math.round(Math.min(w,h)*radPct/500));
+  const sens=thr2sens(+$('#thr').value);
+  const soft=Math.max(1,+$('#soft').value);
+  const density=(+$('#den').value)/100;
+  const r=Math.max(3,Math.round(Math.min(w,h)*(+$('#rad').value)/500));
 
-  const out=sctx.createImageData(w,h);
-  const od=out.data;
-  const W1=w+1;
-
+  const out=sctx.createImageData(w,h), od=out.data, W1=w+1;
   let inkR=0,inkG=0,inkB=0,fixed=false;
-  if(inkMode==='black'){ inkR=17;inkG=17;inkB=20;fixed=true; }
-  else if(inkMode==='blue'){ inkR=20;inkG=44;inkB=122;fixed=true; }
+  if(inkMode==='black'){inkR=17;inkG=17;inkB=20;fixed=true;}
+  else if(inkMode==='navy'){inkR=19;inkG=40;inkB=64;fixed=true;}
+  else if(inkMode==='blue'){inkR=36;inkG=70;inkB=110;fixed=true;}
 
   const alpha=new Float32Array(w*h);
   for(let y=0;y<h;y++){
@@ -470,72 +544,53 @@ function processInk(){
       const x0=x-r<0?0:x-r, x1=x+r>w-1?w-1:x+r;
       const area=(x1-x0+1)*(y1-y0+1);
       const s=I[rowB+x1+1]-I[rowA+x1+1]-I[rowB+x0]+I[rowA+x0];
-      const mean=s/area;
-      const g=gray[y*w+x];
-      let a=(mean-sens-g)/soft;
-      a = a<0?0 : a>1?1:a;
-      alpha[y*w+x]=a;
+      let a=((s/area)-sens-gray[y*w+x])/soft*density;
+      alpha[y*w+x]= a<0?0 : a>1?1:a;
     }
   }
-
-  // 雜點清除：把孤立的小 alpha 點抹掉（3x3 鄰居總和過低就歸零）
-  const den=+$('#den').value;
+  const den=+$('#noi').value;
   if(den>0){
-    const cp=Float32Array.from(alpha);
-    const need=den*0.9;
-    for(let y=1;y<h-1;y++){
-      for(let x=1;x<w-1;x++){
-        const p=y*w+x;
-        if(cp[p]<=0) continue;
-        const sum=cp[p-w-1]+cp[p-w]+cp[p-w+1]+cp[p-1]+cp[p+1]+cp[p+w-1]+cp[p+w]+cp[p+w+1];
-        if(sum<need) alpha[p]=0;
-      }
+    const cp=Float32Array.from(alpha), need=den*0.9;
+    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+      const p=y*w+x; if(cp[p]<=0) continue;
+      const sum=cp[p-w-1]+cp[p-w]+cp[p-w+1]+cp[p-1]+cp[p+1]+cp[p+w-1]+cp[p+w]+cp[p+w+1];
+      if(sum<need) alpha[p]=0;
     }
   }
-
   for(let p=0,i=0;p<w*h;p++,i+=4){
     const a=alpha[p];
     if(a<=0.06){ od[i+3]=0; continue; }   // 低於此值視為紙面，直接全透明
     if(fixed){ od[i]=inkR; od[i+1]=inkG; od[i+2]=inkB; }
-    else {
-      // 原色：把筆跡加深，避免拍照泛灰
-      const k=0.72;
-      od[i]  = Math.max(0, d[i]  *k);
-      od[i+1]= Math.max(0, d[i+1]*k);
-      od[i+2]= Math.max(0, d[i+2]*k);
-    }
+    else { const k=0.72/Math.max(.6,density);
+           od[i]=Math.max(0,d[i]*k); od[i+1]=Math.max(0,d[i+1]*k); od[i+2]=Math.max(0,d[i+2]*k); }
     od[i+3]=Math.round(a*255);
   }
-
   if(!outCanvas) outCanvas=document.createElement('canvas');
   outCanvas.width=w; outCanvas.height=h;
   outCanvas.getContext('2d').putImageData(out,0,0);
-
   const view=$('#inkCanvas');
   view.width=w; view.height=h;
   view.getContext('2d').putImageData(out,0,0);
+  $('#inkEmpty').style.display='none';
+  $('#btnPng').disabled=false; $('#btnSaveSel').disabled=false; $('#btnSaveAll').disabled=false;
 }
 
-/* 自動調參：以整張的暗像素比例做粗略搜尋，目標覆蓋率 1.5%～6% */
+/* 自動調參：在筆跡覆蓋率仍 ≥0.8% 的前提下，選最強的去背檔位 */
 function autoTune(){
   if(!srcCanvas) return;
-  const cands=[8,12,16,20,26,32,40,50];
-  const MINCOV=0.008;           // 低於此值代表筆跡已被吃掉
+  const cands=[8,12,16,20,26,32,40,50], MINCOV=0.008;
   let best=cands[0], bestScore=1e9, strongest=null;
   const w=srcCanvas.width,h=srcCanvas.height;
-  const ctx=srcCanvas.getContext('2d',{willReadFrequently:true});
-  const d=ctx.getImageData(0,0,w,h).data;
+  const d=srcCanvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;
   const gray=new Float32Array(w*h);
   for(let p=0,i=0;p<w*h;p++,i+=4) gray[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
   const I=buildIntegral(gray,w,h);
-  const r=Math.max(3,Math.round(Math.min(w,h)*(+$('#rad').value)/500));
-  const W1=w+1;
+  const r=Math.max(3,Math.round(Math.min(w,h)*(+$('#rad').value)/500)), W1=w+1;
   const step=Math.max(1,Math.round(Math.min(w,h)/300));
   for(const c of cands){
     let hit=0,tot=0;
     for(let y=0;y<h;y+=step){
-      const y0=y-r<0?0:y-r,y1=y+r>h-1?h-1:y+r;
-      const rowA=y0*W1,rowB=(y1+1)*W1;
+      const y0=y-r<0?0:y-r,y1=y+r>h-1?h-1:y+r, rowA=y0*W1,rowB=(y1+1)*W1;
       for(let x=0;x<w;x+=step){
         const x0=x-r<0?0:x-r,x1=x+r>w-1?w-1:x+r;
         const area=(x1-x0+1)*(y1-y0+1);
@@ -545,70 +600,137 @@ function autoTune(){
       }
     }
     const cov=hit/tot;
-    if(cov>=MINCOV && cov<=0.35) strongest=c;      // 候選由小到大，最後一個符合的就是最乾淨的
+    if(cov>=MINCOV && cov<=0.35) strongest=c;
     const score=Math.abs(cov-0.03);
-    if(score<bestScore){ bestScore=score; best=c; }
+    if(score<bestScore){bestScore=score;best=c;}
   }
   if(strongest!==null) best=strongest;
-  $('#sens').value=best; $('#vSens').textContent=best;
+  $('#thr').value=sens2thr(best); $('#vThr').textContent=$('#thr').value;
   processInk();
-  toast('已自動調整（可再手動微調）');
 }
 
-/* ---------- 去背 UI 綁定 ---------- */
-let curRotate=0, curImg=null;
-
-$('#inkFile').onchange = async e=>{
-  const f=e.target.files[0]; if(!f) return;
-  busy(true); await sleep(30);
+function loadSignatureImage(file){
+  busy(true);
   const img=new Image();
   img.onload=()=>{
     curImg=img; curRotate=0;
     srcCanvas=imgToCanvas(img,0);
-    $('#inkCard').style.display='block';
-    $('#cropCard').style.display='block';
-    autoTune();
-    busy(false);
-    $('#inkCard').scrollIntoView({behavior:'smooth',block:'start'});
+    autoTune(); busy(false); clearSel();
+    document.getElementById('s2').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('已載入，往下調整去背');
   };
-  img.onerror=()=>{ busy(false); toast('這張圖讀不進來，換一張試試'); };
-  img.src=URL.createObjectURL(f);
-  e.target.value='';
-};
+  img.onerror=()=>{busy(false);toast('這張圖讀不進來，換一張試試');};
+  img.src=URL.createObjectURL(file);
+}
 
-['sens','soft','rad','den'].forEach(id=>{
-  const el=$('#'+id), lab=$('#v'+id[0].toUpperCase()+id.slice(1));
-  let t=null;
-  el.addEventListener('input',()=>{
-    lab.textContent=el.value;
-    clearTimeout(t); t=setTimeout(()=>{ busy(true); setTimeout(()=>{processInk();busy(false);},15); },120);
-  });
+/* ---------- 分頁：上傳 / 手寫 ---------- */
+function setTab(which){
+  $('#tabUp').classList.toggle('on', which==='up');
+  $('#tabDraw').classList.toggle('on', which==='draw');
+  $('#paneUp').classList.toggle('on', which==='up');
+  $('#paneDraw').classList.toggle('on', which==='draw');
+  if(which==='draw') fitPad();
+}
+$('#tabUp').onclick=()=>setTab('up');
+$('#tabDraw').onclick=()=>setTab('draw');
+
+$('#inkFile').onchange=e=>{const f=e.target.files[0]; e.target.value=''; if(f) loadSignatureImage(f);};
+$('#inkCam').onchange=e=>{const f=e.target.files[0]; e.target.value=''; if(f) loadSignatureImage(f);};
+
+/* 拖放上傳 */
+const drop=$('#drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) loadSignatureImage(f);});
+
+/* ---------- 直接手寫 ---------- */
+const pad=$('#pad'); let pctx=null, drawing=false, hasInk=false, lastPt=null;
+function fitPad(){
+  const r=pad.getBoundingClientRect(), dpr=Math.min(3,window.devicePixelRatio||1);
+  const w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+  if(pad.width===w && pad.height===h) return;
+  const keep = hasInk ? pad.toDataURL() : null;
+  pad.width=w; pad.height=h;
+  pctx=pad.getContext('2d');
+  pctx.fillStyle='#fff'; pctx.fillRect(0,0,w,h);
+  pctx.lineCap='round'; pctx.lineJoin='round'; pctx.strokeStyle='#101820';
+  if(keep){ const im=new Image(); im.onload=()=>pctx.drawImage(im,0,0,w,h); im.src=keep; }
+}
+window.addEventListener('resize',()=>{ if($('#paneDraw').classList.contains('on')) fitPad(); });
+function padPt(ev){
+  const r=pad.getBoundingClientRect();
+  return { x:(ev.clientX-r.left)/r.width*pad.width, y:(ev.clientY-r.top)/r.height*pad.height };
+}
+pad.addEventListener('pointerdown',ev=>{
+  fitPad(); pad.setPointerCapture(ev.pointerId);
+  drawing=true; lastPt=padPt(ev);
+  pctx.lineWidth=Math.max(2.2, pad.width/300);
+  pctx.beginPath(); pctx.moveTo(lastPt.x,lastPt.y); pctx.lineTo(lastPt.x+.01,lastPt.y); pctx.stroke();
+  hasInk=true; $('#usePad').disabled=false; ev.preventDefault();
 });
-$('#inkSeg').onclick=e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  $$('#inkSeg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); inkMode=b.dataset.ink; processInk();
-};
-$('#btnAuto').onclick=()=>{ busy(true); setTimeout(()=>{autoTune();busy(false);},15); };
-$('#btnRotate').onclick=()=>{
-  if(!curImg) return;
+pad.addEventListener('pointermove',ev=>{
+  if(!drawing) return;
+  const p=padPt(ev);
+  const dist=Math.hypot(p.x-lastPt.x,p.y-lastPt.y);
+  const base=pad.width/300;
+  pctx.lineWidth=Math.max(1.6, base*(2.4 - Math.min(1.4, dist/22)));
+  pctx.beginPath(); pctx.moveTo(lastPt.x,lastPt.y); pctx.lineTo(p.x,p.y); pctx.stroke();
+  lastPt=p; ev.preventDefault();
+});
+['pointerup','pointercancel','pointerleave'].forEach(e=>pad.addEventListener(e,()=>{drawing=false;}));
+function wipePad(){
+  if(!pctx) return;
+  pctx.setTransform(1,0,0,1,0,0);
+  pctx.clearRect(0,0,pad.width,pad.height);
+  pctx.fillStyle='#fff'; pctx.fillRect(0,0,pad.width,pad.height);
+  pctx.lineCap='round'; pctx.lineJoin='round'; pctx.strokeStyle='#101820';
+}
+$('#clearPad').onclick=()=>{ hasInk=false; $('#usePad').disabled=true; fitPad(); wipePad(); };
+$('#usePad').onclick=()=>{
+  if(!hasInk){ toast('先在框裡寫一下'); return; }
   busy(true);
   setTimeout(()=>{
-    curRotate=(curRotate+90)%360;
-    srcCanvas=imgToCanvas(curImg,curRotate);
-    clearSel(); processInk(); busy(false);
-  },15);
+    const c=document.createElement('canvas'); c.width=pad.width; c.height=pad.height;
+    const cx=c.getContext('2d');
+    cx.fillStyle='#fff'; cx.fillRect(0,0,c.width,c.height);   // 一定要先鋪白底，否則透明會被當成純黑
+    cx.drawImage(pad,0,0);
+    curImg=null; curRotate=0; srcCanvas=c;
+    autoTune(); busy(false); clearSel();
+    document.getElementById('s2').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('已帶到第二步');
+  },20);
+};
+
+/* ---------- 滑桿 / 墨色 ---------- */
+function bindSlider(id,labelId,fmt){
+  const el=$('#'+id), lab=$('#'+labelId); let t=null;
+  el.addEventListener('input',()=>{
+    lab.textContent=fmt?fmt(el.value):el.value;
+    clearTimeout(t); t=setTimeout(()=>{ if(srcCanvas){busy(true);setTimeout(()=>{processInk();busy(false);},15);} },130);
+  });
+}
+bindSlider('thr','vThr');
+bindSlider('soft','vSoft');
+bindSlider('den','vDen',v=>(v/100).toFixed(1));
+bindSlider('rad','vRad');
+bindSlider('noi','vNoi');
+$('#swatch').onclick=e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  $$('#swatch button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); inkMode=b.dataset.ink; processInk();
+};
+$('#btnAuto').onclick=()=>{ if(!srcCanvas){toast('先取得簽名');return;} busy(true); setTimeout(()=>{autoTune();busy(false);toast('已自動調整');},15); };
+$('#btnRotate').onclick=()=>{
+  if(!curImg){ toast('手寫的簽名不需要旋轉'); return; }
+  busy(true);
+  setTimeout(()=>{ curRotate=(curRotate+90)%360; srcCanvas=imgToCanvas(curImg,curRotate); clearSel(); processInk(); busy(false); },15);
 };
 
 /* ---------- 框選 ---------- */
-let sel=null;
+let sel=null, dragStart=null;
 const stage=$('#inkStage'), selBox=$('#selBox');
 function clearSel(){ sel=null; selBox.style.display='none'; }
-function stagePt(ev){
-  const r=stage.getBoundingClientRect();
-  return { x:(ev.clientX-r.left)/r.width, y:(ev.clientY-r.top)/r.height };
-}
-let dragStart=null;
+function stagePt(ev){ const r=stage.getBoundingClientRect(); return {x:(ev.clientX-r.left)/r.width,y:(ev.clientY-r.top)/r.height}; }
 stage.addEventListener('pointerdown',ev=>{
   if(!outCanvas) return;
   stage.setPointerCapture(ev.pointerId);
@@ -625,136 +747,89 @@ stage.addEventListener('pointermove',ev=>{
   const w=Math.abs(p.x-dragStart.x), h=Math.abs(p.y-dragStart.y);
   selBox.style.left=(x*100)+'%'; selBox.style.top=(y*100)+'%';
   selBox.style.width=(w*100)+'%'; selBox.style.height=(h*100)+'%';
-  sel={x,y,w,h};
-  ev.preventDefault();
+  sel={x,y,w,h}; ev.preventDefault();
 });
-stage.addEventListener('pointerup',ev=>{
-  dragStart=null;
-  if(sel && (sel.w<0.01||sel.h<0.01)) clearSel();
-});
+stage.addEventListener('pointerup',()=>{ dragStart=null; if(sel&&(sel.w<0.01||sel.h<0.01)) clearSel(); });
 stage.addEventListener('pointercancel',()=>{dragStart=null;});
 
-/* ---------- 素材庫（存在本機 IndexedDB，換頁／關掉都還在） ---------- */
-let assets=[];       // {id,name,url,w,h}
-let assetSeq=0;
-let backedUp=false;  // 這批素材是否已匯出備份（決定關頁前要不要提醒）
-/* 刻意不做任何本機保存（不用 localStorage / IndexedDB）：
-   關掉分頁 = 資料消失。要留住素材請用「匯出素材備份」存成檔案，自己保管。
-   原因：GitHub Pages 上 p60732.github.io 底下所有專案是同一個來源，
-   任何一頁的程式碼都讀得到同來源的瀏覽器儲存，所以乾脆不存。 */
+/* ============================================================
+   二、素材庫（純記憶體，不做任何本機保存）
+   ============================================================ */
+let assets=[], assetSeq=0, backedUp=false;
 
-/* 存檔／分享：iOS Safari 對 data: URL 的 download 會靜默失敗，
-   所以一律轉 Blob，並優先走系統分享單（可存到「檔案」或「照片」）。 */
 function dataURLtoBlob(u){
-  const [head,b64]=u.split(',');
-  const mime=(head.match(/:(.*?);/)||[,'application/octet-stream'])[1];
-  const bin=atob(b64); const arr=new Uint8Array(bin.length);
+  const [head,b64]=u.split(','); const mime=(head.match(/:(.*?);/)||[,'application/octet-stream'])[1];
+  const bin=atob(b64), arr=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
   return new Blob([arr],{type:mime});
 }
-/* 檔名只用 ASCII：中文檔名在部分瀏覽器／系統會被丟掉，
-   下載後會變成沒有副檔名的 "download"，就再也叫不回來。 */
+/* 檔名只用 ASCII：中文檔名在部分瀏覽器會被丟掉，下載後變成沒副檔名的 "download" */
 function safeName(n,ext,id){
-  let x=(n||'').replace(/[^A-Za-z0-9._-]/g,'');   // 非 ASCII 一律拿掉
-  x=x.replace(/^[._-]+/,'').slice(0,24);
+  let x=(n||'').replace(/[^A-Za-z0-9._-]/g,'').replace(/^[._-]+/,'').slice(0,24);
   if(!x) x='handwriting'+(id?'-'+id:'');
   return x+'-'+stamp()+ext;
 }
 async function saveOut(blob,name){
-  // 1) 系統分享單（手機首選）
   try{
     const file=new File([blob],name,{type:blob.type});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({files:[file], title:name});
-      return 'shared';
-    }
-  }catch(e){ if(e && e.name==='AbortError') return 'cancel'; }
-  // 2) 傳統下載
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return 'shared'; }
+  }catch(e){ if(e&&e.name==='AbortError') return 'cancel'; }
   try{
     const u=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=u; a.download=name; a.rel='noopener';
-    a.style.display='none';
-    document.body.appendChild(a);
-    a.click();
-    // 不要馬上移除：部分瀏覽器會在移除後才讀 download 屬性，檔名會變成 "download"
-    setTimeout(()=>{ a.remove(); URL.revokeObjectURL(u); },15000);
+    const a=document.createElement('a'); a.href=u; a.download=name; a.rel='noopener'; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},15000);
     return 'download';
   }catch(e){}
-  // 3) 最後手段：開新分頁讓使用者長按儲存
-  try{
-    const u=URL.createObjectURL(blob);
-    const w=window.open(u,'_blank');
-    if(w) return 'opened';
-  }catch(e){}
+  try{ const u=URL.createObjectURL(blob); if(window.open(u,'_blank')) return 'opened'; }catch(e){}
   return 'fail';
 }
 function reportSave(r,fn){
-  const nm=fn? '　檔名：'+fn : '';
-  if(r==='shared') toast('已送到分享單，選「儲存到檔案」就好'+nm, 4000);
-  else if(r==='download') toast('已下載，在「檔案」App 的下載項目'+nm, 4500);
-  else if(r==='opened') toast('已開在新分頁，長按圖片選「加入照片」或「儲存到檔案」', 4500);
+  const nm=fn?'　'+fn:'';
+  if(r==='shared') toast('已送到分享單，選「儲存到檔案」'+nm,4000);
+  else if(r==='download') toast('已下載'+nm,4500);
+  else if(r==='opened') toast('已開在新分頁，長按圖片選「儲存到檔案」',4500);
   else if(r==='cancel') toast('已取消');
-  else toast('存檔失敗，請改用截圖，或告訴我你的瀏覽器', 4500);
+  else toast('存檔失敗，請改用截圖',4000);
 }
-
 function trimTransparent(cv){
   const ctx=cv.getContext('2d',{willReadFrequently:true});
-  const {width:w,height:h}=cv;
-  const d=ctx.getImageData(0,0,w,h).data;
+  const {width:w,height:h}=cv, d=ctx.getImageData(0,0,w,h).data;
   let x0=w,y0=h,x1=-1,y1=-1;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)
     if(d[(y*w+x)*4+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
-  }
   if(x1<0) return null;
   const pad=Math.max(2,Math.round(Math.min(w,h)*0.01));
-  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
-  x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
-  const o=document.createElement('canvas');
-  o.width=x1-x0+1; o.height=y1-y0+1;
+  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
+  const o=document.createElement('canvas'); o.width=x1-x0+1; o.height=y1-y0+1;
   o.getContext('2d').drawImage(cv,x0,y0,o.width,o.height,0,0,o.width,o.height);
   return o;
 }
-
 function addAsset(cv,name){
   const t=trimTransparent(cv);
   if(!t){ toast('這個範圍裡沒有偵測到筆跡'); return; }
-  const url=t.toDataURL('image/png');
-  const a={id:++assetSeq, name:name||('手寫'+assetSeq), url, w:t.width, h:t.height};
+  const a={id:++assetSeq, name:name||('手寫'+assetSeq), url:t.toDataURL('image/png'), w:t.width, h:t.height};
   assets.push(a); backedUp=false;
-  renderAssets(); renderPick();
-  toast('已存成素材');
+  renderAssets(); renderPick(); toast('已存成素材');
 }
-
 function renderAssets(){
   const box=$('#assetList'); box.innerHTML='';
-  $('#assetEmpty').style.display = assets.length? 'none':'block';
+  $('#assetEmpty').style.display=assets.length?'none':'block';
   assets.forEach(a=>{
     const el=document.createElement('div'); el.className='asset';
-    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div>
-      <div class="nm"></div>
+    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div><div class="nm"></div>
       <div class="acts"><button data-a="dl">分享／存檔</button></div>
       <div class="acts"><button data-a="rn">改名</button><button data-a="rm">刪</button></div>`;
     el.querySelector('.nm').textContent=a.name;
-    el.querySelector('[data-a=dl]').onclick=async()=>{
-      const fn=safeName(a.name,'.png',a.id);
-      const r=await saveOut(dataURLtoBlob(a.url), fn);
-      reportSave(r, fn);
-    };
-    el.querySelector('[data-a=rn]').onclick=()=>{
-      const n=prompt('素材名稱', a.name);
-      if(n){ a.name=n.slice(0,24); renderAssets(); renderPick(); }
-    };
-    el.querySelector('[data-a=rm]').onclick=()=>{
-      assets=assets.filter(x=>x.id!==a.id); renderAssets(); renderPick();
-    };
+    el.querySelector('[data-a=dl]').onclick=async()=>{ const fn=safeName(a.name,'.png',a.id); reportSave(await saveOut(dataURLtoBlob(a.url),fn),fn); };
+    el.querySelector('[data-a=rn]').onclick=()=>{ const n=prompt('素材名稱',a.name); if(n){a.name=n.slice(0,24); renderAssets(); renderPick();} };
+    el.querySelector('[data-a=rm]').onclick=()=>{ assets=assets.filter(x=>x.id!==a.id); renderAssets(); renderPick(); };
     box.appendChild(el);
   });
 }
-
 $('#btnSaveSel').onclick=()=>{
-  if(!outCanvas){ toast('先上傳照片'); return; }
-  if(!sel){ toast('請先在預覽圖上拖出一個框'); return; }
+  if(!outCanvas){toast('先取得簽名');return;}
+  if(!sel){toast('請先在預覽圖上拖出一個框');return;}
   const w=outCanvas.width,h=outCanvas.height;
   const sx=Math.round(sel.x*w), sy=Math.round(sel.y*h);
   const sw=Math.max(1,Math.round(sel.w*w)), sh=Math.max(1,Math.round(sel.h*h));
@@ -762,201 +837,175 @@ $('#btnSaveSel').onclick=()=>{
   c.getContext('2d').drawImage(outCanvas,sx,sy,sw,sh,0,0,sw,sh);
   const n=prompt('這塊叫什麼？（例：簽名、日期、身分證字號）','手寫'+(assetSeq+1));
   if(n===null) return;
-  addAsset(c,n.trim());
-  clearSel();
+  addAsset(c,n.trim()); clearSel();
 };
 $('#btnSaveAll').onclick=()=>{
-  if(!outCanvas){ toast('先上傳照片'); return; }
+  if(!outCanvas){toast('先取得簽名');return;}
   const n=prompt('這張叫什麼？','手寫'+(assetSeq+1));
   if(n===null) return;
   addAsset(outCanvas,n.trim());
 };
+$('#btnPng').onclick=async()=>{
+  if(!outCanvas) return;
+  const t=trimTransparent(outCanvas)||outCanvas;
+  const blob=await new Promise(r=>t.toBlob(r,'image/png'));
+  const fn='signature-'+stamp()+'.png';
+  reportSave(await saveOut(blob,fn),fn);
+};
 $('#loadPng').onchange=e=>{
-  const files=Array.from(e.target.files||[]);
-  let warned=false;
+  const files=Array.from(e.target.files||[]); e.target.value=''; let warned=false;
   files.forEach(f=>{
     const img=new Image();
     img.onload=()=>{
       const c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
-      const cx=c.getContext('2d',{willReadFrequently:true});
-      cx.drawImage(img,0,0);
-      // 檢查是否真的有透明區域（相簿轉檔會變成白底）
+      const cx=c.getContext('2d',{willReadFrequently:true}); cx.drawImage(img,0,0);
       let clear=false;
-      try{
-        const d=cx.getImageData(0,0,c.width,c.height).data;
-        for(let i=3;i<d.length;i+=4){ if(d[i]<200){ clear=true; break; } }
-      }catch(err){ clear=true; }
-      if(!clear && !warned){ warned=true; toast('這張是白底不是透明，貼上去會蓋住表格。請從「檔案」App 載入原始 PNG', 5000); }
-      const a={id:++assetSeq,name:f.name.replace(/\.(png|jpe?g|heic)$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height};
-      assets.push(a); backedUp=false;
-      renderAssets(); renderPick();
+      try{ const d=cx.getImageData(0,0,c.width,c.height).data;
+        for(let i=3;i<d.length;i+=4){ if(d[i]<200){clear=true;break;} } }catch(err){ clear=true; }
+      if(!clear&&!warned){ warned=true; toast('這張是白底不是透明，貼上去會蓋住表格。請從「檔案」App 載入原始 PNG',5000); }
+      assets.push({id:++assetSeq,name:f.name.replace(/\.(png|jpe?g|heic)$/i,''),url:c.toDataURL('image/png'),w:c.width,h:c.height});
+      backedUp=false; renderAssets(); renderPick();
     };
     img.src=URL.createObjectURL(f);
   });
-  e.target.value='';
 };
-
 $('#btnClearAssets').onclick=()=>{
-  if(!assets.length){ toast('目前沒有素材'); return; }
+  if(!assets.length){toast('目前沒有素材');return;}
   if(!confirm('確定要清掉全部 '+assets.length+' 個素材？沒匯出備份的話就找不回來了。')) return;
-  assets=[]; renderAssets(); renderPick();
-  toast('已清空');
+  assets=[]; renderAssets(); renderPick(); toast('已清空');
 };
 
 /* ---------- 素材備份檔（一個 .json 裝全部素材，含中文名稱） ---------- */
 const KIT_TAG='handstamp-kit', KIT_VER=1;
-
 $('#btnBackup').onclick=async()=>{
-  if(!assets.length){ toast('目前沒有素材可以備份'); return; }
-  const kit={ tag:KIT_TAG, ver:KIT_VER, at:stamp(),
-              items:assets.map(a=>({name:a.name,w:a.w,h:a.h,url:a.url})) };
+  if(!assets.length){toast('目前沒有素材可以備份');return;}
+  const kit={tag:KIT_TAG,ver:KIT_VER,at:stamp(),items:assets.map(a=>({name:a.name,w:a.w,h:a.h,url:a.url}))};
   const blob=new Blob([JSON.stringify(kit)],{type:'application/json'});
   const fn='handstamp-kit-'+stamp()+'.json';
   const r=await saveOut(blob,fn);
   if(r==='shared'||r==='download'||r==='opened') backedUp=true;
-  reportSave(r, fn);
+  reportSave(r,fn);
 };
-
 $('#loadKit').onchange=async e=>{
-  const f=e.target.files[0]; e.target.value='';
-  if(!f) return;
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
   busy(true);
   try{
     const kit=JSON.parse(await f.text());
-    if(!kit || kit.tag!==KIT_TAG || !Array.isArray(kit.items)) throw new Error('格式不對');
+    if(!kit||kit.tag!==KIT_TAG||!Array.isArray(kit.items)) throw new Error('格式不對');
     let n=0;
     for(const it of kit.items){
-      if(typeof it.url!=='string' || !it.url.startsWith('data:image/')) continue;   // 只收圖片，不吃奇怪內容
-      assets.push({ id:++assetSeq, name:String(it.name||('手寫'+assetSeq)).slice(0,24),
-                    url:it.url, w:+it.w||1, h:+it.h||1 });
+      if(typeof it.url!=='string'||!it.url.startsWith('data:image/')) continue;  // 只收圖片，不吃奇怪內容
+      assets.push({id:++assetSeq,name:String(it.name||('手寫'+assetSeq)).slice(0,24),url:it.url,w:+it.w||1,h:+it.h||1});
       n++;
     }
-    backedUp=true;   // 剛從備份載回來的，本來就有檔案在
-    renderAssets(); renderPick();
-    toast(n? ('已載回 '+n+' 個素材') : '這個備份檔裡沒有可用的素材', 3000);
-  }catch(err){
-    toast('讀不到這個備份檔（要選本工具匯出的 .json）', 4000);
-  }
+    backedUp=true; renderAssets(); renderPick();
+    toast(n?('已載回 '+n+' 個素材'):'這個備份檔裡沒有可用的素材',3000);
+  }catch(err){ toast('讀不到這個備份檔（要選本工具匯出的 .json）',4000); }
   busy(false);
 };
 
-
 /* ============================================================
-   二、文件層
+   三、文件層
    ============================================================ */
-let docKind=null;        // 'pdf' | 'img'
-let pdfDoc=null, pdfBytes=null, pageCount=1, curPage=1;
-let imgEl=null;
-let pageBase={w:0,h:0};  // 目前頁面在 scale=1 下的顯示尺寸（pdf: viewport；img: 像素）
-let placements={};       // { pageNum: [ {assetId,x,y,w,h,rot} ] }  座標為 scale1 顯示座標
-let selStamp=null;
+let docKind=null, pdfDoc=null, pdfBytes=null, pageCount=1, curPage=1, imgEl=null;
+let pageBase={w:0,h:0}, placements={}, selStamp=null;
 
-$('#docFile').onchange=async e=>{
-  const f=e.target.files[0]; if(!f) return;
+async function openDoc(f){
   busy(true);
   try{
     placements={}; curPage=1; selStamp=null;
-    if(f.type==='application/pdf' || /\.pdf$/i.test(f.name)){
+    if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
       await ensurePdfjs();
       pdfBytes=new Uint8Array(await f.arrayBuffer());
       pdfDoc=await window.pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;
       pageCount=pdfDoc.numPages; docKind='pdf'; imgEl=null;
-      $('#pager').style.display = pageCount>1 ? 'flex':'none';
-      $('#docInfo').textContent=`已載入 PDF：${f.name}（${pageCount} 頁）`;
-    } else {
+      $('#pager').style.display=pageCount>1?'flex':'none';
+      $('#docInfo').textContent=`已載入 ${f.name}（${pageCount} 頁）`;
+    }else{
       const img=new Image();
-      await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=URL.createObjectURL(f); });
+      await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=URL.createObjectURL(f);});
       imgEl=img; docKind='img'; pdfDoc=null; pageCount=1;
       $('#pager').style.display='none';
-      $('#docInfo').textContent=`已載入圖片：${f.name}（${img.naturalWidth}×${img.naturalHeight}）`;
+      $('#docInfo').textContent=`已載入 ${f.name}（${img.naturalWidth}×${img.naturalHeight}）`;
     }
+    $('#docPick').style.display='none';
     $('#docCard').style.display='block';
-    $('#expCard').style.display='block';
-    await renderPage();
-    renderPick();
-    $('#docCard').scrollIntoView({behavior:'smooth',block:'start'});
+    await renderPage(); renderPick();
+    $('#s3').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
-    console.error(err);
-    $('#docInfo').textContent='';
-    toast('讀不到這個檔案，或 PDF 函式庫載入失敗（請確認有網路）', 3500);
+    console.error(err); $('#docInfo').textContent='';
+    toast('讀不到這個檔案，或 PDF 函式庫載入失敗（請確認有網路）',4000);
   }
   busy(false);
-  e.target.value='';
+}
+$('#docFile').onchange=e=>{const f=e.target.files[0]; e.target.value=''; if(f) openDoc(f);};
+const ddrop=$('#docDrop');
+['dragenter','dragover'].forEach(ev=>ddrop.addEventListener(ev,e=>{e.preventDefault();ddrop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>ddrop.addEventListener(ev,e=>{e.preventDefault();ddrop.classList.remove('hot');}));
+ddrop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) openDoc(f);});
+$('#btnOtherDoc').onclick=()=>{
+  docKind=null; pdfDoc=null; imgEl=null; placements={}; selStamp=null;
+  $('#docCard').style.display='none'; $('#docPick').style.display='block'; $('#docInfo').textContent='';
 };
 
 async function renderPage(){
-  const cv=$('#docCanvas'); const ctx=cv.getContext('2d');
+  const cv=$('#docCanvas'), ctx=cv.getContext('2d');
   if(docKind==='pdf'){
     const page=await pdfDoc.getPage(curPage);
     const vp1=page.getViewport({scale:1});
     pageBase={w:vp1.width,h:vp1.height};
-    const target=Math.min(1600, Math.max(900, window.devicePixelRatio*900));
-    const scale=target/vp1.width;
-    const vp=page.getViewport({scale});
+    const target=Math.min(1600,Math.max(900,(window.devicePixelRatio||1)*900));
+    const vp=page.getViewport({scale:target/vp1.width});
     cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
-    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    await page.render({canvasContext:ctx,viewport:vp}).promise;
     $('#pgLabel').textContent=`${curPage} / ${pageCount}`;
-  } else if(docKind==='img'){
+  }else if(docKind==='img'){
     pageBase={w:imgEl.naturalWidth,h:imgEl.naturalHeight};
     cv.width=imgEl.naturalWidth; cv.height=imgEl.naturalHeight;
     ctx.drawImage(imgEl,0,0);
   }
   redrawStamps();
 }
-$('#prevPg').onclick=async()=>{ if(curPage>1){ curPage--; selStamp=null; busy(true); await renderPage(); busy(false);} };
-$('#nextPg').onclick=async()=>{ if(curPage<pageCount){ curPage++; selStamp=null; busy(true); await renderPage(); busy(false);} };
+$('#prevPg').onclick=async()=>{ if(curPage>1){curPage--;selStamp=null;busy(true);await renderPage();busy(false);} };
+$('#nextPg').onclick=async()=>{ if(curPage<pageCount){curPage++;selStamp=null;busy(true);await renderPage();busy(false);} };
 
 function renderPick(){
-  const box=$('#assetPick'); box.innerHTML='';
-  $('#pickEmpty').style.display = assets.length? 'none':'block';
+  const box=$('#assetPick'); if(!box) return;
+  box.innerHTML='';
+  $('#pickEmpty').style.display=assets.length?'none':'block';
   assets.forEach(a=>{
     const el=document.createElement('div'); el.className='asset';
-    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div><div class="nm"></div>
-      <div class="acts"><button data-a="add">貼上</button></div>`;
+    el.innerHTML=`<div class="thumb checker"><img src="${a.url}"></div><div class="nm"></div><div class="acts"><button data-a="add">貼上</button></div>`;
     el.querySelector('.nm').textContent=a.name;
     el.querySelector('[data-a=add]').onclick=()=>addStamp(a);
     box.appendChild(el);
   });
 }
-
 function addStamp(a){
-  if(!docKind){ toast('請先選擇文件'); return; }
-  const list = placements[curPage] || (placements[curPage]=[]);
-  const w = pageBase.w*0.28;
-  const h = w * a.h / a.w;
-  const st = {uid:'s'+Date.now()+Math.round(Math.random()*999), assetId:a.id,
-              x:pageBase.w*0.12, y:pageBase.h*0.5, w, h, rot:0};
-  list.push(st);
-  selStamp=st.uid;
-  redrawStamps();
-  toast('已貼上，用手指拖到定位');
+  if(!docKind){toast('請先選擇文件');return;}
+  const list=placements[curPage]||(placements[curPage]=[]);
+  const w=pageBase.w*0.28, h=w*a.h/a.w;
+  const st={uid:'s'+Date.now()+Math.round(Math.random()*999),assetId:a.id,x:pageBase.w*0.12,y:pageBase.h*0.5,w,h,rot:0};
+  list.push(st); selStamp=st.uid; redrawStamps(); toast('已貼上，用手指拖到定位');
 }
-
 function redrawStamps(){
   const st=$('#docStage');
   Array.from(st.querySelectorAll('.stamp')).forEach(n=>n.remove());
-  const list=placements[curPage]||[];
-  list.forEach(p=>{
-    const a=assets.find(x=>x.id===p.assetId);
-    if(!a) return;
+  (placements[curPage]||[]).forEach(p=>{
+    const a=assets.find(x=>x.id===p.assetId); if(!a) return;
     const el=document.createElement('div');
-    el.className='stamp'+(selStamp===p.uid?' sel':'');
-    el.dataset.uid=p.uid;
-    el.style.left=(p.x/pageBase.w*100)+'%';
-    el.style.top=(p.y/pageBase.h*100)+'%';
-    el.style.width=(p.w/pageBase.w*100)+'%';
-    el.style.height=(p.h/pageBase.h*100)+'%';
+    el.className='stamp'+(selStamp===p.uid?' sel':''); el.dataset.uid=p.uid;
+    el.style.left=(p.x/pageBase.w*100)+'%'; el.style.top=(p.y/pageBase.h*100)+'%';
+    el.style.width=(p.w/pageBase.w*100)+'%'; el.style.height=(p.h/pageBase.h*100)+'%';
     el.style.transform=`rotate(${p.rot}deg)`;
     el.innerHTML=`<img src="${a.url}"><div class="h"></div>`;
-    st.appendChild(el);
-    attachStampEvents(el,p);
+    st.appendChild(el); attachStampEvents(el,p);
   });
   updateSelTools();
 }
-
 function updateSelTools(){
   const p=(placements[curPage]||[]).find(x=>x.uid===selStamp);
-  $('#selTools').style.display = p? 'block':'none';
+  $('#selTools').style.display=p?'block':'none';
   if(p){
     $('#szRange').value=Math.round(p.w/pageBase.w*100);
     $('#vSize').textContent=Math.round(p.w/pageBase.w*100)+'%';
@@ -964,173 +1013,115 @@ function updateSelTools(){
     $('#vRot').textContent=Math.round(p.rot)+'°';
   }
 }
-
 function attachStampEvents(el,p){
-  const handle=el.querySelector('.h');
-  let mode=null, start=null;
-
+  const handle=el.querySelector('.h'); let mode=null,start=null;
   const box=()=>$('#docStage').getBoundingClientRect();
-
   function down(ev,m){
     ev.stopPropagation(); ev.preventDefault();
     selStamp=p.uid;
-    $$('#docStage .stamp').forEach(n=>n.classList.toggle('sel', n.dataset.uid===p.uid));
-    updateSelTools();
-    mode=m;
+    $$('#docStage .stamp').forEach(n=>n.classList.toggle('sel',n.dataset.uid===p.uid));
+    updateSelTools(); mode=m;
     const r=box();
-    start={cx:ev.clientX, cy:ev.clientY, x:p.x, y:p.y, w:p.w, h:p.h, sx:pageBase.w/r.width, sy:pageBase.h/r.height};
+    start={cx:ev.clientX,cy:ev.clientY,x:p.x,y:p.y,w:p.w,h:p.h,sx:pageBase.w/r.width,sy:pageBase.h/r.height};
     el.setPointerCapture(ev.pointerId);
   }
   function move(ev){
-    if(!mode) return;
-    ev.preventDefault();
+    if(!mode) return; ev.preventDefault();
     const dx=(ev.clientX-start.cx)*start.sx, dy=(ev.clientY-start.cy)*start.sy;
     if(mode==='move'){
-      p.x=Math.max(-p.w*0.5, Math.min(pageBase.w-p.w*0.5, start.x+dx));
-      p.y=Math.max(-p.h*0.5, Math.min(pageBase.h-p.h*0.5, start.y+dy));
-    } else {
-      const nw=Math.max(pageBase.w*0.02, start.w+dx);
+      p.x=Math.max(-p.w*0.5,Math.min(pageBase.w-p.w*0.5,start.x+dx));
+      p.y=Math.max(-p.h*0.5,Math.min(pageBase.h-p.h*0.5,start.y+dy));
+    }else{
+      const nw=Math.max(pageBase.w*0.02,start.w+dx);
       p.h=nw*start.h/start.w; p.w=nw;
     }
-    el.style.left=(p.x/pageBase.w*100)+'%';
-    el.style.top=(p.y/pageBase.h*100)+'%';
-    el.style.width=(p.w/pageBase.w*100)+'%';
-    el.style.height=(p.h/pageBase.h*100)+'%';
+    el.style.left=(p.x/pageBase.w*100)+'%'; el.style.top=(p.y/pageBase.h*100)+'%';
+    el.style.width=(p.w/pageBase.w*100)+'%'; el.style.height=(p.h/pageBase.h*100)+'%';
     if(mode!=='move') updateSelTools();
   }
   function up(ev){ mode=null; try{el.releasePointerCapture(ev.pointerId);}catch(e){} }
-
   el.addEventListener('pointerdown',ev=>{ if(ev.target===handle) return; down(ev,'move'); });
   handle.addEventListener('pointerdown',ev=>down(ev,'size'));
   el.addEventListener('pointermove',move);
   el.addEventListener('pointerup',up);
   el.addEventListener('pointercancel',up);
 }
-
-$('#docStage').addEventListener('pointerdown',()=>{ /* 點空白處不取消，避免誤觸 */ });
-
 $('#szRange').oninput=()=>{
   const p=(placements[curPage]||[]).find(x=>x.uid===selStamp); if(!p) return;
   const nw=pageBase.w*(+$('#szRange').value)/100;
   p.h=nw*p.h/p.w; p.w=nw;
-  $('#vSize').textContent=$('#szRange').value+'%';
-  redrawStamps();
+  $('#vSize').textContent=$('#szRange').value+'%'; redrawStamps();
 };
 $('#rotRange').oninput=()=>{
   const p=(placements[curPage]||[]).find(x=>x.uid===selStamp); if(!p) return;
-  p.rot=+$('#rotRange').value;
-  $('#vRot').textContent=p.rot+'°';
-  const el=$(`#docStage .stamp[data-uid="${p.uid}"]`);
-  if(el) el.style.transform=`rotate(${p.rot}deg)`;
+  p.rot=+$('#rotRange').value; $('#vRot').textContent=p.rot+'°';
+  const el=$(`#docStage .stamp[data-uid="${p.uid}"]`); if(el) el.style.transform=`rotate(${p.rot}deg)`;
 };
-$('#btnDelStamp').onclick=()=>{
-  placements[curPage]=(placements[curPage]||[]).filter(x=>x.uid!==selStamp);
-  selStamp=null; redrawStamps();
-};
+$('#btnDelStamp').onclick=()=>{ placements[curPage]=(placements[curPage]||[]).filter(x=>x.uid!==selStamp); selStamp=null; redrawStamps(); };
 $('#btnDeselect').onclick=()=>{ selStamp=null; redrawStamps(); };
 $('#btnClearAll').onclick=()=>{ placements[curPage]=[]; selStamp=null; redrawStamps(); toast('已清除本頁'); };
 
 /* ============================================================
-   三、匯出
-   PDF：用 pdf-lib 疊圖，原始頁面內容完全不動（文字仍可選取、畫質不損）
-        座標用 pdf.js viewport.convertToPdfPoint 換算，自動處理頁面 /Rotate
-   圖片：畫到 canvas 後輸出 PNG
+   四、匯出
+   PDF：pdf-lib 疊圖，原始頁面內容完全不動（文字仍可選取、畫質不損）
+        座標走 pdf.js viewport.convertToPdfPoint，自動吃掉頁面 /Rotate
    ============================================================ */
-async function dataURLtoBytes(u){
-  const r=await fetch(u); const b=await r.arrayBuffer(); return new Uint8Array(b);
-}
+async function dataURLtoBytes(u){ const r=await fetch(u); return new Uint8Array(await r.arrayBuffer()); }
+function stamp(){ const d=new Date(),z=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; }
 
 $('#btnExport').onclick=async()=>{
   const total=Object.values(placements).reduce((n,l)=>n+l.length,0);
-  if(!docKind){ toast('請先選擇文件'); return; }
+  if(!docKind){toast('請先選擇文件');return;}
   if(total===0 && !confirm('目前沒有貼上任何手寫，還是要匯出嗎？')) return;
   busy(true);
   try{
     if(docKind==='pdf'){
       await ensurePdflib();
-      const {PDFDocument, degrees}=window.PDFLib;
+      const {PDFDocument,degrees}=window.PDFLib;
       const out=await PDFDocument.load(pdfBytes.slice());
-      const embedded={};
-      for(const a of assets){
-        const list=Object.values(placements).flat();
-        if(list.some(p=>p.assetId===a.id)) embedded[a.id]=await out.embedPng(await dataURLtoBytes(a.url));
-      }
+      const embedded={}, all=Object.values(placements).flat();
+      for(const a of assets) if(all.some(p=>p.assetId===a.id)) embedded[a.id]=await out.embedPng(await dataURLtoBytes(a.url));
       for(const [pnStr,list] of Object.entries(placements)){
         if(!list.length) continue;
-        const pn=+pnStr;
-        const jsPage=await pdfDoc.getPage(pn);
-        const vp=jsPage.getViewport({scale:1});
-        const page=out.getPage(pn-1);
+        const pn=+pnStr, vp=(await pdfDoc.getPage(pn)).getViewport({scale:1}), page=out.getPage(pn-1);
         for(const p of list){
           const img=embedded[p.assetId]; if(!img) continue;
-          // 顯示座標的三個角 → PDF user space
-          const rad=p.rot*Math.PI/180;
-          const cx=p.x+p.w/2, cy=p.y+p.h/2;
-          const rot=(dx,dy)=>({
-            x:cx+dx*Math.cos(rad)-dy*Math.sin(rad),
-            y:cy+dx*Math.sin(rad)+dy*Math.cos(rad)
-          });
-          const BL=rot(-p.w/2, p.h/2);      // 顯示空間左下
-          const BR=rot( p.w/2, p.h/2);      // 顯示空間右下
-          const TL=rot(-p.w/2,-p.h/2);      // 顯示空間左上
-          const uBL=vp.convertToPdfPoint(BL.x,BL.y);
-          const uBR=vp.convertToPdfPoint(BR.x,BR.y);
-          const uTL=vp.convertToPdfPoint(TL.x,TL.y);
-          const wVec=[uBR[0]-uBL[0], uBR[1]-uBL[1]];
-          const hVec=[uTL[0]-uBL[0], uTL[1]-uBL[1]];
-          const wLen=Math.hypot(wVec[0],wVec[1]);
-          const hLen=Math.hypot(hVec[0],hVec[1]);
-          const ang=Math.atan2(wVec[1],wVec[0])*180/Math.PI;
-          page.drawImage(img,{ x:uBL[0], y:uBL[1], width:wLen, height:hLen, rotate:degrees(ang) });
+          const rad=p.rot*Math.PI/180, cx=p.x+p.w/2, cy=p.y+p.h/2;
+          const rot=(dx,dy)=>({x:cx+dx*Math.cos(rad)-dy*Math.sin(rad), y:cy+dx*Math.sin(rad)+dy*Math.cos(rad)});
+          const BL=rot(-p.w/2,p.h/2), BR=rot(p.w/2,p.h/2), TL=rot(-p.w/2,-p.h/2);
+          const uBL=vp.convertToPdfPoint(BL.x,BL.y), uBR=vp.convertToPdfPoint(BR.x,BR.y), uTL=vp.convertToPdfPoint(TL.x,TL.y);
+          const wVec=[uBR[0]-uBL[0],uBR[1]-uBL[1]], hVec=[uTL[0]-uBL[0],uTL[1]-uBL[1]];
+          page.drawImage(img,{ x:uBL[0], y:uBL[1],
+            width:Math.hypot(wVec[0],wVec[1]), height:Math.hypot(hVec[0],hVec[1]),
+            rotate:degrees(Math.atan2(wVec[1],wVec[0])*180/Math.PI) });
         }
       }
       const bytes=await out.save();
-      const r=await saveOut(new Blob([bytes],{type:'application/pdf'}), 'signed_'+stamp()+'.pdf');
-      busy(false); reportSave(r); return;
-    } else {
+      const fn='signed_'+stamp()+'.pdf';
+      busy(false); reportSave(await saveOut(new Blob([bytes],{type:'application/pdf'}),fn),fn); return;
+    }else{
       const cv=document.createElement('canvas');
       cv.width=imgEl.naturalWidth; cv.height=imgEl.naturalHeight;
-      const ctx=cv.getContext('2d');
-      ctx.drawImage(imgEl,0,0);
+      const ctx=cv.getContext('2d'); ctx.drawImage(imgEl,0,0);
       for(const p of (placements[1]||[])){
         const a=assets.find(x=>x.id===p.assetId); if(!a) continue;
-        const im=new Image();
-        await new Promise(r=>{ im.onload=r; im.src=a.url; });
-        ctx.save();
-        ctx.translate(p.x+p.w/2, p.y+p.h/2);
-        ctx.rotate(p.rot*Math.PI/180);
-        ctx.drawImage(im,-p.w/2,-p.h/2,p.w,p.h);
-        ctx.restore();
+        const im=new Image(); await new Promise(r=>{im.onload=r;im.src=a.url;});
+        ctx.save(); ctx.translate(p.x+p.w/2,p.y+p.h/2); ctx.rotate(p.rot*Math.PI/180);
+        ctx.drawImage(im,-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
       }
       const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
-      const r2=await saveOut(blob,'signed_'+stamp()+'.png');
-      busy(false); reportSave(r2); return;
+      const fn='signed_'+stamp()+'.png';
+      busy(false); reportSave(await saveOut(blob,fn),fn); return;
     }
-  }catch(err){
-    console.error(err);
-    toast('匯出失敗：'+(err.message||'未知錯誤'),4000);
-  }
+  }catch(err){ console.error(err); toast('匯出失敗：'+(err.message||'未知錯誤'),4000); }
   busy(false);
 };
 
-function stamp(){
-  const d=new Date(), z=n=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`;
-}
-
-/* 一次性清理：v1.1 曾把素材存進 IndexedDB，改版後要把舊資料刪乾淨，
-   否則舊簽名會一直留在這台裝置的瀏覽器裡。 */
-try{
-  if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('handstamp');
-  if(window.localStorage) localStorage.removeItem('handstamp');
-}catch(e){}
-
 renderAssets(); renderPick();
 
-// 有素材但還沒匯出備份時，離開才提醒（匯出過就不吵）
-window.addEventListener('beforeunload', e=>{
-  if(assets.length && !backedUp){ e.preventDefault(); e.returnValue=''; }
-});
+/* 有素材但還沒匯出備份時，離開才提醒 */
+window.addEventListener('beforeunload', e=>{ if(assets.length && !backedUp){ e.preventDefault(); e.returnValue=''; } });
 </script>
 </body>
 </html>
