@@ -3,32 +3,117 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#132840">
 <title>小工具箱</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--line:#e3e6ea;--ink:#1a1d21;--sub:#6b7280;--accent:#2563eb}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;font-size:15px;line-height:1.6}
-.wrap{max-width:640px;margin:0 auto;padding:28px 16px 60px}
-h1{font-size:20px;margin:0 0 4px}
-p.sub{margin:0 0 22px;color:var(--sub);font-size:13px}
-a.tool{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:10px;text-decoration:none;color:inherit;box-shadow:0 1px 3px rgba(16,24,40,.05)}
-a.tool:active{background:#f2f4f7}
-a.tool b{display:block;font-size:15.5px;margin-bottom:2px}
-a.tool span{font-size:12.5px;color:var(--sub)}
-footer{margin-top:26px;font-size:12px;color:var(--sub);text-align:center}
+:root{
+  --navy:#132840;
+  --ink:#12263f; --body:#3c4b5e; --muted:#6b7a8d;
+  --line:#e4e9f0; --line-soft:#eef2f7;
+  --page:#f5f7fa; --card:#ffffff;
+  --blue:#4a7ab5; --blue-deep:#2f5f9e; --blue-soft:#e8eef7;
+  --r:16px;
+  --shadow:0 1px 2px rgba(16,32,56,.04), 0 4px 16px rgba(16,32,56,.05);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--body);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{
+  background:linear-gradient(170deg,#162c48 0%,#122540 55%,#0e1f34 100%);
+  color:#fff; padding:calc(52px + env(safe-area-inset-top)) 0 46px;
+}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(255,255,255,.24); border-radius:999px;
+  padding:7px 16px 7px 13px; font-size:13px; color:#dbe6f4; margin-bottom:26px;
+}
+.pill svg{width:15px;height:15px;flex:0 0 auto;stroke:#9fc0e6;fill:none;stroke-width:1.8}
+.hero h1{
+  margin:0 0 16px; color:#fff; font-weight:700; letter-spacing:-.01em;
+  font-size:clamp(30px,8vw,42px); line-height:1.28;
+}
+.lede{margin:0;color:#9fb3cc;font-size:15.5px;max-width:46ch}
+
+/* ---------- tools ---------- */
+main{padding:38px 0 70px}
+h2.sec{
+  display:flex;align-items:baseline;gap:12px;
+  margin:0 0 16px; font-size:20px; font-weight:700; color:var(--ink); letter-spacing:-.01em;
+}
+h2.sec .num{font-size:14px;font-weight:600;color:var(--blue);letter-spacing:.04em}
+
+a.tool{
+  display:flex; align-items:flex-start; gap:15px; text-decoration:none; color:inherit;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:19px 20px; margin-bottom:12px; box-shadow:var(--shadow);
+  transition:border-color .15s, transform .1s;
+}
+a.tool:hover{border-color:#c8d8ea}
+a.tool:active{transform:translateY(1px)}
+a.tool .ic{
+  flex:0 0 auto; width:42px; height:42px; border-radius:12px;
+  background:var(--blue-soft); display:flex; align-items:center; justify-content:center;
+}
+a.tool .ic svg{width:21px;height:21px;stroke:var(--blue-deep);fill:none;stroke-width:1.7}
+a.tool .tx{flex:1 1 auto;min-width:0}
+a.tool b{display:block;font-size:16.5px;font-weight:600;color:var(--ink);margin-bottom:3px}
+a.tool span{display:block;font-size:13.5px;color:var(--muted)}
+a.tool .go{flex:0 0 auto;align-self:center;color:#b6c4d5;font-size:20px;line-height:1}
+
+.soon{
+  border:1.5px dashed #dbe3ec; border-radius:var(--r); padding:19px 20px;
+  font-size:13.5px; color:var(--muted); text-align:center;
+}
+
+.note{
+  background:var(--blue-soft); border:1px solid #cfe0f3; color:#2b527f;
+  font-size:13.5px; border-radius:12px; padding:13px 16px; margin-top:26px;
+}
+footer{margin-top:30px;font-size:12.5px;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>小工具箱</h1>
-  <p class="sub">全部都是單一網頁、純本機處理，資料不會傳到任何伺服器。</p>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 8.1-7 9-4-.9-7-4.6-7-9V6l7-3z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6"/></svg>
+      純前端．全程在你的瀏覽器處理
+    </span>
+    <h1>小工具箱</h1>
+    <p class="lede">每個工具都是單一網頁，沒有後端、不用註冊。檔案不會離開你的裝置，關掉分頁就什麼都不剩。</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <h2 class="sec"><span class="num">01</span>目前的工具</h2>
 
   <a class="tool" href="sign.html">
-    <b>✍️ 手寫去背貼章工具</b>
-    <span>拍下紙上的手寫 → 自動去背 → 貼到 PDF／圖片 → 下載上傳</span>
+    <span class="ic">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10-10-3-3L5 16z"/><path d="M14.5 5.5l3 3"/></svg>
+    </span>
+    <span class="tx">
+      <b>手寫去背貼章工具</b>
+      <span>拍下紙上的手寫 → 自動去背 → 貼到 PDF／圖片 → 下載上傳</span>
+    </span>
+    <span class="go">›</span>
   </a>
 
-</div>
-<footer>個人工具，非商業用途</footer>
+  <div class="soon">之後的小工具會陸續放進來</div>
+
+  <div class="note">
+    這些工具都不會把你的檔案送到任何伺服器，也不會在瀏覽器裡留下資料。把網址給別人用是安全的 —— 對方開的是空的。
+  </div>
+
+  <footer>個人工具，非商業用途</footer>
+</main>
+
 </body>
 </html>
