@@ -31,6 +31,13 @@ body{
   background:linear-gradient(170deg,#162c48 0%,#122540 55%,#0e1f34 100%);
   color:#fff; padding:calc(46px + env(safe-area-inset-top)) 0 40px;
 }
+.back{
+  display:inline-flex;align-items:center;gap:7px;
+  color:#8fa8c6;text-decoration:none;font-size:13.5px;
+  margin-bottom:20px;padding:6px 12px 6px 8px;border-radius:999px;
+}
+.back:hover{color:#dbe6f4;background:rgba(255,255,255,.06)}
+.back svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .pill{
   display:inline-flex;align-items:center;gap:8px;
   border:1px solid rgba(255,255,255,.24); border-radius:999px;
@@ -200,6 +207,11 @@ details.faq p{font-size:14px;color:var(--body)}
 
 <header class="hero">
   <div class="wrap">
+    <a class="back" href="index.html">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+      小工具箱
+    </a>
+    <br>
     <span class="pill">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 8.1-7 9-4-.9-7-4.6-7-9V6l7-3z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6"/></svg>
       全程在你的瀏覽器處理
