@@ -60,6 +60,22 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   t('附件縮圖', await p.locator('#dayview .att-th img').count() >= 1);
   await p.reload(); await p.waitForTimeout(800);
   t('票券夾', await p.locator('#tickets .att-th img').count() >= 1);
+  // 網路・電話、行李寄送
+  t('範例有 2 張網路卡和 1 筆行李', await p.locator('#sims article').count() === 2 && await p.locator('#bags article').count() === 1);
+  t('當地號碼可以直接撥', await p.locator('#sims a[href^="tel:+8190"]').count() === 1);
+  await p.click('text=＋ 新增 eSIM／SIM 卡／當地門號');
+  await p.selectOption('#fm-kind', 'sim'); await p.fill('#fm-who', '阿嬤'); await p.fill('#fm-number', '+82 10-1234-5678');
+  await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
+  t('新增網路卡', await p.locator('#sims article:has-text("阿嬤")').count() === 1);
+  await p.locator('#sims article:has-text("阿嬤") .att input[type=file]').setInputFiles(__dirname + '/qr.png'); await p.waitForTimeout(800);
+  t('eSIM QR 存圖', await p.locator('#sims article:has-text("阿嬤") .att-th img').count() === 1);
+  await p.click('text=＋ 新增行李寄送');
+  await p.fill('#fm-from', '金海機場行李櫃台'); await p.fill('#fm-to', '海雲台飯店');
+  await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
+  t('新增行李寄送', await p.locator('#bags article:has-text("海雲台飯店")').count() === 1);
+  await p.reload(); await p.waitForTimeout(600);
+  t('重新整理後網路和行李都在', await p.locator('#sims article').count() === 3 && await p.locator('#bags article').count() === 2 && await p.locator('#sims .att-th img').count() === 1);
+  t('票券夾收到 eSIM', (await p.textContent('#tickets')).includes('網路 實體 SIM 卡 阿嬤'));
   // 匯入新行程
   const json = JSON.stringify({ title: '北海道冬天', days: [{ date: '2027-02-10', title: '札幌', stops: [{ t: '10:00', name: '大通公園', lat: 43.06, lng: 141.35, move: { type: 'car', text: '自駕' } }] }] });
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=換成這個行程'); await p.waitForTimeout(300);

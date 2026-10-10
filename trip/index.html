@@ -176,6 +176,8 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .tf-when{font-size:14px;color:var(--ink2)}
 .tf-when b{font-weight:400;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
 .tf-top .tiny{margin-left:auto}
+.sim-num{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sim-num a{font-size:22px;color:var(--ink);text-decoration:none;font-variant-numeric:tabular-nums;letter-spacing:.5px}
 .btn.tiny{min-height:28px;padding:0 10px;font-size:12px;box-shadow:0 2px 0 var(--ink)}
 .tf-route{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px;margin-top:6px;line-height:1.35}
 .tf-route span{min-width:0;overflow-wrap:anywhere}
@@ -346,6 +348,12 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="flights" id="flights"></div>
     <h3 class="subhead"><span class="dot" style="background:var(--yellow)"></span>機場接送</h3>
     <div class="flights" id="transfers"></div>
+    <h3 class="subhead"><span class="dot" style="background:var(--coral)"></span>行李寄送</h3>
+    <p class="small" style="margin:-6px 0 10px">機場⇄飯店的行李配送，寄件單或預約截圖存這裡</p>
+    <div class="flights" id="bags"></div>
+    <h3 class="subhead"><span class="dot" style="background:var(--green)"></span>當地網路・電話</h3>
+    <p class="small" style="margin:-6px 0 10px">eSIM、SIM 卡、當地門號；eSIM 的 QR code 也存在這裡，沒網路也能打開</p>
+    <div class="flights" id="sims"></div>
   </section>
 
   <section id="tickets-sec">
@@ -381,7 +389,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.2.0 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.0 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -459,6 +467,13 @@ const TRIP_SAMPLE = {
         {name:"難波 章魚燒",local:"わなか 千日前本店",addr:"大阪府大阪市中央区難波千日前11-19",lat:34.6649,lng:135.5040,hours:"10:00–21:00",why:"外帶快，順路去車站"}]},
       {id:"d5c",t:"14:30",name:"南海 Rapi:t 到機場",local:"関西国際空港",addr:"大阪府泉佐野市泉州空港北1",lat:34.4320,lng:135.2304,move:{type:"train",text:"Rapi:t 38分"},note:"起飛前 3 小時到"}
     ]}
+  ],
+  sims:[
+    {uid:"sim1",kind:"esim",who:"媽媽",carrier:"範例 eSIM",plan:"5 天・每天 2GB",number:"",start:"2026-12-20",end:"2026-12-24",ref:"ES-10293",note:"出國前在台灣先安裝好（要有網路），落地後再到設定打開這張卡和「數據漫遊」"},
+    {uid:"sim2",kind:"sim",who:"爸爸",carrier:"範例電信",plan:"8 天吃到飽＋當地門號",number:"+81 90-0000-0000",start:"2026-12-20",end:"2026-12-27",ref:"",note:"機場領卡；台灣的卡收好別弄丟"}
+  ],
+  bags:[
+    {uid:"bag1",date:"2026-12-20",time:"11:30",from:"關西機場 1F 行李配送櫃台",to:"京都站前飯店（範例）",arrive:"2026-12-20 18:00 前",count:"2 件大行李",company:"範例行李宅配",tel:"+81-72-000-0000",ref:"BG-55120",fee:"¥4,000",pay:"已付款",note:"出關後先寄大行李，隨身只帶推車"}
   ],
   transfers:[
     {uid:"tf1",kind:"out",flight:"KX 821",date:"2026-12-20",time:"05:30",way:"預約接送車",pax:"3 人・3 件",from:"家門口",to:"桃園機場 第2航廈",company:"範例機場接送",tel:"0900-000-000",ref:"T20261220",car:"白色 7 人座",fee:"NT$1,800",pay:"已付款",note:"前一晚司機會傳 LINE 確認"},
@@ -590,7 +605,7 @@ function importTrip(trip, opt = {}){
     seen.add(sid);
     DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}), sys);
   }));
-  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers]].forEach(([coll, list]) =>
+  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers], ["sim", trip.sims], ["bag", trip.bags]].forEach(([coll, list]) =>
     (list || []).forEach(x => { const uid = x.uid || rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid}), sys); }));
   Trips.upsert(id, tripInfoFromMeta(id, meta, {local: id === SAMPLE_ID || !!opt.localOnly}));
   return id;
@@ -623,6 +638,8 @@ const SHARED = {
   flights: listAdapter("flight", x => x.date + x.dep),
   hotels: listAdapter("hotel", x => x.inDate || x.in || ""),
   transfers: listAdapter("transfer", x => x.date + x.time),
+  sims: listAdapter("sim", x => (x.start || "") + (x.who || "")),
+  bags: listAdapter("bag", x => (x.date || "") + (x.time || "")),
   done: {
     get(){ const o = {}; DB.live("todo").filter(d => d.key.startsWith("d_") && d.data.done).forEach(d => o[d.data.k] = d.data.done); return o; },
     set(map){
@@ -775,8 +792,8 @@ const Sync = {
 function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 function b64ToBlob(b64, type){ const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type}); }
 
-const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件"};
-function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || "") : ""; }
+const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件", sim:"網路・電話", bag:"行李寄送"};
+function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || (coll === "sim" ? [data.who, data.number || data.carrier].filter(Boolean).join(" ") : coll === "bag" ? [data.date, data.to].filter(Boolean).join(" ") : "") || "") : ""; }
 function resolveConflict(c){
   return new Promise(done => {
     const s = c.server, mine = c.mine;
@@ -1796,10 +1813,10 @@ function renderTickets(){
   const box = $("#tickets"); if (!box) return;
   const recs = fileDocs(null);
   box.textContent = "";
-  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿或接送卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
+  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿、接送、行李或網路卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
   const groups = {};
   recs.forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
-  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); };
+  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); };
   Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"}, h("b",null, lb),
     h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again))))));
 }
@@ -1997,6 +2014,108 @@ function renderTransfers(){
   box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>transferForm(null)},"＋ 新增機場接送"));
 }
 
+/* ===== 行李寄送（機場⇄飯店配送） ===== */
+const bagList = () => store.get("bags", null) || TRIP.bags || [];
+const bagLabel = b => (b.date ? b.date.slice(5).replace("-","/") + " " : "") + (b.to || "行李寄送");
+function bagForm(idx){
+  const list = bagList().slice();
+  const b0 = idx == null ? {date: (TRIP.days[0] || {}).date || "", pay:"已付款"} : list[idx];
+  formDialog(idx == null ? "＋ 新增行李寄送" : "編輯行李寄送", [
+    {k:"date",label:"寄件日期",type:"date",req:true,half:true},
+    {k:"time",label:"寄件時間・截止",type:"time",half:true},
+    {k:"from",label:"寄件地點",req:true,max:60,ph:"例：金海機場 1F 行李寄送櫃台"},
+    {k:"to",label:"送達地點",req:true,max:60,ph:"例：海雲台○○飯店"},
+    {k:"arrive",label:"預計送達",max:30,ph:"當天 18:00 前",half:true},
+    {k:"count",label:"件數",max:20,ph:"2 件大行李",half:true},
+    {k:"company",label:"寄送公司",max:30,ph:"例：T-Luggage",half:true},
+    {k:"tel",label:"聯絡電話",type:"tel",max:24,half:true},
+    {k:"ref",label:"寄件單號・預約編號",max:30,half:true},
+    {k:"fee",label:"費用",max:20,ph:"₩20,000",half:true},
+    {k:"pay",label:"付款狀態",type:"select",options:TF_PAY,half:true},
+    {k:"note",label:"備註",max:120,ph:"例：需出示護照；飯店櫃台代收"}
+  ], b0, v => {
+    v.uid = idx == null ? "bag" + Date.now().toString(36) : list[idx].uid;
+    if (idx == null) list.push(v); else list[idx] = v;
+    store.set("bags", list); logChange((idx == null ? "新增" : "更新") + "行李寄送 " + bagLabel(v)); renderBags();
+  }, idx == null ? null : () => { const gone = list.splice(idx,1)[0]; store.set("bags", list); logChange("刪除行李寄送 " + bagLabel(gone)); renderBags(); });
+}
+function renderBags(){
+  const box = $("#bags"); if (!box) return; box.textContent = "";
+  bagList().forEach((b, i) => {
+    box.append(h("article",{class:"box transfer"},
+      h("div",{class:"tf-top"},
+        h("span",{class:"chip",style:"background:var(--coral)"},"🧳 行李"),
+        h("span",{class:"tf-when"}, b.date.slice(5).replace("-","/") + "（" + WEEK[wd(b.date)] + "） ", b.time ? h("b",null, b.time) : null),
+        h("button",{class:"btn tiny",type:"button",onclick:()=>bagForm(i)},"✏️ 編輯")),
+      h("div",{class:"tf-route"}, h("span",null, b.from), h("span",{class:"tf-arrow","aria-hidden":"true"},"→"), h("span",null, b.to)),
+      h("div",{class:"kv",style:"margin-top:6px"},
+        b.arrive ? h("div",null,h("span",null,"預計送達"), b.arrive) : null,
+        b.count ? h("div",null,h("span",null,"件數"), b.count) : null,
+        b.fee || b.pay ? h("div",null,h("span",null,"費用"), (b.fee ? b.fee + " " : ""), b.pay ? h("span",{class:"chip pay " + (b.pay === "未付款" ? "warn-chip" : "")}, b.pay) : null) : null),
+      b.company || b.tel ? h("div",{class:"small",style:"margin-top:6px"}, (b.company || "") + (b.company && b.tel ? "・" : ""), b.tel ? h("span",{class:"code-ref"}, b.tel) : null) : null,
+      b.ref ? h("div",{class:"small",style:"margin-top:4px"}, "單號 ", h("span",{class:"code-ref"}, b.ref)) : null,
+      b.note ? h("p",{class:"note"}, "📍 " + b.note) : null,
+      attachRow("bag", b, "行李 " + bagLabel(b)),
+      h("div",{class:"acts"},
+        h("a",{class:"btn b",href:gdir(null, {name:b.from}, "walk"),target:"_blank",rel:"noopener"},"導航到寄件點"))));
+  });
+  if (!box.children.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有行李寄送"));
+  box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>bagForm(null)},"＋ 新增行李寄送"));
+}
+
+/* ===== 當地網路・電話（eSIM／SIM 卡／當地門號） ===== */
+const simList = () => store.get("sims", null) || TRIP.sims || [];
+const SIM_KIND = [["esim","eSIM"],["sim","實體 SIM 卡"],["roam","國際漫遊"],["wifi","WiFi 分享器"]];
+const SIM_COLOR = {esim:"var(--green)", sim:"var(--water)", roam:"var(--yellow)", wifi:"var(--coral)"};
+const simKind = k => (SIM_KIND.find(x => x[0] === k) || ["", "網路"])[1];
+const simLabel = s => simKind(s.kind) + (s.who ? " " + s.who : "");
+function simForm(idx){
+  const list = simList().slice();
+  const s0 = idx == null ? {kind:"esim", start: (TRIP.days[0] || {}).date || "", end: (TRIP.days[TRIP.days.length - 1] || {}).date || ""} : list[idx];
+  formDialog(idx == null ? "＋ 新增網路・電話" : "編輯網路・電話", [
+    {k:"kind",label:"類型",type:"select",options:SIM_KIND,half:true},
+    {k:"who",label:"誰的手機",req:true,max:20,ph:"媽媽",half:true},
+    {k:"number",label:"當地手機號碼",type:"tel",max:24,ph:"+82 10-1234-5678（沒有就空白）"},
+    {k:"carrier",label:"電信商・商品",max:30,ph:"KT／Klook",half:true},
+    {k:"plan",label:"方案",max:30,ph:"5 天・每天 2GB",half:true},
+    {k:"start",label:"開始",type:"date",half:true},
+    {k:"end",label:"結束",type:"date",half:true,check:(v, all) => all.start && v < all.start ? "結束日期比開始還早" : ""},
+    {k:"ref",label:"訂單編號",max:30,half:true},
+    {k:"pin",label:"PIN／啟用碼",max:30,half:true},
+    {k:"note",label:"安裝・啟用方式",max:160,ph:"例：出國前先安裝，落地後打開這張卡和數據漫遊；APN 填 ○○"}
+  ], s0, v => {
+    v.uid = idx == null ? "sim" + Date.now().toString(36) : list[idx].uid;
+    if (idx == null) list.push(v); else list[idx] = v;
+    store.set("sims", list); logChange((idx == null ? "新增" : "更新") + "網路・電話：" + simLabel(v)); renderSims();
+  }, idx == null ? null : () => { const gone = list.splice(idx,1)[0]; store.set("sims", list); logChange("刪除網路・電話：" + simLabel(gone)); renderSims(); });
+}
+function renderSims(){
+  const box = $("#sims"); if (!box) return; box.textContent = "";
+  const md = d => d ? d.slice(5).replace("-","/") : "";
+  simList().forEach((s, i) => {
+    const copy = () => { try { navigator.clipboard.writeText(s.number).then(() => toast("已複製號碼"), () => {}); } catch(e){} };
+    box.append(h("article",{class:"box transfer"},
+      h("div",{class:"tf-top"},
+        h("span",{class:"chip",style:"background:" + (SIM_COLOR[s.kind] || "var(--white)")}, simKind(s.kind)),
+        h("span",{class:"tf-when"}, h("b",null, s.who || "")),
+        h("button",{class:"btn tiny",type:"button",onclick:()=>simForm(i)},"✏️ 編輯")),
+      s.number ? h("div",{class:"sim-num"},
+        h("a",{href:"tel:" + s.number.replace(/[^\d+]/g,""),"aria-label":"撥打 " + s.number}, s.number),
+        h("button",{class:"btn tiny",type:"button",onclick:copy},"複製號碼")) : null,
+      h("div",{class:"kv",style:"margin-top:6px"},
+        s.carrier ? h("div",null,h("span",null,"電信商"), s.carrier) : null,
+        s.plan ? h("div",null,h("span",null,"方案"), s.plan) : null,
+        s.start || s.end ? h("div",null,h("span",null,"有效期間"), md(s.start) + (s.end ? "–" + md(s.end) : "")) : null),
+      s.ref || s.pin ? h("div",{class:"small",style:"margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"},
+        s.ref ? ["訂單編號 ", h("span",{class:"code-ref"}, s.ref)] : null, s.pin ? ["PIN ", h("span",{class:"code-ref"}, s.pin)] : null) : null,
+      s.note ? h("p",{class:"note"}, "📶 " + s.note) : null,
+      s.kind === "esim" ? h("p",{class:"small",style:"margin:4px 0 0"}, "小提醒：eSIM 的 QR code 要用「另一支手機」打開這頁給要安裝的手機掃；多數 eSIM 的 QR code 只能用一次，裝好前別刪掉。") : null,
+      attachRow("sim", s, "網路 " + simLabel(s))));
+  });
+  if (!box.children.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有網路・電話資料"));
+  box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>simForm(null)},"＋ 新增 eSIM／SIM 卡／當地門號"));
+}
+
 function renderHotels(){
   const box = $("#hotels"); box.textContent = "";
   const colors = [C.water, C.green, C.yellow, C.coral];
@@ -2181,6 +2300,8 @@ function validateTrip(o){
     flights: (Array.isArray(o.flights) ? o.flights : []).slice(0,6).filter(f => isDate(f.date)).map(f => ({dir:clip(f.dir,6),no:clip(f.no,12),date:f.date,dep:clip(f.dep,5),arr:clip(f.arr,5),from:clip(f.from,4),fromName:clip(f.fromName,30),to:clip(f.to,4),toName:clip(f.toName,30),tz:/^[+-]\d{2}:\d{2}$/.test(f.tz||"")?f.tz:"+08:00"})),
     days,
     transfers: [],
+    sims: [],
+    bags: [],
     routeMap: (o.routeMap && Array.isArray(o.routeMap.nodes)) ? (() => {
       const nodes = o.routeMap.nodes.slice(0,10).filter(n => typeof n.id === "string" && num(n.lat) != null && num(n.lng) != null)
         .map(n => ({id:clip(n.id,20), name:clip(n.name,8), lat:n.lat, lng:n.lng, kind: n.kind === "airport" ? "airport" : "city", far: !!n.far, pos: ["t","b","l","r"].includes(n.pos) ? n.pos : undefined}));
@@ -2318,7 +2439,7 @@ function renderAll(pickDay){
     cur = ti >= 0 ? ti : Math.min(store.get("day", 0) || 0, Math.max(0, TRIP.days.length-1));
   }
   cur = Math.min(cur, Math.max(0, TRIP.days.length-1));
-  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
+  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderBags(); renderSims(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
 }
 function startRender(){ renderAll(true); }
 function modeNote(){ const n = $("#mode-note"); if (n) n.textContent = Sync.enabled ? "全家同步版" : "本機模式（資料只在這支手機）"; }

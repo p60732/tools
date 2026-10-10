@@ -97,6 +97,18 @@ const names = u => u.p.$$eval('#dayview .tl .nm b', a => a.map(x => x.textConten
   await dad.p.reload(); await sleep(400); await sync(dad); await sleep(1200);
   t('爸爸下載到附件', await dad.p.locator('#tickets .att-th img').count() === 1);
 
+  // 媽媽加 eSIM 和行李寄送 → 爸爸看到
+  await mom.p.click('text=＋ 新增 eSIM／SIM 卡／當地門號');
+  await mom.p.fill('#fm-who', '媽媽'); await mom.p.fill('#fm-number', '+82 10-9999-0000'); await mom.p.fill('#fm-plan', '4 天吃到飽');
+  await mom.p.click('#modal button[type=submit]'); await sleep(200);
+  await mom.p.click('text=＋ 新增行李寄送');
+  await mom.p.fill('#fm-from', '仁川機場 T1'); await mom.p.fill('#fm-to', '明洞飯店');
+  await mom.p.click('#modal button[type=submit]'); await sleep(200);
+  await sync(mom); await sync(dad);
+  t('爸爸看到媽媽的當地號碼', (await dad.p.textContent('#sims')).includes('+82 10-9999-0000'));
+  t('爸爸看到行李寄送', (await dad.p.textContent('#bags')).includes('明洞飯店'));
+  const dump2 = await (await fetch(API + '__admin/dump')).json();
+  t('存在通訊表和行李表', dump2['通訊'] === 1 && dump2['行李'] === 1);
   // 全部登出 → 要求重新登入
   await fetch(API + '__admin/logout');
   await sync(mom); await sleep(300);
