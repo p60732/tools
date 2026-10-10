@@ -3,10 +3,23 @@
   "PAGES_URL": "https://p60732.github.io/tools/trip/",
   "GAS_EXEC_URL": "",
   "GAS_DEPLOY_ID": "",
-  "SHEET_ID": "",
+  "SHEET_ID": "14bSdT9CJPT_VWDsXvMMm_aztkXWDe1YRRLJzj_IbrIQ",
   "SHEET_ID_DEV": "",
-  "LOG_SHEET_ID": "",
-  "DRIVE_FOLDER_ID": "",
-  "BACKUP_FOLDER_ID": "",
-  "SCRIPT_PROPERTIES_KEYS": ["SHEET_ID", "LOG_SHEET_ID", "DRIVE_FOLDER_ID", "BACKUP_FOLDER_ID", "SECRET", "PW_SALT", "PW_HASH", "SESSION_VER", "SEQ", "FX_LAST", "NEW_PASSWORD（只在改密碼時暫時存在）"]
+  "LOG_SHEET_ID": "1RY6mEXf58hVtk5J1d4698BpBNgHmyejfBo52rF2S__A",
+  "DRIVE_FOLDER_ID": "1mV9NYyw0jxRWhhPqPz3OX9ql2MNISeBf",
+  "BACKUP_FOLDER_ID": "1u1xfWSC2r5_g4unzyUvwLKSSbX0UZCrk",
+  "SCRIPT_PROPERTIES_KEYS": [
+    "SHEET_ID",
+    "LOG_SHEET_ID",
+    "DRIVE_FOLDER_ID",
+    "BACKUP_FOLDER_ID",
+    "SECRET",
+    "PW_SALT",
+    "PW_HASH",
+    "SESSION_VER",
+    "SEQ",
+    "FX_LAST",
+    "NEW_PASSWORD（只在改密碼時暫時存在）"
+  ],
+  "GAS_SCRIPT_ID": "1ewKIMkB-5lh73wERp1zGNp6TGUkxc6NDNc-tdPoZWiv-FxxQDBA7kV7b"
 }
