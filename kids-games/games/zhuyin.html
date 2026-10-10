@@ -76,6 +76,34 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .burst{position:fixed;pointer-events:none;width:26px;height:26px;z-index:2000;animation:fly .8s ease-out forwards}
 @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.3);opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== 平板:字和按鈕放大;橫放時遊戲畫面在左、提示和按鈕在右 ===== */
+@media (min-width:700px) and (min-height:600px){
+  h1{font-size:36px}
+  .count{font-size:26px;padding:4px 14px}
+  .music{width:56px;height:56px}
+  .banner{font-size:26px;border-radius:18px;padding:8px 16px}
+  .tab{font-size:28px;padding:8px 30px}
+  .action{font-size:42px}
+  .controls .big{font-size:34px}
+  .controls .big.arrow{font-size:48px}
+  .hintline{font-size:26px}
+  .lv,.step{font-size:20px}
+}
+@media (orientation:landscape) and (min-width:900px) and (min-height:600px){
+  .app{max-width:1500px;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,34%);grid-template-rows:auto 1fr auto auto auto 1fr;column-gap:24px;row-gap:18px}
+  .app>header{grid-column:1/-1;grid-row:1}
+  .app>.main{grid-column:1;grid-row:2/-1}
+  .app>.banner{grid-column:2;grid-row:3;min-height:5.5em}
+  .app>.tabs{grid-column:2;grid-row:4}
+  .app>.tabs .tab{flex:1;min-width:0}
+  .app>.controls,.app>.action{grid-column:2;grid-row:5}
+  .app>.controls{flex-direction:column;align-items:stretch;min-height:0}
+  .app>.controls:has(.arrow){flex-direction:row;justify-content:center}
+  .app>.controls .big{max-width:none;flex:none;padding-block:14px}
+  .app>.controls .big.arrow{flex:1}
+  .app>.action{width:100%;min-width:0;padding-block:18px}
+}
 </style>
 </head>
 <body>
