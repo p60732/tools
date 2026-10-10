@@ -1,8 +1,8 @@
 {
   "_說明": "旅遊小筆記的位置清單（唯一來源）。ID 一律從這裡複製，不要用眼睛抄。這裡只放 ID 與網址，不放任何密碼。",
   "PAGES_URL": "https://p60732.github.io/tools/trip/",
-  "GAS_EXEC_URL": "",
-  "GAS_DEPLOY_ID": "",
+  "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbyKvv4G0Z3TqVU_jEzkfMSATA-tHCUSbUfWZgnhTRi2wxEzu9i9V3c7KH13M5z5fwgibg/exec",
+  "GAS_DEPLOY_ID": "AKfycbyKvv4G0Z3TqVU_jEzkfMSATA-tHCUSbUfWZgnhTRi2wxEzu9i9V3c7KH13M5z5fwgibg",
   "SHEET_ID": "14bSdT9CJPT_VWDsXvMMm_aztkXWDe1YRRLJzj_IbrIQ",
   "SHEET_ID_DEV": "",
   "LOG_SHEET_ID": "1RY6mEXf58hVtk5J1d4698BpBNgHmyejfBo52rF2S__A",

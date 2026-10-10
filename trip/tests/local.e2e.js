@@ -4,6 +4,7 @@ const BASE = process.env.BASE || 'http://localhost:8765/trip/';
 let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; console.log('✗', n); } };
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await ctx.addInitScript(() => { if (!localStorage.getItem('tripnote.apiOverride')) localStorage.setItem('tripnote.apiOverride', JSON.stringify('off')); });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(BASE);
   await p.waitForSelector('#gateform', { state: 'visible' });

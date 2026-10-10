@@ -517,7 +517,8 @@ const gstore = {
 let TRIP = null;
 /* ===== 資料層：所有共用資料都是「文件」（旅程／景點／航班／接送／住宿／清單／附件），
    本機一定有一份完整副本（離線可看）；接了後端就同步給全家。 ===== */
-const API_URL = "" || gstore.get("apiOverride", "");   // GAS 網頁應用程式網址（/exec），從 deploy.config.json 複製。空白 = 本機模式
+const API_DEFAULT = "https://script.google.com/macros/s/AKfycbyKvv4G0Z3TqVU_jEzkfMSATA-tHCUSbUfWZgnhTRi2wxEzu9i9V3c7KH13M5z5fwgibg/exec";   // GAS 網頁應用程式網址（/exec），從 deploy.config.json 複製
+const API_URL = (o => o === "off" ? "" : (o || API_DEFAULT))(gstore.get("apiOverride", ""));   // 測試用：apiOverride 指到假後端，"off" = 本機模式
 const SAMPLE_ID = SAMPLE.id;      // 範例行程只存在本機，不會上傳
 const OVER = ["day","origPos","pos","skipped","swap","bookSt","added"];
 const strip = o => { const c = Object.assign({}, o); OVER.forEach(k => delete c[k]); return c; };
