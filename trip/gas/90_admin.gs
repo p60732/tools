@@ -42,6 +42,20 @@ function DANGER_setupTripNotebook() {
   console.log('下一步：到「專案設定 → 指令碼屬性」新增 NEW_PASSWORD（家庭密碼），再執行 APPLY_NEW_PASSWORD。');
 }
 
+/** 改版加了新的資料類型時執行：只補「還沒有」的工作表（含表頭），已經有的完全不碰。網頁請求叫不到這個 */
+function ADD_MISSING_SHEETS() {
+  var ss = SpreadsheetApp.openById(cfg_('SHEET_ID'));
+  var added = [];
+  Object.keys(COLLS).forEach(function (k) {
+    if (ss.getSheetByName(COLLS[k])) return;
+    var sh = ss.insertSheet(COLLS[k]);
+    sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    added.push(COLLS[k]);
+  });
+  console.log(added.length ? '已新增工作表：' + added.join('、') : '工作表都齊了，沒有新增');
+}
+
 /** 設定／更換家庭密碼：先在「指令碼屬性」新增 NEW_PASSWORD，執行後只留雜湊值，明碼會被刪掉，所有人要重新登入 */
 function APPLY_NEW_PASSWORD() {
   var pw = prop_('NEW_PASSWORD');
