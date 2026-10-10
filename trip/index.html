@@ -243,6 +243,11 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .days{padding-top:12px}
 .bookbanner{background:#FBE3B0;border:var(--line);border-radius:var(--rs);padding:8px 12px;margin-bottom:12px;font-size:14px}
 
+.trip-list{display:grid;gap:8px}
+.trip-row{display:flex;gap:10px;align-items:center;border:2.5px solid var(--ink);border-radius:12px;padding:8px 10px;background:var(--paper);flex-wrap:wrap}
+.trip-row.on{background:#FBF3D9}
+.trip-row b{font-weight:400;font-size:16px;display:block}
+
 /* 同步 */
 .sync{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);margin:-4px 0 10px;flex-wrap:wrap}
 .sync i{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:var(--green);display:inline-block}
@@ -376,16 +381,18 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.1.0 · 資料只存在這支手機 · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.2.0 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
   <form class="dlg gate" id="gateform" autocomplete="off">
-    <b style="font-weight:400;font-size:20px">歡迎使用旅遊小筆記</b>
-    <p class="small" style="margin:6px 0 10px">這一版的行程、清單、附件都只存在這支手機裡，不會上傳到任何地方。改行程時會記下是誰改的。</p>
+    <b style="font-weight:400;font-size:20px" id="gate-title">歡迎使用旅遊小筆記</b>
+    <p class="small" style="margin:6px 0 10px" id="gate-desc">行程、清單、附件都存在這支手機裡。改行程時會記下是誰改的。</p>
+    <div class="field" id="pw-field" hidden><label for="pw">家庭密碼</label><input id="pw" type="password" autocomplete="current-password"></div>
     <div class="field"><label for="who">你是誰？</label>
       <select id="who"><option>媽媽</option><option>爸爸</option><option>小孩</option><option>阿公</option><option>阿嬤</option><option>其他</option></select></div>
-    <button class="btn y" style="width:100%" type="submit">開始使用</button>
+    <div class="err" id="pwerr" role="alert"></div>
+    <button class="btn y" style="width:100%" type="submit" id="gate-btn">開始使用</button>
   </form>
 </div>
 
@@ -507,8 +514,317 @@ const gstore = {
   get(k, d){ try { const v = localStorage.getItem("tripnote." + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
   set(k, v){ try { if (v == null) localStorage.removeItem("tripnote." + k); else localStorage.setItem("tripnote." + k, JSON.stringify(v)); } catch(e){} }
 };
-let TRIP = gstore.get("imported", null) || SAMPLE;
-const store = { get:(k,d)=>gstore.get(TRIP.id + "." + k, d), set:(k,v)=>gstore.set(TRIP.id + "." + k, v) };
+let TRIP = null;
+/* ===== 資料層：所有共用資料都是「文件」（旅程／景點／航班／接送／住宿／清單／附件），
+   本機一定有一份完整副本（離線可看）；接了後端就同步給全家。 ===== */
+const API_URL = "" || gstore.get("apiOverride", "");   // GAS 網頁應用程式網址（/exec），從 deploy.config.json 複製。空白 = 本機模式
+const SAMPLE_ID = SAMPLE.id;      // 範例行程只存在本機，不會上傳
+const OVER = ["day","origPos","pos","skipped","swap","bookSt","added"];
+const strip = o => { const c = Object.assign({}, o); OVER.forEach(k => delete c[k]); return c; };
+const jeq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const rid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const hk = s => { let x = 5381; for (const c of String(s)) x = ((x << 5) + x + c.codePointAt(0)) >>> 0; return x.toString(36); };
+
+const DB = (() => {
+  let tripId = null, docs = {};
+  const K = id => "db." + id;
+  const save = () => gstore.set(K(tripId), docs);
+  return {
+    get tripId(){ return tripId; },
+    open(id){ tripId = id; docs = gstore.get(K(id), {}) || {}; },
+    exists: id => !!gstore.get(K(id), null),
+    drop: id => gstore.set(K(id), null),
+    get: (coll, key) => docs[coll + "|" + key] || null,
+    all: coll => Object.values(docs).filter(d => d.coll === coll),
+    live: coll => Object.values(docs).filter(d => d.coll === coll && !d.deleted),
+    /* 自己改的：先改本機，再排進待送佇列 */
+    put(coll, key, data, opt = {}){
+      if (Trips.readOnly(tripId) && !opt.system){ toast("這趟旅程已經結束，目前是唯讀（到「工具 → 我的旅程」可以解鎖）"); return false; }
+      const k = coll + "|" + key, old = docs[k];
+      if (old && !old.deleted && !opt.deleted && jeq(old.data, data)) return false;
+      docs[k] = {coll, key, data, rev: old ? old.rev : 0, by: me(), at: Date.now(), deleted: !!opt.deleted};
+      save();
+      if (!opt.localOnly) Sync.enqueue(tripId, coll, key);
+      return true;
+    },
+    /* 伺服器來的：直接覆蓋本機（呼叫端負責避開還沒送出的修改） */
+    applyServer(d){
+      const k = d.coll + "|" + d.key;
+      docs[k] = {coll: d.coll, key: d.key, data: d.data, rev: d.rev, by: d.by, at: d.at, deleted: !!d.deleted};
+      save();
+    },
+    setRev(coll, key, rev){ const d = docs[coll + "|" + key]; if (d){ d.rev = rev; save(); } },
+    raw: () => docs,
+    replaceAll(id, all){ tripId = id; docs = all; save(); }
+  };
+})();
+
+/* ---- 旅程清單（多趟旅程切換；舊旅程預設唯讀） ---- */
+const Trips = {
+  list(){ return gstore.get("trips", {}) || {}; },
+  upsert(id, info){ const l = this.list(); l[id] = Object.assign({}, l[id] || {}, info); gstore.set("trips", l); },
+  remove(id){ const l = this.list(); delete l[id]; gstore.set("trips", l); },
+  current(){ return gstore.get("current", null); },
+  setCurrent(id){ gstore.set("current", id); },
+  ended(id){ const t = this.list()[id]; if (!t || !t.end) return false; const today = new Date().toLocaleDateString("sv-SE"); return t.end < today; },
+  readOnly(id){ return id !== SAMPLE_ID && this.ended(id) && !gstore.get("unlock." + id, false); }
+};
+function tripInfoFromMeta(id, m, extra){
+  const days = (m && m.days) || [];
+  return Object.assign({title: (m && m.title) || "旅程", start: days[0] && days[0].date, end: days.length && days[days.length-1].date}, extra || {});
+}
+
+/* ---- 把一份完整行程（AI 匯入、範例、v0.1 搬移）拆成文件 ---- */
+function importTrip(trip, opt = {}){
+  const id = opt.keepId && trip.id ? trip.id : (opt.id || rid("t"));
+  DB.replaceAll(id, {});
+  const sys = {system: true, localOnly: !!opt.localOnly};
+  const meta = {title: trip.title || "我們的旅行", who: trip.who || "", lang: trip.lang || "en", askText: trip.askText || "",
+    scene: trip.scene || null, routeMap: trip.routeMap || null, rules: trip.rules || [], rulesCheckedAt: trip.rulesCheckedAt || "",
+    todos: trip.todos || [], days: (trip.days || []).map(d => ({date: d.date, title: d.title || ""}))};
+  DB.put("trip", "meta", meta, sys);
+  const seen = new Set();
+  (trip.days || []).forEach((d, i) => (d.stops || []).forEach((st, j) => {
+    let sid = st.id && !seen.has(st.id) ? st.id : rid("s");
+    seen.add(sid);
+    DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}), sys);
+  }));
+  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers]].forEach(([coll, list]) =>
+    (list || []).forEach(x => { const uid = x.uid || rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid}), sys); }));
+  Trips.upsert(id, tripInfoFromMeta(id, meta, {local: id === SAMPLE_ID || !!opt.localOnly}));
+  return id;
+}
+
+/* ---- 文件 → 畫面要用的 TRIP 物件 ---- */
+const byPos = (a, b) => (a.pos - b.pos) || (a.origPos - b.origPos);
+function materialize(){
+  const meta = DB.get("trip", "meta");
+  if (!meta) return null;
+  const m = meta.data, stops = DB.live("stop").map(d => d.data);
+  const days = (m.days || []).map((d, i) => ({date: d.date, title: d.title,
+    stops: stops.filter(x => x.day === i && !x.added).sort((a, b) => a.origPos - b.origPos).map(strip)}));
+  return Object.assign({}, m, {id: DB.tripId, days});
+}
+
+/* ---- 共用資料的讀寫轉接：畫面程式照舊用 store.get/set，底下換成文件 ---- */
+const sortBy = f => (a, b) => String(f(a)).localeCompare(String(f(b)));
+function listAdapter(coll, sortKey){
+  return {
+    get: () => DB.live(coll).map(d => JSON.parse(JSON.stringify(d.data))).sort(sortBy(sortKey)),
+    set(list){
+      const keep = new Set();
+      list.forEach(x => { if (!x.uid) x.uid = rid("u"); keep.add(x.uid); DB.put(coll, x.uid, x); });
+      DB.live(coll).forEach(d => { if (!keep.has(d.key)) DB.put(coll, d.key, d.data, {deleted: true}); });
+    }
+  };
+}
+const SHARED = {
+  flights: listAdapter("flight", x => x.date + x.dep),
+  hotels: listAdapter("hotel", x => x.inDate || x.in || ""),
+  transfers: listAdapter("transfer", x => x.date + x.time),
+  done: {
+    get(){ const o = {}; DB.live("todo").filter(d => d.key.startsWith("d_") && d.data.done).forEach(d => o[d.data.k] = d.data.done); return o; },
+    set(map){
+      const old = this.get();
+      new Set(Object.keys(old).concat(Object.keys(map))).forEach(k => { if (old[k] !== map[k]) DB.put("todo", "d_" + hk(k), {k, done: map[k] || null}); });
+    }
+  },
+  extra: {
+    get(){ const o = {}; DB.live("todo").filter(d => d.key.startsWith("x_")).sort((a, b) => a.data.n - b.data.n).forEach(d => (o[d.data.g] = o[d.data.g] || []).push(d.data.item)); return o; },
+    set(obj){
+      const old = this.get();
+      Object.keys(obj).forEach(g => (obj[g] || []).forEach((item, i) => { if (!old[g] || i >= old[g].length) DB.put("todo", rid("x_"), {g: +g, item, n: Date.now() + i}); }));
+    }
+  },
+  edits: {
+    get(){
+      const e = {order:{}, skip:{}, swap:{}, added:{}, book:{}};
+      const stops = DB.live("stop").map(d => d.data);
+      (TRIP ? TRIP.days : []).forEach((d, i) => {
+        const ds = stops.filter(x => x.day === i).sort(byPos), added = ds.filter(x => x.added);
+        if (added.length) e.added[i] = added.map(strip).map(x => Object.assign(x, {added: true}));
+        if (added.length || ds.some(x => x.pos !== x.origPos)) e.order[i] = ds.map(x => x.id);
+        ds.forEach(x => { if (x.skipped) e.skip[x.id] = true; if (x.swap != null) e.swap[x.id] = x.swap; if (x.bookSt) e.book[x.id] = x.bookSt; });
+      });
+      return e;
+    },
+    set(e){
+      const docsNow = DB.live("stop");
+      TRIP.days.forEach((d, i) => {
+        const mine = docsNow.filter(x => x.data.day === i);
+        const addedNew = (e.added[i] || []);
+        const addedIds = new Set(addedNew.map(x => x.id));
+        const ids = e.order[i] || mine.filter(x => !x.data.added).sort((a, b) => a.data.origPos - b.data.origPos).map(x => x.key).concat(addedNew.map(x => x.id));
+        const posOf = id => { const p = ids.indexOf(id); return p < 0 ? 999 : p; };
+        mine.forEach(doc => {
+          const x = doc.data;
+          if (x.added && !addedIds.has(x.id)){ DB.put("stop", doc.key, x, {deleted: true}); return; }
+          const nx = Object.assign({}, x, {pos: x.added ? posOf(x.id) : (e.order[i] ? posOf(x.id) : x.origPos), skipped: !!e.skip[x.id], swap: e.swap[x.id] != null ? e.swap[x.id] : null, bookSt: e.book[x.id] || null});
+          DB.put("stop", doc.key, nx);
+        });
+        addedNew.forEach((x, n) => {
+          if (DB.get("stop", x.id) && !DB.get("stop", x.id).deleted) return;
+          DB.put("stop", x.id, Object.assign({}, strip(x), {id: x.id, day: i, origPos: 1000 + n, pos: posOf(x.id), skipped: false, swap: null, bookSt: e.book[x.id] || null, added: true}));
+        });
+      });
+    }
+  }
+};
+const store = {
+  get: (k, d) => SHARED[k] ? SHARED[k].get() : gstore.get(TRIP.id + "." + k, d),
+  set: (k, v) => SHARED[k] ? SHARED[k].set(v) : gstore.set(TRIP.id + "." + k, v)
+};
+
+/* ---- 同步：待送佇列、拉取、衝突 ---- */
+const Sync = {
+  get enabled(){ return !!API_URL; },
+  token: null, busy: false, lastOk: 0, error: "", timer: null, seqKey: id => "seq." + id,
+  queue(){ return gstore.get("queue", []) || []; },
+  setQueue(q){ gstore.set("queue", q); },
+  enqueue(tid, coll, key){
+    if (!this.enabled || tid === SAMPLE_ID || (Trips.list()[tid] || {}).local) return;
+    const q = this.queue().filter(o => !(o.tripId === tid && o.coll === coll && o.key === key && !o.sending));
+    q.push({tripId: tid, coll, key, t: Date.now()});
+    this.setQueue(q); this.kick();
+  },
+  pendingFor(tid){ return this.queue().filter(o => o.tripId === tid); },
+  kick(delay = 700){ clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), delay); },
+  async call(action, payload, retry){
+    const body = JSON.stringify(Object.assign({action}, payload, this.token ? {token: this.token} : {}));
+    let res;
+    try { res = await fetch(API_URL, {method: "POST", headers: {"Content-Type": "text/plain;charset=utf-8"}, body}); }
+    catch(e){ throw Object.assign(new Error("連不上伺服器"), {net: true}); }
+    let j; try { j = await res.json(); } catch(e){ throw Object.assign(new Error("伺服器回應看不懂"), {net: true}); }
+    if (j && j.health){                       // 換版那幾秒會拿到健康檢查頁：讀取重試一次，寫入明確報錯
+      if (retry) return this.call(action, payload, false);
+      throw Object.assign(new Error("伺服器正在更新，請稍後再試"), {net: true});
+    }
+    if (!j.success){
+      if (j.code === "auth"){ this.token = null; gstore.set("token", null); showLogin(j.error); }
+      throw new Error(j.error || "伺服器出了點問題");
+    }
+    return j.data;
+  },
+  run(){
+    if (!this.enabled || !this.token || !navigator.onLine) { syncPaint(); return Promise.resolve(); }
+    if (this.busy){ this.again = true; return this.current; }   // 正在同步：等這一輪結束後再跑一輪
+    this.busy = true; syncPaint();
+    this.current = (async () => {
+      do {
+        this.again = false;
+        try {
+          await this.uploadPending();
+          await this.push();
+          await this.pull();
+          this.lastOk = Date.now(); this.error = "";
+        } catch(e){ this.error = e.message; break; }
+      } while (this.again && this.token && navigator.onLine);
+      this.busy = false; syncPaint();
+    })();
+    return this.current;
+  },
+  async push(){
+    let q = this.queue().filter(o => o.tripId === DB.tripId);
+    if (!q.length) return;
+    q = q.slice(0, 150);
+    const msgs = gstore.get("opmsg", {}) || {};
+    const ops = q.map(o => { const d = DB.get(o.coll, o.key); return {coll: o.coll, tripId: o.tripId, key: o.key, data: d ? d.data : null, baseRev: d ? d.rev : 0, deleted: d ? !!d.deleted : true, force: !!o.force, msg: msgs[o.t] || undefined}; });
+    const sentKeys = new Set(q.map(o => o.coll + "|" + o.key + "|" + o.t));
+    const res = await this.call("push", {ops});
+    const conflicts = [];
+    res.results.forEach(r => {
+      const o = q[r.i];
+      if (r.status === "ok") DB.setRev(o.coll, o.key, r.rev);
+      else conflicts.push({op: o, server: r.server, mine: DB.get(o.coll, o.key)});
+    });
+    const rest = this.queue().filter(o => !sentKeys.has(o.coll + "|" + o.key + "|" + o.t));
+    this.setQueue(rest);
+    q.forEach(o => delete msgs[o.t]); gstore.set("opmsg", msgs);
+    for (const c of conflicts) await resolveConflict(c);
+    if (conflicts.length) await this.push();
+  },
+  async pull(full){
+    const since = full ? 0 : (gstore.get(this.seqKey(DB.tripId), 0) || 0);
+    const res = await this.call("pull", {tripId: DB.tripId === SAMPLE_ID ? "" : DB.tripId, since}, true);
+    const waiting = new Set(this.pendingFor(DB.tripId).map(o => o.coll + "|" + o.key));
+    let changed = false, tripsChanged = false;
+    res.docs.forEach(d => {
+      if (d.coll === "trip"){ Trips.upsert(d.tripId, tripInfoFromMeta(d.tripId, d.data, {local: false, deleted: !!d.deleted})); tripsChanged = true; }
+      if (d.tripId !== DB.tripId || waiting.has(d.coll + "|" + d.key)) return;
+      const cur = DB.get(d.coll, d.key);
+      if (!cur || cur.rev !== d.rev || cur.deleted !== !!d.deleted){ DB.applyServer(d); changed = true; }
+    });
+    if (DB.tripId !== SAMPLE_ID) gstore.set(this.seqKey(DB.tripId), res.seq);
+    if (res.log && res.log.length) store.set("log", res.log);
+    if (changed) refreshAfterRemote();
+    else if (tripsChanged && TRIP) renderTools();
+    return res;
+  },
+  async uploadPending(){
+    for (const d of DB.live("file")){
+      if (d.data.driveId) continue;
+      const rec = await FileDB.get(d.key).catch(() => null);
+      if (!rec || !rec.blob) continue;
+      const b64 = await blobToB64(rec.blob);
+      const r = await this.call("upload", {tripId: DB.tripId, fileId: d.key, name: d.data.name, type: d.data.type, b64});
+      DB.put("file", d.key, Object.assign({}, d.data, {driveId: r.driveId}), {system: true});
+    }
+  }
+};
+function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
+function b64ToBlob(b64, type){ const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type}); }
+
+const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件"};
+function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || "") : ""; }
+function resolveConflict(c){
+  return new Promise(done => {
+    const s = c.server, mine = c.mine;
+    if (!s){ Sync.setQueue(Sync.queue().filter(o => !(o.coll === c.op.coll && o.key === c.op.key))); return done(); }
+    const label = COLL_NAME[c.op.coll] + (docLabel(c.op.coll, s.data || (mine && mine.data)) ? "「" + docLabel(c.op.coll, s.data || mine.data) + "」" : "");
+    const take = which => {
+      $("#modal").hidden = true;
+      if (which === "theirs"){
+        Sync.setQueue(Sync.queue().filter(o => !(o.coll === c.op.coll && o.key === c.op.key)));
+        DB.applyServer(s); refreshAfterRemote();
+      } else {
+        DB.setRev(c.op.coll, c.op.key, s.rev);
+        const q = Sync.queue(); q.push({tripId: c.op.tripId, coll: c.op.coll, key: c.op.key, t: Date.now(), force: true}); Sync.setQueue(q);
+      }
+      done();
+    };
+    openModal(b => b.append(h("div",null,
+      h("b",{style:"font-weight:400;font-size:20px"},"同時有人改了"),
+      h("p",{style:"margin:8px 0"}, s.by + " 在 " + ago(s.at) + "也改了" + label + (s.deleted ? "（把它刪掉了）" : "") + "。要保留誰的版本？"),
+      h("div",{class:"acts"},
+        h("button",{class:"btn y",type:"button",onclick:()=>take("theirs")},"用" + s.by + "的"),
+        h("button",{class:"btn",type:"button",onclick:()=>take("mine")},"用我的")))));
+    $("#modal").onclick = null;
+  });
+}
+function refreshAfterRemote(){
+  TRIP = materialize() || TRIP;
+  if (document.querySelector(".tl.sorting")) { setTimeout(refreshAfterRemote, 1500); return; }   // 正在拖曳就等放開再更新
+  const y = scrollY; renderAll(false); scrollTo({top: y, behavior: "instant"});
+}
+
+/* ---- v0.1（只有本機）資料搬到新格式 ---- */
+async function migrateV01(){
+  if (gstore.get("dbver", 0) >= 2) return;
+  const old = gstore.get("imported", null);
+  const base = old || SAMPLE;
+  const oldStore = k => gstore.get(base.id + "." + k, null);
+  const id = importTrip(base, {keepId: true, localOnly: true});
+  DB.open(id); TRIP = materialize();
+  const ed = oldStore("edits"), f = oldStore("flights"), ho = oldStore("hotels"), tf = oldStore("transfers"), dn = oldStore("done"), ex = oldStore("extra");
+  if (ed) SHARED.edits.set(Object.assign({order:{}, skip:{}, swap:{}, added:{}, book:{}}, ed));
+  if (f) SHARED.flights.set(f); if (ho) SHARED.hotels.set(ho); if (tf) SHARED.transfers.set(tf);
+  if (dn) SHARED.done.set(dn); if (ex) SHARED.extra.set(ex);
+  try { (await FileDB.all()).forEach(r => { const tid = String(r.owner).split(":")[1]; if (tid === id && !DB.get("file", r.id)) DB.put("file", r.id, {owner: r.owner, label: r.label, name: r.name, type: r.type, by: r.by, added: r.added}, {system: true}); }); } catch(e){}
+  if (old) Trips.upsert(id, {local: true, migrated: true});
+  Trips.setCurrent(id);
+  gstore.set("dbver", 2);
+}
+
 const WEEK = "日一二三四五六";
 function wd(dateStr){ return new Date(dateStr + "T12:00:00Z").getUTCDay(); }
 const MOVE = {train:["🚃","train","電車"],walk:["🚶","walk","步行"],bus:["🚌","bus","巴士"],taxi:["🚕","taxi","計程車"],car:["🚗","taxi","自駕"],plane:["✈️","plane","飛機"],boat:["⛴","train","船"]};
@@ -978,31 +1294,74 @@ function renderScene(){
     pk.append(row);
   }
 }
-/* ===== 身分（這一版不用密碼：資料只在本機） ===== */
+/* ===== 身分：本機模式只問你是誰；接了後端要輸入家庭密碼 ===== */
 function me(){ return gstore.get("who", "我"); }
+let gateNext = null;
+function showLogin(msg){
+  const g = $("#gate"); g.hidden = false;
+  $("#pw-field").hidden = !Sync.enabled;
+  $("#gate-title").textContent = Sync.enabled ? "輸入家庭密碼" : "歡迎使用旅遊小筆記";
+  $("#gate-desc").textContent = Sync.enabled ? "輸入家裡約好的密碼，這支手機會記住 30 天。登入後全家看到同一份行程，沒網路時也能看。" : "行程、清單、附件都存在這支手機裡。改行程時會記下是誰改的。";
+  $("#gate-btn").textContent = Sync.enabled ? "登入" : "開始使用";
+  $("#pwerr").textContent = msg || "";
+  const w = gstore.get("who", null); if (w) $("#who").value = w;
+  (Sync.enabled ? $("#pw") : $("#who")).focus();
+}
 function gate(next){
-  if (gstore.get("who", null)) return next();
-  $("#gate").hidden = false;
-  $("#gateform").addEventListener("submit", e => { e.preventDefault(); gstore.set("who", $("#who").value); $("#gate").hidden = true; next(); });
+  gateNext = next;
+  $("#gateform").addEventListener("submit", async e => {
+    e.preventDefault();
+    const who = $("#who").value;
+    if (Sync.enabled){
+      const btn = $("#gate-btn"); btn.disabled = true; $("#pwerr").textContent = "";
+      try {
+        const r = await Sync.call("login", {password: $("#pw").value, who});
+        Sync.token = r.token; gstore.set("token", r.token); gstore.set("who", r.who);
+        $("#pw").value = ""; $("#gate").hidden = true;
+        if (gateNext){ const n = gateNext; gateNext = null; n(); } else Sync.run();
+      } catch(err){ $("#pwerr").textContent = err.message; }
+      btn.disabled = false;
+    } else {
+      gstore.set("who", who); $("#gate").hidden = true;
+      if (gateNext){ const n = gateNext; gateNext = null; n(); }
+    }
+  });
+  Sync.token = gstore.get("token", null);
+  if (!gstore.get("who", null) || (Sync.enabled && !Sync.token)) showLogin();
+  else { gateNext = null; next(); }
 }
 
-/* ===== 同步（原型：模擬；正式版送到後端，沒網路先排隊） ===== */
 let lastSync = Date.now();
-function pending(){ return store.get("queue", []); }
+function pending(){ return Sync.enabled && TRIP ? Sync.pendingFor(TRIP.id) : []; }
 function logChange(text){
   const item = {who: me(), text, at: Date.now()};
-  const log = store.get("log", []); log.unshift(item); store.set("log", log.slice(0,30));
-  lastSync = Date.now(); toast("已存在這支手機 ✓");
+  const log = gstore.get(TRIP.id + ".log", []) || []; log.unshift(item); gstore.set(TRIP.id + ".log", log.slice(0, 30));
+  const q = Sync.queue().filter(o => o.tripId === TRIP.id && Date.now() - o.t < 1500);
+  if (q.length){ const msgs = gstore.get("opmsg", {}) || {}; msgs[q[q.length-1].t] = text.slice(0, 120); gstore.set("opmsg", msgs); }
+  lastSync = Date.now();
+  const shared = Sync.enabled && TRIP.id !== SAMPLE_ID && !(Trips.list()[TRIP.id] || {}).local;
+  toast(!shared ? "已存在這支手機 ✓" : navigator.onLine ? "已存，正在同步給全家…" : "離線中，先存在手機，有網路會自動同步");
+  syncPaint();
 }
-function flush(){ return; const q = pending(); if (q.length && navigator.onLine){ store.set("queue", []); lastSync = Date.now(); toast("剛剛把 " + q.length + " 筆修改同步給全家 ✓"); renderDay(false); } }
-function ago(t){ const m = Math.round((Date.now()-t)/6e4); return m < 1 ? "剛剛" : m < 60 ? m + " 分鐘前" : Math.round(m/60) + " 小時前"; }
+function flush(){ Sync.kick(100); }
+function ago(t){ const m = Math.round((Date.now()-t)/6e4); return m < 1 ? "剛剛" : m < 60 ? m + " 分鐘前" : m < 1440 ? Math.round(m/60) + " 小時前" : Math.round(m/1440) + " 天前"; }
+function syncState(){
+  const info = Trips.list()[TRIP.id] || {};
+  if (!Sync.enabled) return {cls: "", text: "存在這支手機"};
+  if (TRIP.id === SAMPLE_ID) return {cls: "", text: "範例行程只存在這支手機"};
+  if (info.local) return {cls: "wait", text: "這趟還沒上傳給全家（到「工具 → 我的旅程」上傳）"};
+  if (!Sync.token) return {cls: "wait", text: "登入過期，請重新輸入家庭密碼"};
+  const q = pending().length;
+  if (q) return {cls: "wait", text: (navigator.onLine ? (Sync.busy ? "同步中…" : "還有 " + q + " 筆修改等同步") : "離線中・" + q + " 筆修改等網路")};
+  if (Sync.error) return {cls: "wait", text: "同步失敗：" + Sync.error};
+  return {cls: "", text: "全家同步・" + (Sync.lastOk ? ago(Sync.lastOk) : "連線中…")};
+}
 function syncLine(){
-  const q = pending(), log = store.get("log", []);
-  const last = log[0];
-  return h("div",{class:"sync" + (q.length ? " wait" : ""),role:"status"}, h("i"),
-    "存在這支手機（全家同步在下一版）",
+  const s = syncState(), log = gstore.get(TRIP.id + ".log", []) || [], last = log[0];
+  return h("div",{class:"sync " + s.cls,role:"status"}, h("i"), s.text,
     last ? h("span",null,"　最近：" + last.who + " " + last.text + "（" + ago(last.at) + "）") : null);
 }
+function syncPaint(){ if (!TRIP) return; const v = document.querySelector(".sync"); if (v) v.replaceWith(syncLine()); net(); }
 
 /* ===== 航班 ===== */
 function planeIcon(){ const g = s("svg",{width:28,height:28,viewBox:"0 0 24 24"}); g.append(s("path",{d:"M2 13l8-2 4-8 2 1-2 7 6 1 1 2-7 1-2 6-2-1 0-5-8 0z",fill:C.yellow,stroke:C.ink,"stroke-width":"1.8","stroke-linejoin":"round"})); return g; }
@@ -1111,7 +1470,7 @@ function addStopDialog(){
       parsed = parseGmaps(url.value);
       if (!parsed){ hint.className="hint"; hint.textContent="貼上 Google 地圖的分享連結，店名和位置會自動帶出；也可以直接打店名"; return; }
       if (parsed.err){ hint.className="hint"; hint.textContent=parsed.err; return; }
-      if (parsed.short){ hint.className="hint"; hint.textContent="這是短網址（maps.app.goo.gl）。正式版會由後端自動展開帶出店名；原型請先手動填店名"; return; }
+      if (parsed.short){ hint.className="hint"; expandShort(url, hint); return; }
       if (parsed.name && !name.value) name.value = parsed.name;
       hint.className = "hint ok"; hint.textContent = "✓ 讀到了：" + (parsed.name || "（沒有店名，請手動填）") + (hasXY(parsed) ? "・已取得位置，會出現在小地圖" : "・沒有座標，導航會用店名搜尋");
     }});
@@ -1341,6 +1700,7 @@ const FileDB = (() => {
   const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction("files", mode); const out = fn(t.objectStore("files")); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); };
   return {
     put: rec => tx("readwrite", s => s.put(rec)),
+    get: id => tx("readonly", s => s.get(id)),
     del: id => tx("readwrite", s => s.delete(id)),
     byOwner: owner => tx("readonly", s => s.index("owner").getAll(owner)),
     all: () => tx("readonly", s => s.getAll())
@@ -1361,6 +1721,28 @@ async function shrinkImage(file){
 }
 const urlCache = new Map();
 const blobUrl = rec => { if (!urlCache.has(rec.id)) urlCache.set(rec.id, URL.createObjectURL(rec.blob)); return urlCache.get(rec.id); };
+/* 附件清單來自「附件」文件；圖檔本身先找手機快取，沒有就向後端下載後存起來 */
+const fileDocs = owner => DB.live("file").filter(d => !owner || d.data.owner === owner).map(d => Object.assign({id: d.key}, d.data)).sort((a, b) => a.added - b.added);
+async function fileBlob(meta){
+  const rec = await FileDB.get(meta.id).catch(() => null);
+  if (rec && rec.blob) return rec;
+  if (!Sync.enabled || !Sync.token || !meta.driveId || !navigator.onLine) return null;
+  try {
+    const r = await Sync.call("getFile", {driveId: meta.driveId}, true);
+    const full = Object.assign({}, meta, {blob: b64ToBlob(r.b64, r.type || meta.type)});
+    await FileDB.put(full); return full;
+  } catch(e){ return null; }
+}
+function thumb(meta, big, onChange){
+  const isPdf = /pdf/.test(meta.type);
+  const btn = h("button",{type:"button",class:"att-th" + (big ? " big" : "") + (isPdf ? " pdf" : ""),"aria-label":"打開附件 " + meta.name}, isPdf ? h("span",null,"PDF") : h("span",{class:"small"},"⏳"));
+  fileBlob(meta).then(rec => {
+    if (!rec){ if (!isPdf) btn.firstChild.textContent = "☁️"; btn.title = "還沒下載（有網路時會自動抓）"; return; }
+    if (!isPdf){ btn.textContent = ""; btn.append(h("img",{src:blobUrl(rec),alt:""})); }
+    btn.onclick = () => openViewer(rec, onChange);
+  });
+  return btn;
+}
 function openViewer(rec, onChange){
   let armed = false;
   openModal(b => {
@@ -1374,32 +1756,33 @@ function openViewer(rec, onChange){
         h("button",{class:"btn y",type:"button","data-close":""},"關閉"),
         h("button",{class:"btn c",type:"button",style:"margin-left:auto",onclick:async e=>{
           if (!armed){ armed = true; e.currentTarget.textContent = "確定刪除？"; return; }
-          await FileDB.del(rec.id); logChange("刪除附件「" + rec.name + "」"); $("#modal").hidden = true; onChange && onChange();
+          const d = DB.get("file", rec.id);
+          if (DB.put("file", rec.id, d ? d.data : {}, {deleted: true}) !== false){ await FileDB.del(rec.id).catch(() => {}); logChange("刪除附件「" + rec.name + "」"); }
+          $("#modal").hidden = true; onChange && onChange();
         }},"刪除"))));
   });
 }
 function attachRow(type, item, label){
   const key = ownerKey(type, item);
   const row = h("div",{class:"att"});
-  const fill = async () => {
+  const fill = () => {
     row.textContent = "";
-    let recs = [];
-    try { recs = await FileDB.byOwner(key); } catch(e){}
-    recs.sort((a,b) => a.added - b.added).forEach(rec => {
-      const isPdf = /pdf/.test(rec.type);
-      row.append(h("button",{type:"button",class:"att-th" + (isPdf ? " pdf" : ""),"aria-label":"打開附件 " + rec.name,onclick:()=>openViewer(rec, () => { fill(); renderTickets(); })},
-        isPdf ? h("span",null,"PDF") : h("img",{src:blobUrl(rec),alt:""})));
-    });
+    const recs = fileDocs(key);
+    recs.forEach(meta => row.append(thumb(meta, false, () => { fill(); renderTickets(); })));
     const inp = h("input",{type:"file",accept:"image/*,application/pdf",multiple:true,class:"sr",onchange:async e=>{
       const room = ATT_MAX - recs.length;
       if (e.target.files.length > room) toast("每張卡片最多 " + ATT_MAX + " 個附件，這次只加前 " + room + " 個");
       const files = [...e.target.files].slice(0, Math.max(0, room));
+      let n = 0;
       for (const f of files){
         if (f.size > 15e6){ toast("「" + f.name + "」太大了（上限 15MB）"); continue; }
         const blob = await shrinkImage(f);
-        await FileDB.put({id:"f" + Date.now().toString(36) + Math.random().toString(36).slice(2,6), owner:key, label, name:f.name || "截圖", type:blob.type || f.type, blob, added:Date.now(), by:me()});
+        const meta = {owner: key, label, name: f.name || "截圖", type: blob.type || f.type, added: Date.now() + n, by: me()};
+        const id = rid("f");
+        if (DB.put("file", id, meta) === false) break;
+        await FileDB.put(Object.assign({id, blob}, meta)); n++;
       }
-      if (files.length){ logChange("在「" + label + "」加了 " + files.length + " 個附件"); fill(); renderTickets(); }
+      if (n){ logChange("在「" + label + "」加了 " + n + " 個附件"); fill(); renderTickets(); }
     }});
     if (recs.length >= ATT_MAX) row.append(h("span",{class:"small"},"已滿 " + ATT_MAX + " 個（刪掉一個才能再加）"));
     else row.append(h("label",{class:"att-add"}, inp, recs.length ? "＋ " + recs.length + "/" + ATT_MAX : "📎 加 QR／截圖"));
@@ -1407,17 +1790,16 @@ function attachRow(type, item, label){
   fill();
   return row;
 }
-async function renderTickets(){
+function renderTickets(){
   const box = $("#tickets"); if (!box) return;
-  let recs = [];
-  try { recs = (await FileDB.all()).filter(r => r.owner.split(":")[1] === TRIP.id); } catch(e){}
+  const recs = fileDocs(null);
   box.textContent = "";
   if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿或接送卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
   const groups = {};
-  recs.sort((a,b) => a.added - b.added).forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
-  Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"},
-    h("b",null, lb),
-    h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(rec => { const isPdf = /pdf/.test(rec.type); return h("button",{type:"button",class:"att-th big" + (isPdf ? " pdf" : ""),"aria-label":"打開 " + rec.name,onclick:()=>openViewer(rec, () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); })}, isPdf ? h("span",null,"PDF") : h("img",{src:blobUrl(rec),alt:""})); })))));
+  recs.forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
+  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); };
+  Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"}, h("b",null, lb),
+    h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again))))));
 }
 
 /* ===== 航班、住宿：可新增／編輯／刪除（正式版存後端，全家同步） ===== */
@@ -1507,7 +1889,7 @@ function hotelForm(idx){
       const p = parseGmaps(val);
       if (!p){ hint.className="hint"; hint.textContent="貼上 Google 地圖連結，名稱和位置會自動帶出"; return; }
       if (p.err){ hint.className="hint"; hint.textContent=p.err; return; }
-      if (p.short){ hint.className="hint"; hint.textContent="短網址正式版會由後端展開；原型請手動填名稱"; return; }
+      if (p.short){ hint.className="hint"; expandShort(ins.map, hint); return; }
       if (p.name && !ins.name.value) ins.name.value = p.name;
       if (p.name && !ins.local.value) ins.local.value = p.name;
       geo = hasXY(p) ? {lat:p.lat, lng:p.lng} : geo;
@@ -1642,8 +2024,14 @@ let fxFrom = null;
 function fxState(){ const s = store.get("fx", null); return s ? Object.assign({}, FX_DEF, s, {rates:Object.assign({}, FX_DEF.rates, s.rates||{}), cmp:Object.assign({}, FX_DEF.cmp, s.cmp||{})}) : JSON.parse(JSON.stringify(FX_DEF)); }
 const twdPer = (st, c) => c === "TWD" ? 1 : st.rates[c];
 const fmt = (v, c) => isFinite(v) ? v.toLocaleString("zh-TW", {maximumFractionDigits: FX_INFO[c].d, minimumFractionDigits: FX_INFO[c].d}) : "—";
+let fxFetching = false;
 function renderFx(){
   const box = $("#fxbox"); box.textContent = "";
+  const today = new Date().toLocaleDateString("sv-SE");
+  if (Sync.enabled && Sync.token && navigator.onLine && !fxFetching && fxState().date !== today && fxState().src !== "手動輸入"){
+    fxFetching = true;
+    Sync.call("fx", {}, true).then(r => { const s = fxState(); s.rates = Object.assign({}, s.rates, r.rates); s.date = r.date; s.src = r.src; store.set("fx", s); renderFx(); }).catch(() => {}).finally(() => { fxFetching = false; });
+  }
   const st = fxState(); fxFrom = fxFrom || tripCur();
   const curs = ["TWD", tripCur()].concat(["KRW","JPY","USD"].filter(c => c !== tripCur()));
   const amt = h("input",{id:"fx-amt",type:"text",inputmode:"decimal",value: store.get("fxAmt","10000"),"aria-label":"金額",autocomplete:"off"});
@@ -1805,8 +2193,44 @@ function validateTrip(o){
   return {trip, probs};
 }
 let toolMode = "new";
+/* 短網址（maps.app.goo.gl）交給後端展開，展開後當成新貼上的連結再解析一次 */
+async function expandShort(input, hint){
+  if (!Sync.enabled || !Sync.token || !navigator.onLine){ hint.textContent = Sync.enabled ? "短網址要有網路才能展開；也可以先手動填名稱" : "這是短網址，本機模式沒辦法展開；請在 Google 地圖按「分享 → 複製連結」後改用電腦版長網址，或手動填名稱"; return; }
+  hint.textContent = "展開短網址中…";
+  try { const r = await Sync.call("resolveMap", {url: input.value.trim()}); input.value = r.url; input.dispatchEvent(new Event("input")); }
+  catch(e){ hint.textContent = "展開失敗：" + e.message + "；可以先手動填名稱"; }
+}
+/* 我的旅程：切換、上傳給全家、解鎖舊旅程、登出 */
+function tripsCard(){
+  const list = Object.entries(Trips.list()).filter(([k, v]) => !v.deleted && (k === TRIP.id || k === SAMPLE_ID || DB.exists(k) || (Sync.enabled && !v.local)))
+    .sort((a, b) => (a[0] === SAMPLE_ID) - (b[0] === SAMPLE_ID) || String(b[1].start || "").localeCompare(String(a[1].start || "")));
+  const rows = list.map(([id, v]) => {
+    const curTrip = id === TRIP.id, ended = Trips.ended(id), unlocked = gstore.get("unlock." + id, false);
+    const tags = [curTrip ? "目前" : null, id === SAMPLE_ID ? "範例" : null, Sync.enabled && v.local && id !== SAMPLE_ID ? "只在這支手機" : null, ended ? (unlocked ? "已結束・已解鎖" : "已結束・唯讀") : null].filter(Boolean);
+    return h("div",{class:"trip-row" + (curTrip ? " on" : "")},
+      h("div",{style:"min-width:0;flex:1"}, h("b",null, v.title || "旅程"), h("div",{class:"small"}, (v.start ? v.start.replaceAll("-","/") + (v.end ? " – " + v.end.slice(5).replace("-","/") : "") : "") + (tags.length ? "・" + tags.join("・") : ""))),
+      h("div",{class:"acts",style:"margin:0;flex:0 0 auto"},
+        curTrip ? null : h("button",{class:"btn tiny",type:"button",onclick:()=>{ switchTrip(id); scrollTo(0,0); }},"打開"),
+        Sync.enabled && Sync.token && v.local && id !== SAMPLE_ID ? h("button",{class:"btn tiny g",type:"button",onclick:()=>uploadTrip(id)},"☁️ 上傳給全家") : null,
+        ended && id !== SAMPLE_ID ? h("button",{class:"btn tiny",type:"button",onclick:()=>{ gstore.set("unlock." + id, !unlocked); renderAll(false); }}, unlocked ? "🔒 鎖回唯讀" : "🔓 解鎖編輯") : null));
+  });
+  return h("div",{class:"box"},
+    h("h3",null,"🧳 我的旅程"),
+    h("p",{class:"small",style:"margin:0 0 10px"}, Sync.enabled ? (Sync.token ? "登入身分：" + me() + "・全家共用同一份行程" : "還沒登入") : "本機模式：行程只存在這支手機（接上後端後就能全家同步）"),
+    h("div",{class:"trip-list"}, rows),
+    Sync.enabled ? h("div",{class:"acts"}, Sync.token
+      ? h("button",{class:"btn tiny",type:"button",onclick:()=>{ Sync.token = null; gstore.set("token", null); showLogin("已登出這支手機"); renderAll(false); }},"登出這支手機")
+      : h("button",{class:"btn tiny y",type:"button",onclick:()=>showLogin()},"登入")) : null);
+}
+function uploadTrip(id){
+  if (DB.tripId !== id) switchTrip(id);
+  Trips.upsert(id, {local: false});
+  Object.values(DB.raw()).forEach(d => Sync.enqueue(id, d.coll, d.key));
+  toast("開始上傳給全家…"); renderAll(false);
+}
 function renderTools(){
   const box = $("#toolbox"); box.textContent = "";
+  box.append(tripsCard());
   const f = {dest:"北海道 札幌、小樽", from:"2027-02-10", to:"2027-02-14", who:"爸爸、媽媽、5 歲小孩", need:"自駕、不想太趕"};
   const inputs = {};
   const fld = (k, label, type) => { inputs[k] = h("input",{id:"tp-"+k,type:type||"text",value:f[k],maxlength:"80"}); return h("div",{class:"field"}, h("label",{for:"tp-"+k},label), inputs[k]); };
@@ -1821,7 +2245,7 @@ function renderTools(){
   const res = h("div",{class:"hint"},"貼上之後按「檢查」，我會先告訴你讀到什麼，確認了才會換掉行程");
   let pendingTrip = null;
   const applyBtn = h("button",{class:"btn c",type:"button",hidden:true,onclick:()=>{
-    gstore.set("imported", pendingTrip); TRIP = pendingTrip; preview = null; cur = 0; startRender(); toast("已換成新行程 ✓"); scrollTo(0,0);
+    const id = importTrip(pendingTrip); switchTrip(id); toast(Sync.enabled ? "已建立新旅程，正在上傳給全家…" : "已換成新行程 ✓"); scrollTo(0,0);
   }},"換成這個行程");
   box.append(
     h("div",{class:"box"},
@@ -1858,14 +2282,15 @@ function renderTools(){
     h("div",{class:"box"},
       h("h3",null, h("span",{class:"step"},"3"), "手動加地點"),
       h("p",{class:"small",style:"margin:0"},"到「行程」那天按「✏️ 臨時改行程」→ 最下面「＋ 加一站」，貼 Google 地圖連結就會自動帶出店名和位置。"),
-      TRIP !== SAMPLE && gstore.get("imported", null) ? h("div",{class:"acts"}, h("button",{class:"btn",type:"button",onclick:()=>{gstore.set("imported",null); TRIP = SAMPLE; cur = 0; startRender(); toast("已回到範例行程");}},"回到範例行程（原型用）")) : null)
+      null)
   );
   gen();
 }
 
 /* ===== 網路狀態、選單高亮 ===== */
-function net(){ const n = $("#net"); const on = navigator.onLine; const q = pending().length; n.textContent = on ? "● 可離線" : "● 離線中" + (q ? "・待同步 " + q : ""); n.classList.toggle("off", !on); }
-addEventListener("online", () => { net(); flush(); }); addEventListener("offline", net);
+function net(){ const n = $("#net"); if (!n) return; const on = navigator.onLine; const q = pending().length; n.textContent = on ? (q ? "● 同步中" : "● 可離線") : "● 離線中" + (q ? "・待同步 " + q : ""); n.classList.toggle("off", !on); }
+addEventListener("online", () => { net(); Sync.kick(200); }); addEventListener("offline", () => { net(); syncPaint(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") Sync.kick(200); });
 function navSpy(){
   const ids = ["top","flight","tickets-sec","plan","todo","stay","money","tools"]; let curId = "top";
   ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 120) curId = id; });
@@ -1876,21 +2301,57 @@ addEventListener("scroll", navSpy, {passive:true});
 /* ===== 啟動 ===== */
 function sampleNotice(){
   const old = $("#sample-note"); if (old) old.remove();
-  if (TRIP !== SAMPLE) return;
-  const n = h("div",{id:"sample-note",class:"bookbanner",style:"margin-top:14px"}, "👋 現在看到的是範例行程（京阪五日）。到最下面的「工具」產生或匯入你自己的行程。");
-  $("#sub").after(n);
+  let msg = null;
+  if (TRIP.id === SAMPLE_ID) msg = "👋 現在看到的是範例行程（京阪五日）。到最下面的「工具」產生或匯入你自己的行程。";
+  else if (Trips.readOnly(TRIP.id)) msg = "📖 這趟旅程已經結束，目前是唯讀的回憶。要修改請到「工具 → 我的旅程」解鎖。";
+  if (msg) $("#sub").after(h("div",{id:"sample-note",class:"bookbanner",style:"margin-top:14px"}, msg));
 }
-function startRender(){
+function renderAll(pickDay){
   $("#title").textContent = TRIP.title;
-  const d0 = TRIP.days[0].date, d1 = TRIP.days[TRIP.days.length-1].date;
-  $("#sub").textContent = d0.replaceAll("-","/") + " – " + d1.slice(5).replace("-","/") + " · " + TRIP.days.length + " 天" + (TRIP.who ? " · " + TRIP.who : "");
-  const today = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Tokyo"});
-  const ti = TRIP.days.findIndex(d => d.date === today);
-  cur = ti >= 0 ? ti : Math.min(store.get("day", 0), TRIP.days.length-1);
-  sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
+  const d0 = TRIP.days[0] ? TRIP.days[0].date : "", d1 = TRIP.days.length ? TRIP.days[TRIP.days.length-1].date : "";
+  $("#sub").textContent = d0 ? d0.replaceAll("-","/") + " – " + d1.slice(5).replace("-","/") + " · " + TRIP.days.length + " 天" + (TRIP.who ? " · " + TRIP.who : "") : "";
+  if (pickDay){
+    const today = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Tokyo"});
+    const ti = TRIP.days.findIndex(d => d.date === today);
+    cur = ti >= 0 ? ti : Math.min(store.get("day", 0) || 0, Math.max(0, TRIP.days.length-1));
+  }
+  cur = Math.min(cur, Math.max(0, TRIP.days.length-1));
+  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
 }
-function start(){ startRender(); setInterval(()=>{ if (!editMode) { const v = document.querySelector(".sync"); if (v) v.replaceWith(syncLine()); } }, 60000); }
-gate(start);
+function startRender(){ renderAll(true); }
+function modeNote(){ const n = $("#mode-note"); if (n) n.textContent = Sync.enabled ? "全家同步版" : "本機模式（資料只在這支手機）"; }
+async function switchTrip(id){
+  DB.open(id);
+  if (!DB.get("trip", "meta") && Sync.enabled && Sync.token && id !== SAMPLE_ID && navigator.onLine){
+    toast("正在下載這趟旅程…");
+    try { await Sync.pull(true); } catch(e){ toast("下載失敗：" + e.message); }
+  }
+  TRIP = materialize();
+  if (!TRIP){ if (!DB.exists(SAMPLE_ID)) importTrip(SAMPLE, {keepId: true}); DB.open(SAMPLE_ID); TRIP = materialize(); id = SAMPLE_ID; }
+  Trips.setCurrent(id);
+  preview = null; editMode = false; renderAll(true);
+  if (Sync.enabled && Sync.token && id !== SAMPLE_ID) Sync.kick(300);
+}
+async function boot(){
+  await migrateV01();
+  let id = Trips.current();
+  if (!id || !DB.exists(id)) id = SAMPLE_ID;
+  if (!DB.exists(SAMPLE_ID)) { const keep = DB.tripId; importTrip(SAMPLE, {keepId: true}); if (keep) DB.open(keep); }
+  gate(async () => {
+    await switchTrip(id);
+    if (Sync.enabled && Sync.token){
+      await Sync.run();
+      /* 第一次登入：伺服器上已經有旅程、手機上只有範例 → 自動打開最近的一趟 */
+      if (TRIP.id === SAMPLE_ID){
+        const list = Object.entries(Trips.list()).filter(([k, v]) => k !== SAMPLE_ID && !v.local && !v.deleted).sort((a, b) => String(b[1].start).localeCompare(String(a[1].start)));
+        if (list.length) await switchTrip(list[0][0]);
+      }
+      setInterval(() => { if (document.visibilityState === "visible") Sync.run(); }, 30000);
+    }
+    setInterval(syncPaint, 60000);
+  });
+}
+boot();
 </script>
 <script>
 /* 離線快取：第一次打開後，沒網路也能開 */

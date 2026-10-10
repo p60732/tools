@@ -1,0 +1,12 @@
+{
+  "_說明": "旅遊小筆記的位置清單（唯一來源）。ID 一律從這裡複製，不要用眼睛抄。這裡只放 ID 與網址，不放任何密碼。",
+  "PAGES_URL": "https://p60732.github.io/tools/trip/",
+  "GAS_EXEC_URL": "",
+  "GAS_DEPLOY_ID": "",
+  "SHEET_ID": "",
+  "SHEET_ID_DEV": "",
+  "LOG_SHEET_ID": "",
+  "DRIVE_FOLDER_ID": "",
+  "BACKUP_FOLDER_ID": "",
+  "SCRIPT_PROPERTIES_KEYS": ["SHEET_ID", "LOG_SHEET_ID", "DRIVE_FOLDER_ID", "BACKUP_FOLDER_ID", "SECRET", "PW_SALT", "PW_HASH", "SESSION_VER", "SEQ", "FX_LAST", "NEW_PASSWORD（只在改密碼時暫時存在）"]
+}
