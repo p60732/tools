@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>玩具回家囉</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: one-screen playroom — floor with scattered toys on top, three colored toy boxes along the bottom. Deliberately single bright theme. */
+:root{
+  --ink:#16161D; --floor:#FFF7E0; --floor-line:#F1DFAE; --wall:#7FD3F5;
+  --red:#E8202A; --blue:#1F55E0; --yellow:#FFC400; --white:#FFFFFF;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--wall);color:var(--ink);font-family:var(--font);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding:10px 16px 12px;box-sizing:border-box;max-width:900px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:clamp(22px,5vw,32px);font-weight:900;letter-spacing:.04em;
+  color:var(--white);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink)}
+.count{display:flex;align-items:center;gap:6px;background:var(--white);border:4px solid var(--ink);border-radius:999px;
+  padding:4px 14px;font-weight:900;font-size:clamp(18px,4.5vw,26px);font-variant-numeric:tabular-nums;box-shadow:3px 3px 0 var(--ink)}
+.count svg{width:1.1em;height:1.1em}
+.tools{display:flex;align-items:center;gap:10px}
+.music{width:clamp(44px,10vw,54px);height:clamp(44px,10vw,54px);border:4px solid var(--ink);border-radius:50%;background:var(--yellow);
+  box-shadow:3px 3px 0 var(--ink);padding:6px;cursor:pointer;display:grid;place-items:center}
+.music svg{width:100%;height:100%}
+.music .x{display:none}
+.music.off{background:var(--white)}
+.music.off .x{display:inline}
+.music:not(.off) svg{animation:bob 1s ease-in-out infinite}
+@keyframes bob{50%{transform:rotate(-10deg) translateY(-2px)}}
+.music:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.music:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.floor{position:relative;flex:1;min-height:0;border:5px solid var(--ink);border-radius:22px;
+  background:repeating-linear-gradient(90deg,var(--floor) 0 58px,var(--floor-line) 58px 62px);box-shadow:5px 5px 0 var(--ink);overflow:hidden}
+.toy{position:absolute;width:var(--s);height:var(--s);cursor:grab;touch-action:none;transition:transform .15s}
+.toy svg{width:100%;height:100%;display:block;filter:drop-shadow(3px 4px 0 rgba(22,22,29,.35))}
+.toy.drag{cursor:grabbing;transform:scale(1.18);z-index:50;transition:none}
+.toy.back{transition:left .35s cubic-bezier(.3,1.6,.5,1),top .35s cubic-bezier(.3,1.6,.5,1)}
+.toy.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px) rotate(-6deg)}75%{transform:translateX(8px) rotate(6deg)}}
+.bins{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bin{position:relative;height:clamp(96px,17vh,140px);border:5px solid var(--ink);border-radius:10px 10px 22px 22px;
+  box-shadow:5px 5px 0 var(--ink);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;transition:transform .15s}
+.bin::before{content:"";position:absolute;left:-10px;right:-10px;top:-5px;height:16px;background:inherit;border:5px solid var(--ink);border-radius:8px}
+.bin.red{background:var(--red)}.bin.blue{background:var(--blue)}.bin.yellow{background:var(--yellow)}
+.bin.hover{transform:scale(1.08) translateY(-4px)}
+.bin.pop{animation:pop .35s}
+@keyframes pop{40%{transform:scale(1.15)}}
+.bin .n{font-weight:900;font-size:clamp(20px,5vw,30px);color:var(--white);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;font-variant-numeric:tabular-nums}
+.done{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(255,247,224,.94);text-align:center;padding:0 16px}
+.done h2{margin:0;font-size:clamp(30px,8vw,52px);font-weight:900;color:var(--yellow);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);text-wrap:balance}
+.done p{margin:0;font-size:clamp(18px,4vw,24px);font-weight:700}
+.btn{font:inherit;font-weight:900;font-size:clamp(20px,5vw,28px);padding:12px 32px;border:5px solid var(--ink);border-radius:999px;
+  background:var(--blue);color:var(--white);box-shadow:5px 5px 0 var(--ink);cursor:pointer}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+.btn:focus-visible{outline:4px dashed var(--ink);outline-offset:4px}
+.hint{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--white);border:4px solid var(--ink);border-radius:14px;
+  padding:6px 14px;font-weight:900;font-size:clamp(15px,3.6vw,20px);white-space:nowrap;z-index:5;pointer-events:none}
+.burst{position:absolute;pointer-events:none;width:30px;height:30px;z-index:60;animation:fly .8s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.toy,.bin,.burst,.toy.back{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header>
+    <h1>玩具回家囉</h1>
+    <div class="tools">
+    <button class="music" id="music" type="button" aria-label="背景音樂" aria-pressed="true">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#16161D" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#E8202A" stroke="#16161D" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#1F55E0" stroke="#16161D" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#16161D" stroke-width="3" stroke-linecap="round"/></svg>
+    </button>
+    <div class="count" aria-live="polite">
+      <svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span id="score">0</span>/<span id="total">9</span>
+    </div>
+    </div>
+  </header>
+  <div class="floor" id="floor">
+    <div class="hint" id="hint">把玩具拖到一樣顏色的箱子!</div>
+  </div>
+  <div class="bins">
+    <div class="bin red" data-c="red"><span class="n">0</span></div>
+    <div class="bin blue" data-c="blue"><span class="n">0</span></div>
+    <div class="bin yellow" data-c="yellow"><span class="n">0</span></div>
+  </div>
+</div>
+
+<script>
+const COL={red:'#E8202A',blue:'#1F55E0',yellow:'#FFC400'};
+const INK='#16161D';
+const SHAPES={
+  ball:c=>`<circle cx="50" cy="50" r="40" fill="${c}" stroke="${INK}" stroke-width="7"/><path d="M14 46 Q50 66 86 46" fill="none" stroke="#fff" stroke-width="7"/><circle cx="36" cy="30" r="7" fill="#fff"/>`,
+  block:c=>`<rect x="12" y="12" width="76" height="76" rx="10" fill="${c}" stroke="${INK}" stroke-width="7"/><rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="#fff" stroke-width="6"/>`,
+  star:c=>`<path d="M50 6l12 28 30 3-23 20 7 30-26-16-26 16 7-30-23-20 30-3z" fill="${c}" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/><circle cx="42" cy="46" r="4" fill="${INK}"/><circle cx="58" cy="46" r="4" fill="${INK}"/>`,
+  car:c=>`<path d="M8 66 V50 Q10 44 18 42 L30 24 H66 L80 42 Q92 44 92 52 V66 Z" fill="${c}" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/><path d="M36 32 H62 L70 42 H30 Z" fill="#fff" stroke="${INK}" stroke-width="4"/><circle cx="28" cy="70" r="11" fill="${INK}"/><circle cx="72" cy="70" r="11" fill="${INK}"/><circle cx="28" cy="70" r="4" fill="#fff"/><circle cx="72" cy="70" r="4" fill="#fff"/>`,
+  duck:c=>`<path d="M20 58 Q20 86 52 86 Q86 86 86 60 Q86 50 74 52 Q72 30 54 24 Q32 18 30 40 Q30 50 38 54 Q24 50 20 58Z" fill="${c}" stroke="${INK}" stroke-width="7" stroke-linejoin="round"/><circle cx="46" cy="36" r="5" fill="${INK}"/><path d="M26 38 L12 42 L26 46Z" fill="#FF8A00" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>`
+};
+const floor=document.getElementById('floor'), scoreEl=document.getElementById('score'), totalEl=document.getElementById('total');
+const bins=[...document.querySelectorAll('.bin')];
+let score=0,total=0,ctx=null,round=0,draggingId=null;
+// 保險:記錄畫面上還按著的手指;全部放開時,如果還標記「拖曳中」就自動解除
+const activePointers=new Set();
+addEventListener('pointerdown',e=>activePointers.add(e.pointerId),true);
+const release=e=>{activePointers.delete(e.pointerId);
+  if(activePointers.size===0&&draggingId!==null){setTimeout(()=>{if(activePointers.size===0&&draggingId!==null){
+    draggingId=null; document.querySelectorAll('.toy[data-busy]').forEach(t=>{delete t.dataset.busy;t.classList.remove('drag');
+      if(t.parentNode===document.body&&!t.classList.contains('gone')){t.style.position='absolute';floor.appendChild(t);t.style.left='20px';t.style.top='60px'}});
+  }},50)}};
+addEventListener('pointerup',release,true); addEventListener('pointercancel',release,true);
+
+/* ---------- 音效與背景音樂(全部即時合成,不需下載) ---------- */
+let musicGain=null,sfxGain=null,musicOn=true,bgmTimer=null,nextT=0,step=0;
+try{musicOn=localStorage.getItem('toyMusic')!=='off'}catch(e){}
+function ac(){
+  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();
+    musicGain=ctx.createGain();musicGain.gain.value=.12;musicGain.connect(ctx.destination);
+    sfxGain=ctx.createGain();sfxGain.gain.value=.9;sfxGain.connect(ctx.destination);}
+  if(ctx.state==='suspended')ctx.resume();
+  return ctx;
+}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function note(f,t,d,{type='sine',v=.25,to=null,bus=null}={}){
+  try{const c=ac(),o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g).connect(bus||sfxGain);o.start(t);o.stop(t+d+.03);}catch(e){}
+}
+const now=()=>ac().currentTime;
+// 拿起玩具:往上滑的「啵~」
+const pick=()=>{const t=now();note(420,t,.14,{to:900,v:.2})};
+// 放對:「啵!」加上三聲小鈴鐺
+const yay=()=>{const t=now();note(1100,t,.08,{to:350,v:.3});
+  [84,88,91].forEach((m,i)=>{note(hz(m),t+.07+i*.08,.35,{type:'triangle',v:.22});note(hz(m+12),t+.07+i*.08,.2,{v:.06})})};
+// 放錯:軟軟的「咚~ㄛ」彈簧聲
+const nope=()=>{const t=now();note(330,t,.18,{type:'triangle',to:180,v:.22});note(260,t+.16,.25,{type:'triangle',to:140,v:.18})};
+// 過關:小號角+和弦
+const win=()=>{const t=now();[72,76,79,84,79,84].forEach((m,i)=>note(hz(m),t+i*.13,.3,{type:'square',v:.08}));
+  [72,76,79,84].forEach(m=>note(hz(m),t+.8,1.2,{type:'triangle',v:.12}))};
+
+// 背景音樂:八音盒風格,132 BPM,4 小節循環(原創旋律)
+const MEL=[72,0,76,79,84,0,79,0, 81,0,79,77,76,0,74,0, 72,0,76,79,84,0,88,0, 86,84,81,79,84,0,0,0];
+const BASS=[48,55,52,55, 53,57,55,59, 48,55,52,55, 53,55,48,0];
+const EIGHTH=60/132/2;
+function scheduler(){
+  while(nextT<ctx.currentTime+.15){
+    const i=step%32, m=MEL[i];
+    if(m){note(hz(m),nextT,.32,{type:'triangle',v:.5,bus:musicGain});note(hz(m+12),nextT,.18,{v:.12,bus:musicGain});}
+    if(i%2===0){const b=BASS[i/2];if(b)note(hz(b),nextT,.28,{v:.45,bus:musicGain});}
+    if(i%4===2)note(5000,nextT,.03,{type:'square',v:.03,bus:musicGain});
+    nextT+=EIGHTH;step++;
+  }
+}
+function startMusic(){if(bgmTimer||!musicOn)return;ac();nextT=ctx.currentTime+.1;step=0;
+  musicGain.gain.setValueAtTime(.12,ctx.currentTime);bgmTimer=setInterval(scheduler,25);}
+function stopMusic(){clearInterval(bgmTimer);bgmTimer=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05);}
+const musicBtn=document.getElementById('music');
+function paintMusic(){musicBtn.setAttribute('aria-pressed',musicOn);musicBtn.classList.toggle('off',!musicOn);musicBtn.title=musicOn?'關掉音樂':'打開音樂'}
+musicBtn.addEventListener('click',e=>{e.stopPropagation();musicOn=!musicOn;
+  try{localStorage.setItem('toyMusic',musicOn?'on':'off')}catch(err){}
+  paintMusic();musicOn?startMusic():stopMusic();note(musicOn?880:440,now(),.1,{v:.15})});
+paintMusic();
+// 瀏覽器規定要先點一下畫面才能出聲音
+addEventListener('pointerdown',()=>{ac();startMusic()},{once:false});
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function start(){
+  document.querySelectorAll('.toy,.done').forEach(e=>e.remove()); draggingId=null;
+  activePointers.clear();
+  score=0; bins.forEach(b=>b.querySelector('.n').textContent=0);
+  const n=round===0?6:9; total=n; totalEl.textContent=n; scoreEl.textContent=0;
+  const shapes=shuffle(Object.keys(SHAPES)), colors=Object.keys(COL);
+  const W=floor.clientWidth,H=floor.clientHeight;
+  const cols=n<=6?3:3, rows=Math.ceil(n/cols);
+  const cw=W/cols, ch=(H-50)/rows, s=Math.min(cw,ch)*0.72;
+  const cells=shuffle([...Array(cols*rows).keys()]).slice(0,n);
+  cells.forEach((cell,i)=>{
+    const color=colors[i%3], shape=shapes[i%shapes.length];
+    const el=document.createElement('div'); el.className='toy'; el.dataset.c=color;
+    el.style.setProperty('--s',s+'px');
+    el.innerHTML=`<svg viewBox="0 0 100 100">${SHAPES[shape](COL[color])}</svg>`;
+    el.setAttribute('aria-label',color+' '+shape);
+    const cx=(cell%cols)*cw+(cw-s)/2+(Math.random()-.5)*cw*.18;
+    const cy=50+Math.floor(cell/cols)*ch+(ch-s)/2+(Math.random()-.5)*ch*.15;
+    el.style.left=Math.max(0,Math.min(W-s,cx))+'px'; el.style.top=Math.max(40,Math.min(H-s,cy))+'px';
+    el.style.transform=`rotate(${(Math.random()-.5)*24}deg)`;
+    drag(el); floor.appendChild(el);
+  });
+  document.getElementById('hint').hidden=false;
+}
+
+function binAt(x,y){return bins.find(b=>{const r=b.getBoundingClientRect();return x>r.left-10&&x<r.right+10&&y>r.top-30&&y<r.bottom})}
+
+function drag(el){
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    // 已收好的、正在被拖的(多指同時按)都不理會,避免重複計分
+    if(el.classList.contains('gone')||el.dataset.busy||draggingId!==null) return;
+    el.dataset.busy='1'; draggingId=e.pointerId;
+    const fr=floor.getBoundingClientRect(), home={l:el.style.left,t:el.style.top};
+    const offX=e.clientX-el.getBoundingClientRect().left, offY=e.clientY-el.getBoundingClientRect().top;
+    // move toy to body so it can leave the floor
+    const r=el.getBoundingClientRect();
+    document.body.appendChild(el); el.style.position='fixed'; el.style.left=r.left+'px'; el.style.top=r.top+'px';
+    el.classList.remove('back'); el.classList.add('drag'); el.style.transform='';
+    pick();
+    let over=null;
+    const move=ev=>{if(ev.pointerId!==e.pointerId)return;el.style.left=ev.clientX-offX+'px'; el.style.top=ev.clientY-offY+'px';
+      const b=binAt(ev.clientX,ev.clientY); if(b!==over){over&&over.classList.remove('hover');over=b;b&&b.classList.add('hover')}};
+    const up=ev=>{
+      if(ev.pointerId!==e.pointerId)return;
+      draggingId=null; delete el.dataset.busy;
+      removeEventListener('pointermove',move); removeEventListener('pointerup',up); removeEventListener('pointercancel',up);
+      el.classList.remove('drag'); over&&over.classList.remove('hover');
+      const b=binAt(ev.clientX,ev.clientY);
+      if(b&&b.dataset.c===el.dataset.c){ put(el,b) }
+      else{
+        const cur=el.getBoundingClientRect(), f=floor.getBoundingClientRect();
+        floor.appendChild(el); el.style.position='absolute';
+        el.style.left=cur.left-f.left+'px'; el.style.top=cur.top-f.top+'px';
+        requestAnimationFrame(()=>{el.classList.add('back'); el.style.left=home.l; el.style.top=home.t;});
+        if(b){nope(); setTimeout(()=>{el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),400)},350)}
+      }
+    };
+    // 監聽整個視窗:手指放開在任何地方都收得到,不會卡住
+    addEventListener('pointermove',move); addEventListener('pointerup',up); addEventListener('pointercancel',up);
+  });
+}
+
+function put(el,b){
+  if(el.classList.contains('gone')) return;
+  el.classList.add('gone'); el.style.pointerEvents='none';
+  const r=b.getBoundingClientRect();
+  el.style.transition='left .25s,top .25s,transform .25s,opacity .25s';
+  el.style.left=r.left+r.width/2-el.offsetWidth/2+'px'; el.style.top=r.top+'px';
+  el.style.transform='scale(.3)'; el.style.opacity='0';
+  setTimeout(()=>el.remove(),260);
+  yay(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  const n=b.querySelector('.n'); n.textContent=+n.textContent+1;
+  burst(r.left+r.width/2,r.top);
+  score++; scoreEl.textContent=score; document.getElementById('hint').hidden=true;
+  // 以「畫面上還剩幾個玩具」判斷過關,不只看分數
+  if(document.querySelectorAll('.toy:not(.gone)').length===0) setTimeout(finish,500);
+}
+
+function burst(x,y){
+  for(let i=0;i<8;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    s.setAttribute('viewBox','0 0 24 24'); s.classList.add('burst');
+    s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2"/>';
+    const a=Math.PI*2*i/8; s.style.left=x-15+'px'; s.style.top=y-15+'px'; s.style.position='fixed';
+    s.style.setProperty('--dx',Math.cos(a)*90+'px'); s.style.setProperty('--dy',Math.sin(a)*90-40+'px');
+    document.body.appendChild(s); setTimeout(()=>s.remove(),850);}
+}
+
+function finish(){
+  win(); round++;
+  const d=document.createElement('div'); d.className='done';
+  d.innerHTML='<h2>房間好乾淨!</h2><p>玩具都回家了,你好棒!</p><button class="btn" id="again">再玩一次</button>';
+  floor.appendChild(d);
+  document.getElementById('again').addEventListener('click',start);
+}
+
+start();
+let rt; addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(score===0&&draggingId===null)start()},300)});
+</script>
+
+</body>
+</html>

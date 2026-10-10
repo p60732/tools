@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>小小消防隊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: header / instruction strip / fixed-ratio scene (station, fire, road) / big controls row. Deliberately single bright theme. */
+:root{
+  --ink:#16161D; --sky:#8ED8F8; --red:#E8202A; --red-dark:#B3171F; --brick:#C8352B; --yellow:#FFC400; --blue:#1F55E0;
+  --green:#14A84B; --road:#55585F; --grass:#5CC46A; --concrete:#C9CED6; --white:#FFFFFF; --water:#3FA9FF;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.app{height:100%;display:flex;flex-direction:column;gap:8px;padding:8px 16px 12px;box-sizing:border-box;max-width:820px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px}
+h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--yellow);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.tools{display:flex;gap:8px;align-items:center;margin-left:auto}
+.count{display:flex;align-items:center;gap:4px;background:var(--white);border:3px solid var(--ink);border-radius:999px;padding:2px 10px;font-weight:900;font-size:clamp(16px,4vw,22px);font-variant-numeric:tabular-nums;box-shadow:2px 2px 0 var(--ink)}
+.count svg{width:1.1em;height:1.1em}
+.music{flex:none;width:42px;height:42px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--ink);padding:5px;cursor:pointer}
+.music svg{width:100%;height:100%}.music .x{display:none}.music.off{background:var(--white)}.music.off .x{display:inline}
+.banner{flex:none;display:flex;align-items:center;justify-content:center;min-height:2.7em;box-sizing:border-box;text-align:center;background:var(--white);border:4px solid var(--ink);border-radius:14px;padding:4px 10px;font-weight:900;font-size:clamp(16px,4.2vw,22px);line-height:1.3;box-shadow:4px 4px 0 var(--ink);text-wrap:balance}
+.main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;width:calc(var(--u)*400);height:calc(var(--u)*500);border:5px solid var(--ink);border-radius:20px;overflow:hidden;box-shadow:5px 5px 0 var(--ink);background:var(--sky)}
+.abs{position:absolute}
+.abs svg,.v svg{width:100%;height:100%;display:block;overflow:visible}
+
+.controls{flex:none;display:flex;gap:12px;justify-content:center;min-height:clamp(64px,10vh,84px)}
+.big{display:flex;align-items:center;justify-content:center;gap:10px;flex:1;max-width:340px;font:inherit;font-weight:900;font-size:clamp(22px,6vw,34px);padding:8px 18px;border:5px solid var(--ink);border-radius:999px;background:var(--yellow);color:var(--ink);box-shadow:6px 6px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+.big svg{width:1.6em;height:1.6em;flex:none}
+.big:active{transform:translate(4px,4px);box-shadow:2px 2px 0 var(--ink)}
+.big:focus-visible,.music:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.big.red{background:var(--red);color:var(--white)}.big.red .t{text-shadow:2px 2px 0 var(--ink)}
+.big.white{background:var(--white)}
+.big.arrow{max-width:180px;font-size:clamp(34px,9vw,48px)}
+.big.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(8px) rotate(3deg)}}
+.hintline{align-self:center;font-weight:900;font-size:clamp(18px,4.6vw,24px);background:var(--white);border:4px dashed var(--ink);border-radius:14px;padding:8px 16px;text-align:center}
+
+/* station */
+.bldg{left:calc(var(--u)*16);top:calc(var(--u)*36);width:calc(var(--u)*368);height:calc(var(--u)*300);border:calc(var(--u)*5) solid var(--ink);border-radius:calc(var(--u)*10) calc(var(--u)*10) 0 0;box-sizing:border-box;
+  background:linear-gradient(#0000 calc(var(--u)*18),#9E2A22 0 calc(var(--u)*20)) 0 0/100% calc(var(--u)*20),linear-gradient(90deg,#0000 calc(var(--u)*38),#9E2A22 0 calc(var(--u)*40)) 0 0/calc(var(--u)*40) calc(var(--u)*40),var(--brick)}
+.fsign{left:50%;top:calc(var(--u)*48);transform:translateX(-50%);background:var(--white);color:var(--red);border:calc(var(--u)*4) solid var(--ink);border-radius:calc(var(--u)*10);padding:calc(var(--u)*2) calc(var(--u)*20);font-weight:900;font-size:calc(var(--u)*30);letter-spacing:.2em;white-space:nowrap}
+.garage{top:calc(var(--u)*130);width:calc(var(--u)*160);height:calc(var(--u)*206);background:#2B2E36;border:calc(var(--u)*5) solid var(--ink);border-bottom:0;border-radius:calc(var(--u)*30) calc(var(--u)*30) 0 0;overflow:hidden;box-sizing:border-box}
+.gdoor{left:0;top:0;width:100%;height:100%;background:repeating-linear-gradient(#E9ECF1 0 calc(var(--u)*18),#B7BDC7 calc(var(--u)*18) calc(var(--u)*22));transition:height 1s ease;z-index:3}
+.gdoor.up{height:0}
+.ground{left:0;top:calc(var(--u)*336);width:100%;height:calc(var(--u)*164);background:var(--concrete);border-top:calc(var(--u)*5) solid var(--ink)}
+.desk{left:calc(var(--u)*90);top:calc(var(--u)*400);width:calc(var(--u)*220);height:calc(var(--u)*110);background:#B9772F;border:calc(var(--u)*5) solid var(--ink);border-radius:calc(var(--u)*12) calc(var(--u)*12) 0 0;box-shadow:inset 0 calc(var(--u)*22) 0 #D99A4E}
+.phone{left:calc(var(--u)*150);top:calc(var(--u)*336);width:calc(var(--u)*100);height:calc(var(--u)*80);z-index:5;transform-origin:50% 100%}
+.phone::after{content:"";position:absolute;left:12%;right:12%;bottom:calc(var(--u)*-6);height:calc(var(--u)*10);border-radius:50%;background:rgba(0,0,0,.25);z-index:-1}
+.phone.ringing{animation:ring .18s linear infinite}
+@keyframes ring{25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}
+.rings{left:calc(var(--u)*232);top:calc(var(--u)*300);z-index:6;padding:calc(var(--u)*6) calc(var(--u)*14);background:var(--white);border:calc(var(--u)*4) solid var(--ink);border-radius:calc(var(--u)*18);box-shadow:calc(var(--u)*3) calc(var(--u)*3) 0 var(--ink);font-weight:900;font-size:calc(var(--u)*22);line-height:1.2;white-space:nowrap;color:var(--red);transform-origin:0 100%;animation:bounce .5s ease-in-out infinite alternate}
+.rings::before,.rings::after{content:"";position:absolute;left:calc(var(--u)*10);width:0;height:0;border-style:solid}
+.rings::before{bottom:calc(var(--u)*-20);border-width:calc(var(--u)*20) calc(var(--u)*18) 0 0;border-color:var(--ink) transparent transparent transparent}
+.rings::after{bottom:calc(var(--u)*-12);left:calc(var(--u)*15);border-width:calc(var(--u)*13) calc(var(--u)*11) 0 0;border-color:var(--white) transparent transparent transparent}
+@keyframes bounce{to{transform:translateY(-8%) rotate(-3deg)}}
+.call{left:calc(var(--u)*30);top:calc(var(--u)*70);width:calc(var(--u)*340);height:calc(var(--u)*250);z-index:20;background:var(--white);border:calc(var(--u)*5) solid var(--ink);border-radius:calc(var(--u)*24);box-shadow:calc(var(--u)*6) calc(var(--u)*6) 0 var(--ink);animation:pop .35s cubic-bezier(.3,1.6,.5,1);overflow:hidden}
+.call::after{content:"";position:absolute;left:46%;bottom:calc(var(--u)*-26);width:calc(var(--u)*30);height:calc(var(--u)*30);background:var(--white);border-right:calc(var(--u)*5) solid var(--ink);border-bottom:calc(var(--u)*5) solid var(--ink);transform:rotate(45deg)}
+@keyframes pop{from{transform:scale(.3)}}
+.v{position:absolute;z-index:4}
+
+/* fire scene */
+.road{left:0;top:calc(var(--u)*410);width:100%;height:calc(var(--u)*90);background:var(--road);border-top:calc(var(--u)*4) solid var(--ink)}
+.flame{position:absolute;width:calc(var(--u)*64);height:calc(var(--u)*80);transform-origin:50% 100%;transition:transform .2s;z-index:30;pointer-events:none}
+.flame svg{width:100%;height:100%;animation:flick .35s ease-in-out infinite alternate;transform-origin:50% 100%}
+@keyframes flick{to{transform:scaleY(1.12) scaleX(.92) skewX(4deg)}}
+.ring{position:absolute;width:calc(var(--u)*96);height:calc(var(--u)*96);margin:calc(var(--u)*-48) 0 0 calc(var(--u)*-48);border-radius:50%;border:calc(var(--u)*6) dashed var(--yellow);box-shadow:0 0 0 calc(var(--u)*3) var(--ink),inset 0 0 0 calc(var(--u)*3) var(--ink);z-index:40;pointer-events:none;animation:beat .6s ease-in-out infinite alternate;box-sizing:border-box}
+.ring.picked{border-color:var(--water);border-style:solid}
+.lhint{border:calc(var(--u)*5) dashed var(--yellow);border-radius:calc(var(--u)*10);box-shadow:0 0 0 calc(var(--u)*3) var(--ink);z-index:40;pointer-events:none;animation:beat .6s ease-in-out infinite alternate;box-sizing:border-box}
+.dot{position:absolute;width:calc(var(--u)*46);height:calc(var(--u)*46);margin:calc(var(--u)*-23) 0 0 calc(var(--u)*-23);border-radius:50%;background:var(--white);border:calc(var(--u)*4) solid var(--ink);display:grid;place-items:center;font-weight:900;font-size:calc(var(--u)*22);z-index:40;box-sizing:border-box}
+.dot.next{background:var(--yellow);animation:beat .6s ease-in-out infinite alternate}
+.dot.done{background:var(--water);color:var(--white)}
+@keyframes beat{to{transform:scale(1.18)}}
+.ladder{height:calc(var(--u)*18);transform-origin:0 50%;z-index:12;transition:width .45s ease;
+  background:repeating-linear-gradient(90deg,#9AA3AD 0 calc(var(--u)*4),transparent calc(var(--u)*4) calc(var(--u)*16)),linear-gradient(#5B6370 0 calc(var(--u)*4),transparent 0 calc(var(--u)*14),#5B6370 0);border-radius:4px}
+.p{position:absolute;width:calc(var(--u)*48);height:calc(var(--u)*66);transition-property:left,top,opacity,transform;transition-timing-function:linear;z-index:20}
+.p svg{width:100%;height:100%;display:block;overflow:visible}
+.p.walk svg{animation:bobp .28s ease-in-out infinite}
+@keyframes bobp{50%{transform:translateY(-6%) rotate(3deg)}}
+.p.wave svg{animation:wave .5s ease-in-out infinite alternate;transform-origin:50% 100%}
+@keyframes wave{to{transform:rotate(8deg)}}
+.say{position:absolute;left:50%;bottom:105%;transform:translateX(-50%);background:var(--white);border:calc(var(--u)*3) solid var(--ink);border-radius:calc(var(--u)*10);padding:calc(var(--u)*2) calc(var(--u)*7);font-weight:900;font-size:calc(var(--u)*15);white-space:nowrap}
+.puff{position:absolute;width:calc(var(--u)*50);height:calc(var(--u)*50);margin:calc(var(--u)*-40) 0 0 calc(var(--u)*-25);border-radius:50%;background:rgba(240,244,250,.9);z-index:35;pointer-events:none;animation:puff 1s ease-out forwards}
+@keyframes puff{to{transform:translateY(-120%) scale(2);opacity:0}}
+
+/* driving */
+.lane{top:0;width:calc(var(--u)*6);height:100%;background:repeating-linear-gradient(var(--white) 0 calc(var(--u)*40),transparent calc(var(--u)*40) calc(var(--u)*80));background-position:0 var(--off,0)}
+.prog{left:calc(var(--u)*50);right:calc(var(--u)*50);top:calc(var(--u)*10);height:calc(var(--u)*20);background:var(--white);border:calc(var(--u)*3) solid var(--ink);border-radius:999px;z-index:60;overflow:hidden}
+.prog i{position:absolute;left:0;top:0;bottom:0;background:var(--red);width:0}
+.amb.bump{animation:shake .4s}
+.amb.blink svg{animation:blinkv .2s steps(2) 5}
+@keyframes blinkv{50%{opacity:.3}}
+.lb1{animation:lb .5s steps(2) infinite}.lb2{animation:lb .5s steps(2) infinite reverse}
+@keyframes lb{50%{opacity:.25}}
+
+.done{position:absolute;inset:0;z-index:999;background:rgba(255,248,230,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*14);text-align:center;padding:0 16px}
+.done h2{margin:0;font-size:calc(var(--u)*42);font-weight:900;color:var(--yellow);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);text-wrap:balance}
+.done p{margin:0;font-size:calc(var(--u)*20);font-weight:700}
+.done .big{flex:none}
+.burst{position:fixed;pointer-events:none;width:26px;height:26px;z-index:2000;animation:fly .8s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header>
+    <h1>小小消防隊</h1>
+    <div class="tools">
+      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
+      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#16161D" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#E8202A" stroke="#16161D" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#1F55E0" stroke="#16161D" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#16161D" stroke-width="3" stroke-linecap="round"/></svg></button>
+    </div>
+  </header>
+  <div class="banner" id="banner" aria-live="polite"></div>
+  <div class="main" id="main"><div class="stage" id="stage"></div></div>
+  <div class="controls" id="controls"></div>
+</div>
+
+<script>
+/* ================= 音效(即時合成) ================= */
+let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
+try{musicOn=localStorage.getItem('fireMusic')!=='off'}catch(e){}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.08;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function env(g,t,v,d,a=.012){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+d)}
+function note(f,t,d,{type='sine',v=.25,to=null,bus=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);env(g,t,v,d);o.connect(g).connect(bus||sfx);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(t,d,{v=.3,f=1000,q=1,type='bandpass',bus=null}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type=type;fl.frequency.value=f;fl.Q.value=q;env(g,t,v,d,.005);s.connect(fl).connect(g).connect(bus||sfx);s.start(t)}catch(e){}}
+const T=()=>ac().currentTime;
+const S={
+  ring(){const t=T();for(let i=0;i<14;i++)note(i%2?1250:1550,t+i*.045,.05,{type:'square',v:.07})},
+  click(){const t=T();noise(t,.04,{v:.4,f:2500});note(300,t,.06,{v:.2})},
+  siren(n=2){const t=T();for(let i=0;i<n;i++){note(660,t+i*.9,.45,{type:'triangle',v:.16,to:900});note(900,t+i*.9+.45,.45,{type:'triangle',v:.16,to:660})}},
+  wrong(){const t=T();note(330,t,.18,{type:'triangle',to:180,v:.22});note(260,t+.16,.25,{type:'triangle',to:140,v:.18})},
+  dot(k){note(hz(67+k*2),T(),.18,{type:'triangle',v:.25})},
+  gush(){const t=T();noise(t,.9,{v:.25,f:1200,q:.6})},
+  crank(){const t=T();for(let i=0;i<4;i++)noise(t+i*.07,.03,{v:.35,f:3000,q:3})},
+  spray(){noise(T(),.18,{v:.22,f:3500,q:.5,type:'highpass'})},
+  fizz(){const t=T();noise(t,.6,{v:.25,f:5000,q:.5,type:'highpass'});note(800,t,.4,{to:200,v:.05})},
+  honk(){const t=T();note(392,t,.18,{type:'square',v:.1});note(330,t,.18,{type:'square',v:.08})},
+  bump(){const t=T();noise(t,.15,{v:.5,f:300,type:'lowpass'});note(160,t,.2,{to:70,v:.3})},
+  move(){note(600,T(),.08,{to:800,v:.12})},
+  yay(){const t=T();[84,88,91].forEach((m,i)=>note(hz(m),t+i*.08,.35,{type:'triangle',v:.2}))},
+  win(){const t=T();[67,72,76,79,76,79,84].forEach((m,i)=>note(hz(m),t+i*.12,.28,{type:'square',v:.07}));[72,76,79,84].forEach(m=>note(hz(m),t+.9,1.3,{type:'triangle',v:.12}))}
+};
+// 持續的救護車鳴笛
+let sirenNodes=null;
+function sirenOn(){if(sirenNodes)return;try{const c=ac(),o=c.createOscillator(),l=c.createOscillator(),lg=c.createGain(),g=c.createGain();
+  o.type='triangle';o.frequency.value=760;l.type='square';l.frequency.value=1.4;lg.gain.value=130;l.connect(lg).connect(o.frequency);g.gain.value=.05;o.connect(g).connect(sfx);o.start();l.start();sirenNodes=[o,l,g]}catch(e){}}
+function sirenOff(){if(!sirenNodes)return;try{sirenNodes[2].gain.setTargetAtTime(.0001,ctx.currentTime,.1);const n=sirenNodes;setTimeout(()=>{n[0].stop();n[1].stop()},400)}catch(e){}sirenNodes=null}
+// 背景音樂:原創進行曲,150 BPM
+const MEL=[67,0,72,0,72,74,76,0, 74,0,72,0,67,0,0,0, 69,0,74,0,74,76,77,0, 76,74,72,0,72,0,0,0];
+const BASS=[48,55,48,55, 52,55,48,55, 50,57,50,57, 55,50,48,0];
+const EI=60/150/2;
+function sched(){while(nextT<ctx.currentTime+.15){const i=stepN%32,m=MEL[i];
+  if(m){note(hz(m),nextT,.26,{type:'square',v:.18,bus:musicGain});note(hz(m),nextT,.3,{type:'triangle',v:.35,bus:musicGain})}
+  if(i%2===0&&BASS[i/2])note(hz(BASS[i/2]),nextT,.24,{v:.5,bus:musicGain});
+  if(i%4===0)noise(nextT,.08,{v:.12,f:150,type:'lowpass',bus:musicGain});
+  if(i%4===2)noise(nextT,.05,{v:.06,f:4000,bus:musicGain});
+  nextT+=EI;stepN++}}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.08,ctx.currentTime);bgm=setInterval(sched,25)}
+function stopMusic(){clearInterval(bgm);bgm=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05)}
+const musicBtn=document.getElementById('music');
+function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
+musicBtn.addEventListener('click',e=>{e.stopPropagation();musicOn=!musicOn;try{localStorage.setItem('fireMusic',musicOn?'on':'off')}catch(err){}paintMusic();musicOn?startMusic():stopMusic()});
+paintMusic();
+addEventListener('pointerdown',()=>{ac();startMusic()});
+
+/* ================= 共用工具 ================= */
+const stage=document.getElementById('stage'),main=document.getElementById('main'),controls=document.getElementById('controls'),bannerEl=document.getElementById('banner'),starsEl=document.getElementById('stars');
+const U=v=>`calc(var(--u)*${v})`;
+function fit(){const u=Math.max(.5,Math.min(main.clientWidth/410,main.clientHeight/510));document.documentElement.style.setProperty('--u',u+'px');return u}
+addEventListener('resize',fit);fit();
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function el(cls,css={},html=''){const d=document.createElement('div');d.className=cls;Object.assign(d.style,css);d.innerHTML=html;return d}
+function box(x,y,w,h){return{left:U(x),top:U(y),width:U(w),height:U(h)}}
+const banner=t=>bannerEl.textContent=t;
+let stars=0;
+function addStar(n,cx,cy){stars+=n;starsEl.textContent=stars;if(cx!=null){const r=stage.getBoundingClientRect(),k=stage.clientWidth/400;burst(r.left+stage.clientLeft+cx*k,r.top+stage.clientTop+cy*k)}}
+function burst(x,y){for(let i=0;i<6;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('burst');
+  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2"/>';
+  const a=Math.PI*2*i/6;s.style.left=x-13+'px';s.style.top=y-13+'px';s.style.setProperty('--dx',Math.cos(a)*70+'px');s.style.setProperty('--dy',Math.sin(a)*70-30+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),850)}}
+// 把手指位置換算成畫面座標(0~400, 0~500)
+function toStage(e){const r=stage.getBoundingClientRect();const k=stage.clientWidth/400;return{x:(e.clientX-r.left-stage.clientLeft)/k,y:(e.clientY-r.top-stage.clientTop)/k}}
+// 畫面上的手指操作:一次只追蹤一根手指,放開事件由整個視窗接收,不會卡住
+let H={},ptr=null;
+stage.addEventListener('pointerdown',e=>{if(e.target.closest('.done'))return;if(ptr!==null)return;ptr=e.pointerId;H.down&&H.down(toStage(e),e)});
+addEventListener('pointermove',e=>{if(e.pointerId===ptr&&H.move)H.move(toStage(e),e)});
+const endPtr=e=>{if(e.pointerId!==ptr)return;ptr=null;H.up&&H.up(toStage(e),e)};
+addEventListener('pointerup',endPtr);addEventListener('pointercancel',endPtr);
+function setControls(list){controls.innerHTML='';list.forEach(b=>{if(b.hint){controls.appendChild(el('hintline',{},b.hint));return}
+  const n=document.createElement('button');n.type='button';n.className='big '+(b.cls||'');n.innerHTML=(b.icon?ICON[b.icon]:'')+(b.label?`<span class="t">${b.label}</span>`:'');if(b.aria)n.setAttribute('aria-label',b.aria);
+  n.addEventListener('click',()=>b.on(n));controls.appendChild(n)})}
+
+/* ================= 圖案 ================= */
+const INK='#16161D';
+const ICON={
+  phone:`<svg viewBox="0 0 48 48"><path d="M8 18q16-12 32 0l-3 7-7-2v-5q-6-2-12 0v5l-7 2z" fill="#fff" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/><rect x="12" y="26" width="24" height="16" rx="4" fill="#fff" stroke="${INK}" stroke-width="3.5"/></svg>`,
+  truck:`<svg viewBox="0 0 60 40"><rect x="2" y="12" width="40" height="20" rx="3" fill="#E8202A" stroke="${INK}" stroke-width="3"/><path d="M42 14h9l7 9v9H42z" fill="#E8202A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="45" y="17" width="7" height="6" fill="#BFE6FF" stroke="${INK}" stroke-width="2"/><rect x="4" y="6" width="34" height="5" fill="#C9CED6" stroke="${INK}" stroke-width="2"/><circle cx="14" cy="33" r="5" fill="${INK}"/><circle cx="48" cy="33" r="5" fill="${INK}"/></svg>`,
+  amb:`<svg viewBox="0 0 60 40"><rect x="2" y="6" width="40" height="26" rx="3" fill="#fff" stroke="${INK}" stroke-width="3"/><path d="M42 14h9l7 9v9H42z" fill="#fff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="45" y="17" width="7" height="6" fill="#BFE6FF" stroke="${INK}" stroke-width="2"/><path d="M22 11v16M14 19h16" stroke="#E8202A" stroke-width="5"/><circle cx="14" cy="33" r="5" fill="${INK}"/><circle cx="48" cy="33" r="5" fill="${INK}"/></svg>`,
+  ladder:`<svg viewBox="0 0 48 48"><path d="M10 44L30 4M24 44L44 4" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="M14 36h14M18 28h14M22 20h14M26 12h14" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+  left:`<svg viewBox="0 0 48 48"><path d="M30 8L12 24l18 16" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  right:`<svg viewBox="0 0 48 48"><path d="M18 8l18 16-18 16" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  home:`<svg viewBox="0 0 48 48"><path d="M6 24L24 8l18 16v18H6z" fill="#fff" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><rect x="18" y="28" width="12" height="14" fill="#E8202A" stroke="${INK}" stroke-width="3"/></svg>`
+};
+const phoneSVG=`<svg viewBox="0 0 100 80"><rect x="14" y="34" width="72" height="42" rx="10" fill="#E8202A" stroke="${INK}" stroke-width="5"/><circle cx="50" cy="55" r="12" fill="#fff" stroke="${INK}" stroke-width="4"/><circle cx="50" cy="55" r="3" fill="${INK}"/><path d="M6 26q44-34 88 0l-6 12-16-4v-9q-22-8-44 0v9l-16 4z" fill="#E8202A" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/></svg>`;
+function truckSVG(){return `<svg viewBox="0 0 170 96"><rect x="6" y="30" width="118" height="50" rx="6" fill="#E8202A" stroke="${INK}" stroke-width="5"/><path d="M122 22h24q10 0 16 14l4 12v32h-44z" fill="#E8202A" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M130 30h16q6 0 9 8l2 8h-27z" fill="#BFE6FF" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="6" y="60" width="160" height="8" fill="#fff"/><rect x="10" y="16" width="112" height="12" rx="3" fill="#C9CED6" stroke="${INK}" stroke-width="4"/>${[24,40,56,72,88,104].map(x=>`<path d="M${x} 17v10" stroke="${INK}" stroke-width="3"/>`).join('')}<rect x="132" y="14" width="16" height="8" rx="3" fill="#3FA9FF" stroke="${INK}" stroke-width="3"/><circle cx="62" cy="46" r="10" fill="#FFC400" stroke="${INK}" stroke-width="4"/><circle cx="62" cy="46" r="3" fill="${INK}"/>${[34,138].map(x=>`<circle cx="${x}" cy="82" r="13" fill="#3A3F4A" stroke="${INK}" stroke-width="4"/><circle cx="${x}" cy="82" r="4" fill="#C9CED6"/>`).join('')}</svg>`}
+function ambSideSVG(){return `<svg viewBox="0 0 170 96"><rect x="6" y="12" width="112" height="68" rx="6" fill="#fff" stroke="${INK}" stroke-width="5"/><path d="M116 30h28q10 0 16 14l4 10v26h-48z" fill="#fff" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M126 38h18q6 0 9 8l1 6h-28z" fill="#BFE6FF" stroke="${INK}" stroke-width="3"/><rect x="6" y="58" width="158" height="9" fill="#E8202A"/><path d="M62 24v28M48 38h28" stroke="#E8202A" stroke-width="9"/><rect x="40" y="4" width="10" height="9" fill="#E8202A" stroke="${INK}" stroke-width="3" class="lb1"/><rect x="74" y="4" width="10" height="9" fill="#3FA9FF" stroke="${INK}" stroke-width="3" class="lb2"/>${[34,138].map(x=>`<circle cx="${x}" cy="82" r="13" fill="#3A3F4A" stroke="${INK}" stroke-width="4"/><circle cx="${x}" cy="82" r="4" fill="#C9CED6"/>`).join('')}</svg>`}
+function ambTopSVG(){return `<svg viewBox="0 0 60 100"><rect x="4" y="4" width="52" height="92" rx="12" fill="#fff" stroke="${INK}" stroke-width="5"/><path d="M10 14q20-10 40 0v14H10z" fill="#3A5A8A" stroke="${INK}" stroke-width="3"/><rect x="10" y="32" width="18" height="8" rx="2" fill="#E8202A" stroke="${INK}" stroke-width="2" class="lb1"/><rect x="32" y="32" width="18" height="8" rx="2" fill="#3FA9FF" stroke="${INK}" stroke-width="2" class="lb2"/><path d="M30 50v32M14 66h32" stroke="#E8202A" stroke-width="9"/></svg>`}
+const CARS=['#FFC400','#1F55E0','#14A84B','#8B3FD9','#FF7A00','#00A6B8','#FF4FA3'];
+function carSVG(c){return `<svg viewBox="0 0 60 100"><rect x="4" y="6" width="52" height="88" rx="16" fill="${c}" stroke="${INK}" stroke-width="5"/><path d="M12 24q18-8 36 0v14H12z" fill="#BFE6FF" stroke="${INK}" stroke-width="3"/><path d="M12 70h36v10q-18 6-36 0z" fill="#BFE6FF" stroke="${INK}" stroke-width="3"/><circle cx="16" cy="10" r="4" fill="#FFF7A0" stroke="${INK}" stroke-width="2"/><circle cx="44" cy="10" r="4" fill="#FFF7A0" stroke="${INK}" stroke-width="2"/></svg>`}
+const coneSVG=`<svg viewBox="0 0 60 70"><path d="M30 4L48 60H12z" fill="#FF7A00" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M22 30h16M18 44h24" stroke="#fff" stroke-width="6"/><rect x="4" y="58" width="52" height="9" rx="3" fill="#FF7A00" stroke="${INK}" stroke-width="4"/></svg>`;
+const flameSVG=`<svg viewBox="0 0 64 80"><path d="M32 2q10 18 22 28q12 14 6 32q-8 18-28 18T4 62Q-2 44 10 30q4 10 10 12Q18 20 32 2z" fill="#E8202A" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><path d="M32 26q8 12 14 20q6 12-2 22q-6 8-12 8t-12-8q-6-10 2-20q2 6 6 6q-4-14 4-28z" fill="#FF7A00"/><path d="M32 50q6 8 6 14q0 8-6 8t-6-8q0-6 6-14z" fill="#FFE27A"/></svg>`;
+const hydrantSVG=`<svg viewBox="0 0 40 56"><rect x="8" y="14" width="24" height="38" rx="4" fill="#E8202A" stroke="${INK}" stroke-width="4"/><path d="M8 16q12-16 24 0" fill="#E8202A" stroke="${INK}" stroke-width="4"/><rect x="2" y="26" width="36" height="9" rx="3" fill="#E8202A" stroke="${INK}" stroke-width="4"/><rect x="4" y="50" width="32" height="6" rx="2" fill="#B3171F" stroke="${INK}" stroke-width="3"/></svg>`;
+function houseSVG(burnt){const wall=burnt?'#B9B3AA':'#CFE3F0',win=burnt?'#6E737D':'#FFF3A0',cols=[20,85,150],rows=[34,98,162,226];
+  const w=(x,y)=>`<rect x="${x}" y="${y}" width="44" height="40" rx="3" fill="${win}" stroke="${INK}" stroke-width="4"/><path d="M${x+22} ${y}v40" stroke="${INK}" stroke-width="3"/>`;
+  return `<svg viewBox="0 0 210 340"><rect x="2" y="12" width="206" height="326" fill="${wall}" stroke="${INK}" stroke-width="5"/><rect x="0" y="2" width="210" height="14" fill="${burnt?'#7A7F8A':'#8FA4B8'}" stroke="${INK}" stroke-width="5"/>${rows.map(y=>cols.map(x=>w(x,y)).join('')).join('')}${[34,98,162,226].map(y=>`<path d="M2 ${y+52}h206" stroke="${INK}" stroke-width="2" opacity=".35"/>`).join('')}${w(20,284)}${w(150,284)}<rect x="80" y="276" width="50" height="62" fill="${burnt?'#555':'#3FA9FF'}" stroke="${INK}" stroke-width="5"/><path d="M105 276v62" stroke="${INK}" stroke-width="3"/><rect x="70" y="262" width="70" height="14" fill="#E8202A" stroke="${INK}" stroke-width="4"/></svg>`}
+function hospitalSVG(){return `<svg viewBox="0 0 320 200"><rect x="10" y="30" width="300" height="170" fill="#fff" stroke="${INK}" stroke-width="6"/><rect x="120" y="0" width="80" height="60" rx="8" fill="#fff" stroke="${INK}" stroke-width="6"/><path d="M160 10v40M140 30h40" stroke="#E8202A" stroke-width="12"/>${[30,70,230,270].map(x=>`<rect x="${x}" y="70" width="26" height="26" fill="#BFE6FF" stroke="${INK}" stroke-width="4"/>`).join('')}<rect x="110" y="110" width="100" height="90" fill="#3A3F4A" stroke="${INK}" stroke-width="6"/><text x="160" y="104" text-anchor="middle" font-size="18" font-weight="900" fill="#E8202A" font-family="Noto Sans TC,sans-serif">醫院</text></svg>`}
+const SHIRTS=['#E8202A','#1F55E0','#14A84B','#8B3FD9','#FF7A00','#00A6B8','#FF4FA3'];
+function personSVG(i,{grandpa=false,bandage=false}={}){const shirt=SHIRTS[i%SHIRTS.length],hair=grandpa?'#E6E6E6':['#16161D','#6B3E1F','#C46A1B'][i%3];
+  return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/><path d="M8 64v-16q0-12 16-12t16 12v16z" fill="${shirt}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><circle cx="24" cy="22" r="14" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/><path d="M10 18q2-13 14-13t14 13q-8-4-14-4t-14 4z" fill="${hair}" stroke="${INK}" stroke-width="3"/>${grandpa?`<circle cx="19" cy="22" r="5" fill="none" stroke="${INK}" stroke-width="2"/><circle cx="29" cy="22" r="5" fill="none" stroke="${INK}" stroke-width="2"/><path d="M24 22h0" stroke="${INK}"/>`:''}<circle cx="19" cy="22" r="2.4" fill="${INK}"/><circle cx="29" cy="22" r="2.4" fill="${INK}"/><path d="${bandage?'M19 31q5-4 10 0':'M19 29q5 5 10 0'}" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>${bandage?`<rect x="26" y="8" width="14" height="6" rx="2" fill="#fff" stroke="${INK}" stroke-width="2" transform="rotate(25 33 11)"/><rect x="12" y="50" width="12" height="7" rx="2" fill="#fff" stroke="${INK}" stroke-width="2"/>`:''}<circle cx="15" cy="28" r="2.4" fill="#FF9AA8"/><circle cx="33" cy="28" r="2.4" fill="#FF9AA8"/></svg>`}
+function firemanSVG(){return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/><path d="M8 64v-16q0-12 16-12t16 12v16z" fill="#2C2F3A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M8 54h32" stroke="#FFC400" stroke-width="4"/><circle cx="24" cy="23" r="13" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/><path d="M6 18q0-15 18-15t18 15z" fill="#E8202A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M3 18h42" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><rect x="20" y="6" width="8" height="8" rx="2" fill="#FFC400" stroke="${INK}" stroke-width="2"/><circle cx="19" cy="24" r="2.4" fill="${INK}"/><circle cx="29" cy="24" r="2.4" fill="${INK}"/><path d="M19 30q5 4 10 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`}
+
+/* 人物 */
+function makePerson(svg,x,y){const d=el('p');d.innerHTML=svg;const P={el:d,x,y};place(P,x,y,0);return P}
+function place(P,x,y,dur){P.x=x;P.y=y;const d=P.el;d.style.transitionDuration=dur+'ms';d.style.left=U(x-24);d.style.top=U(y-66)}
+async function walk(P,x,y,speed=.16){const ms=Math.max(150,Math.hypot(x-P.x,y-P.y)/speed);P.el.classList.add('walk');place(P,x,y,ms);await wait(ms);P.el.classList.remove('walk')}
+function say(P,txt,ms=1400){const s=el('say',{},txt);P.el.appendChild(s);setTimeout(()=>s.remove(),ms)}
+
+/* ================= 任務安排 ================= */
+const FIRE_CALLS=['幸福大樓著火了!','彩虹公寓冒出好多煙,失火了!','星星大樓起火了,快來幫忙!'];
+const AMB_CALLS=['爺爺在家跌倒受傷了!','小明騎腳踏車摔倒,腳流血了!','奶奶身體不舒服,需要去醫院!'];
+let missionNo=0,order=shuffle(['fire','amb']);
+function nextMission(){const type=order[missionNo%2];if(missionNo%2===1)order=shuffle(['fire','amb']);return type}
+
+/* ================= 消防局:接電話、選車 ================= */
+let ringTimer=null,mission=null;
+function station(){H={};sirenOff();stage.innerHTML='';
+  const type=nextMission();mission={type,rescue:type==='fire'&&Math.random()<.6,text:(type==='fire'?FIRE_CALLS:AMB_CALLS)[(missionNo/2|0)%3]};
+  stage.append(el('abs bldg'),el('abs fsign',{},'消防局'));
+  const g1=el('abs garage',{left:U(36)}),g2=el('abs garage',{left:U(204)});
+  const t=el('v',box(-5,110,170,96),truckSVG()),a=el('v',box(-5,110,170,96),ambSideSVG());
+  const d1=el('abs gdoor'),d2=el('abs gdoor');g1.append(t,d1);g2.append(a,d2);
+  stage.append(g1,g2,el('abs ground'),el('abs desk'));
+  const ph=el('abs phone ringing',{},phoneSVG),rg=el('abs rings',{},'鈴鈴鈴!');stage.append(ph,rg);
+  banner('電話響了!快接電話');
+  S.ring();clearInterval(ringTimer);ringTimer=setInterval(S.ring,1500);
+  setControls([{label:'接電話',icon:'phone',cls:'red',on:()=>answer(ph,rg,{t,a,d1,d2})}])}
+function answer(ph,rg,v){clearInterval(ringTimer);S.click();ph.classList.remove('ringing');rg.remove();
+  const isFire=mission.type==='fire';
+  const pic=isFire?`<div class="abs" style="left:${U(50)};top:${U(22)};width:${U(124)};height:${U(200)}">${houseSVG(false)}</div><div class="flame" style="left:${U(58)};top:${U(30)}">${flameSVG}</div><div class="flame" style="left:${U(112)};top:${U(108)}">${flameSVG}</div>`
+    :`<div class="abs" style="left:${U(60)};top:${U(60)};width:${U(110)};height:${U(150)}">${personSVG(missionNo,{grandpa:true,bandage:true})}</div>`;
+  const card=el('abs call',{},pic+`<div class="abs" style="left:${U(190)};top:${U(70)};width:${U(130)};font-weight:900;font-size:${U(26)};line-height:1.3">${isFire?'失火了!':'有人受傷!'}</div>`);
+  stage.appendChild(card);
+  banner(mission.text+' 要派哪一台車?');
+  setControls([{icon:'truck',label:'消防車',cls:'red',on:b=>choose('fire',b,v)},{icon:'amb',label:'救護車',cls:'white',on:b=>choose('amb',b,v)}])}
+async function choose(kind,b,v){if(kind!==mission.type){S.wrong();b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');
+    banner(mission.type==='fire'?'著火了要用水滅火,派會噴水的車!':'有人受傷要送醫院,派有紅十字的車!');return}
+  setControls([]);S.siren(2);addStar(1,200,200);banner('出動!');stage.querySelector('.call').remove();
+  // 出勤動線:收起值班桌 → 車庫門升起 → 車子開出車庫到門前 → 右轉上馬路開走
+  stage.querySelectorAll('.desk,.phone').forEach(e=>{e.style.transition='opacity .5s';e.style.opacity='0'});
+  const street=el('abs',{...box(0,440,400,60),background:'var(--road)',borderTop:U(4)+' solid '+INK,zIndex:2,opacity:'0',transition:'opacity .5s'});
+  street.appendChild(el('abs',{left:0,top:U(26),width:'100%',height:U(5),background:`repeating-linear-gradient(90deg,#fff 0 ${U(30)},transparent ${U(30)} ${U(56)})`}));
+  stage.appendChild(street);requestAnimationFrame(()=>street.style.opacity='1');
+  const door=kind==='fire'?v.d1:v.d2,car=kind==='fire'?v.t:v.a;door.classList.add('up');await wait(1100);
+  const gx=kind==='fire'?36:204;car.remove();Object.assign(car.style,{left:U(gx),top:U(245),zIndex:30,transformOrigin:'50% 100%'});stage.appendChild(car);
+  await wait(30);S.siren(1);
+  car.style.transition='top 1.1s ease-in-out,transform 1.1s ease-in-out';car.style.top=U(366);car.style.transform='scale(1.12)';await wait(1150);
+  car.style.transition='transform .25s';car.style.transform='scale(1.12) rotate(-3deg)';await wait(250);
+  car.style.transition='left 1.3s ease-in,transform .3s';car.style.transform='scale(1.12)';car.style.left=U(470);await wait(1350);
+  kind==='fire'?fireScene():ambScene()}
+
+/* ================= 火災現場 ================= */
+let F={};
+const ROOF_SPOT=[216,84];
+function fireScene(){H={};stage.innerHTML='';F={flames:[]};
+  stage.style.background='linear-gradient(#FFB36B,#8ED8F8 60%)';
+  stage.append(el('abs road'));
+  F.house=el('abs',box(180,70,210,340),houseSVG(false));stage.appendChild(F.house);
+  F.hydrant=el('abs',box(352,420,40,56),hydrantSVG);stage.appendChild(F.hydrant);
+  F.truck=el('v',box(-180,326,170,96),truckSVG());F.truck.style.transition='left 1.4s ease-out';stage.appendChild(F.truck);
+  // 有人逃到屋頂時,屋頂右邊不放火焰,免得擋住他
+  const spots=[[287,144],[352,144],[222,208],[287,208],[352,272],[222,272],[287,336],[352,336],[222,394]].concat(mission.rescue?[]:[[222,144]]);
+  shuffle(spots).slice(0,4).forEach(([x,y])=>{const f=el('flame',{left:U(x-32),top:U(y-80)},flameSVG);stage.appendChild(f);F.flames.push({el:f,x,y,hp:3})});
+  if(mission.rescue){F.victim=makePerson(personSVG(missionNo+2),ROOF_SPOT[0],ROOF_SPOT[1]);F.victim.el.classList.add('wave');F.victim.el.style.zIndex=31;stage.appendChild(F.victim.el);
+    setTimeout(()=>F.victim&&say(F.victim,'救命啊!',1800),1500)}
+  F.svg=document.createElementNS('http://www.w3.org/2000/svg','svg');F.svg.setAttribute('viewBox','0 0 400 500');Object.assign(F.svg.style,{position:'absolute',inset:0,width:'100%',height:'100%',zIndex:11,pointerEvents:'none'});stage.appendChild(F.svg);
+  setControls([{hint:'消防車開過去了…'}]);banner('到火災現場了!');S.siren(1);
+  requestAnimationFrame(()=>F.truck.style.left=U(0));
+  setTimeout(hoseStage,1600)}
+
+// 第一步:拉水線——從消防栓畫到消防車(或兩邊各點一下),有連上就成功
+const HYD=[372,438],PUMP=[62,372];
+function nearEnd(p){if(Math.hypot(p.x-HYD[0],p.y-HYD[1])<58)return'hyd';if(Math.hypot(p.x-PUMP[0],p.y-PUMP[1])<58)return'pump';return null}
+const ptOf=k=>k==='hyd'?HYD:PUMP;
+function hoseStage(){F.a=null;F.drawing=false;F.connected=false;
+  F.rings=[HYD,PUMP].map(([x,y])=>{const r=el('ring',{left:U(x),top:U(y)});stage.appendChild(r);return r});
+  F.hose=document.createElementNS('http://www.w3.org/2000/svg','polyline');F.hose.setAttribute('fill','none');F.hose.setAttribute('stroke','#FFC400');F.hose.setAttribute('stroke-width','9');F.hose.setAttribute('stroke-linecap','round');F.hose.setAttribute('stroke-linejoin','round');
+  F.hoseOut=F.hose.cloneNode();F.hoseOut.setAttribute('stroke',INK);F.hoseOut.setAttribute('stroke-width','15');F.svg.append(F.hoseOut,F.hose);F.pts=[];drawHose();
+  banner('拉水線!用手指從消防栓畫到消防車');setControls([{hint:'畫一條線連起消防栓和消防車'}]);
+  H.down=p=>{const s=nearEnd(p);
+    if(F.a&&s&&s!==F.a){connectHose();return}
+    if(s){F.a=s;F.drawing=true;F.pts=[ptOf(s)];drawHose();S.dot(0);F.rings[s==='hyd'?0:1].classList.add('picked')}};
+  H.move=p=>{if(!F.drawing)return;const l=F.pts[F.pts.length-1];if(Math.hypot(p.x-l[0],p.y-l[1])>6){F.pts.push([p.x,p.y]);drawHose()}
+    const s=nearEnd(p);if(s&&s!==F.a)connectHose()};
+  H.up=()=>{if(F.connected||!F.drawing)return;F.drawing=false;F.pts=[ptOf(F.a)];drawHose();banner('差一點!再點另一邊,水線就接上了')}}
+function drawHose(){const s=F.pts.map(p=>p.join(',')).join(' ');F.hose.setAttribute('points',s);F.hoseOut.setAttribute('points',s)}
+function connectHose(){F.connected=true;F.drawing=false;H={};F.pts.push(ptOf(F.a==='hyd'?'pump':'hyd'));drawHose();F.rings.forEach(r=>r.remove());
+  S.gush();addStar(1,PUMP[0],PUMP[1]);banner('水線接好了!');setTimeout(()=>mission.rescue?ladderStage():sprayStage(),900)}
+
+// 第二步:有人逃到屋頂——點雲梯上去救人
+const LADDER_BASE=[110,342],LADDER_TOP=[204,96];
+function ladderStage(){const [bx,by]=LADDER_BASE,[tx,ty]=LADDER_TOP;F.raised=false;
+  F.angle=Math.atan2(ty-by,tx-bx);F.len=Math.hypot(tx-bx,ty-by);
+  F.ladder=el('abs ladder',{left:U(bx),top:U(by-9),width:U(20),transform:`rotate(${F.angle}rad)`});stage.appendChild(F.ladder);
+  F.lhint=el('lhint',box(4,334,124,30));stage.appendChild(F.lhint);
+  banner('有人逃到大樓頂樓了!點消防車上的雲梯去救他');say(F.victim,'救命啊!',1500);
+  setControls([{icon:'ladder',label:'升雲梯',cls:'red',on:raise}]);
+  H.down=p=>{if(p.x<150&&p.y>300&&p.y<390)raise()}}
+async function raise(){if(F.raised)return;F.raised=true;H={};F.lhint.remove();
+  setControls([{hint:'雲梯升起來了!'}]);banner('雲梯升高中…');
+  const cr=setInterval(S.crank,280);F.ladder.style.transition='width 1.4s ease-out';F.ladder.style.width=U(F.len);await wait(1450);clearInterval(cr);
+  banner('雲梯到頂樓了!消防員爬上去救人');
+  const [bx,by]=LADDER_BASE,[tx,ty]=LADDER_TOP;const fm=makePerson(firemanSVG(),bx,by+10);fm.el.style.zIndex=32;stage.appendChild(fm.el);
+  await walk(fm,tx-10,ty+14,.15);say(fm,'別怕,我來了!',1200);await wait(800);
+  F.victim.el.classList.remove('wave');await walk(F.victim,tx+12,ty+10,.12);
+  walk(F.victim,bx+22,by+14,.13);await walk(fm,bx,by+10,.13);
+  await Promise.all([walk(fm,40,470,.18),walk(F.victim,84,480,.18)]);
+  S.yay();addStar(2,80,430);say(F.victim,'謝謝消防員!',1600);
+  F.ladder.style.transition='width .8s';F.ladder.style.width=U(20);await wait(900);F.ladder.remove();fm.el.remove();sprayStage()}
+
+// 第三步:灑水滅火
+function sprayStage(){banner('開始灑水!點火焰(按住也可以)把火澆熄');setControls([{hint:'點火焰灑水'}]);
+  let last=0;const hit=p=>{const now=performance.now();if(now-last<160)return;last=now;spray(p)};H.down=hit;H.move=hit}
+function spray(p){S.spray();const sx=150,sy=338,mx=(sx+p.x)/2,my=Math.min(sy,p.y)-60;
+  const w=document.createElementNS('http://www.w3.org/2000/svg','path');w.setAttribute('d',`M${sx} ${sy}Q${mx} ${my} ${p.x} ${p.y}`);w.setAttribute('fill','none');w.setAttribute('stroke','#3FA9FF');w.setAttribute('stroke-width','10');w.setAttribute('stroke-linecap','round');w.setAttribute('stroke-dasharray','14 8');w.setAttribute('opacity','.9');F.svg.appendChild(w);setTimeout(()=>w.remove(),220);
+  const f=F.flames.find(f=>f.hp>0&&Math.hypot(p.x-f.x,p.y-(f.y-40))<46);if(!f)return;
+  f.hp--;f.el.style.transform=`scale(${.35+.65*f.hp/3})`;
+  if(f.hp===0){S.fizz();f.el.remove();addStar(1,f.x,f.y-40);for(let i=0;i<3;i++){const pf=el('puff',{left:U(f.x+(i-1)*14),top:U(f.y-20),animationDelay:i*.12+'s'});stage.appendChild(pf);setTimeout(()=>pf.remove(),1300)}
+    const left=F.flames.filter(f=>f.hp>0).length;if(left)banner('滅掉一個了!還剩 '+left+' 個火焰');else fireOut()}}
+async function fireOut(){H={};banner('火全部撲滅了!');F.house.innerHTML=houseSVG(true);await wait(700);complete('火撲滅了!','你是很棒的消防員')}
+
+/* ================= 救護車閃車 ================= */
+let D={};
+const LANES=[93,200,307];
+function ambScene(){H={};stage.innerHTML='';stage.style.background='var(--grass)';
+  stage.append(el('abs road',{left:U(40),top:0,width:U(320),height:'100%',borderTop:0,borderLeft:U(4)+' solid '+INK,borderRight:U(4)+' solid '+INK,boxSizing:'border-box'}));
+  D={lane:1,obs:[],prog:0,off:0,speed:.22+Math.min(missionNo,6)*.012,spawn:900,inv:0,running:true,total:24000,ended:false,lanes:[]};
+  [147,253].forEach(x=>{const l=el('abs lane',{left:U(x-3)});stage.appendChild(l);D.lanes.push(l)});
+  D.amb=el('v amb',box(LANES[1]-28,380,56,96),ambTopSVG());D.amb.style.transition='left .18s ease-out';D.amb.style.zIndex=20;stage.appendChild(D.amb);
+  const pg=el('abs prog');D.bar=document.createElement('i');pg.appendChild(D.bar);stage.appendChild(pg);
+  banner('送傷患去醫院!按左右閃開車子和三角錐');
+  setControls([{icon:'left',cls:'arrow',aria:'往左',on:()=>steer(-1)},{icon:'right',cls:'arrow',aria:'往右',on:()=>steer(1)}]);
+  H.down=p=>steer(p.x<200?-1:1);
+  sirenOn();D.t0=performance.now();D.last=D.t0;requestAnimationFrame(drive)}
+function steer(d){if(!D.running)return;const n=Math.max(0,Math.min(2,D.lane+d));if(n===D.lane)return;D.lane=n;S.move();D.amb.style.left=U(LANES[n]-28)}
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')steer(-1);if(e.key==='ArrowRight')steer(1)});
+function spawn(){const free=Math.random()*3|0;const lanes=[0,1,2].filter(l=>l!==free);const n=Math.random()<.35+Math.min(missionNo,4)*.05?2:1;
+  shuffle(lanes).slice(0,n).forEach(l=>{const cone=Math.random()<.25;const o=el('v',box(LANES[l]-(cone?24:28),-110,cone?48:56,cone?56:96),cone?coneSVG:carSVG(CARS[Math.random()*CARS.length|0]));
+    stage.appendChild(o);D.obs.push({el:o,lane:l,y:-110,h:cone?56:96})})}
+function drive(now){if(!D.running)return;const dt=Math.min(50,now-D.last);D.last=now;
+  if(!D.ended){D.prog+=dt/D.total;D.bar.style.width=Math.min(100,D.prog*100)+'%';}
+  D.off=(D.off+D.speed*dt)%80;D.lanes.forEach(l=>l.style.setProperty('--off',U(D.off)));
+  if(!D.ended){D.spawn-=dt;if(D.spawn<=0){spawn();D.spawn=1150-Math.min(missionNo,6)*40+Math.random()*350}}
+  D.inv=Math.max(0,D.inv-dt);
+  for(const o of D.obs){o.y+=D.speed*.75*dt;o.el.style.top=U(o.y);
+    if(!o.hit&&o.lane===D.lane&&o.y+o.h>388&&o.y<468&&D.inv===0){o.hit=true;D.inv=1100;S.bump();S.honk();D.prog=Math.max(0,D.prog-.04);
+      D.amb.classList.remove('bump','blink');void D.amb.offsetWidth;D.amb.classList.add('bump','blink');banner('叭!小心!閃開車子');setTimeout(()=>{if(!D.ended)banner('送傷患去醫院!按左右閃開車子和三角錐')},1200);o.el.style.opacity='.5'}}
+  D.obs=D.obs.filter(o=>{if(o.y>520){o.el.remove();return false}return true});
+  if(D.prog>=1&&!D.ended){D.ended=true;banner('醫院快到了!')}
+  if(D.ended&&D.obs.length===0){D.running=false;arrive();return}
+  requestAnimationFrame(drive)}
+async function arrive(){H={};setControls([{hint:'抵達醫院!'}]);
+  const h=el('v',box(40,-210,320,200),hospitalSVG());h.style.transition='top 1.4s ease-out';h.style.zIndex=5;stage.appendChild(h);
+  requestAnimationFrame(()=>h.style.top=U(10));await wait(1500);
+  D.amb.style.transition='left .5s,top 1.4s ease-in,transform 1.4s';D.amb.style.left=U(172);await wait(500);D.amb.style.top=U(120);D.amb.style.transform='scale(.7)';await wait(1450);
+  sirenOff();const doc=makePerson(firemanSVG(),150,250);doc.el.innerHTML=personSVG(1).replace('#1F55E0','#FFFFFF');doc.el.style.zIndex=25;stage.appendChild(doc.el);
+  const pt=makePerson(personSVG(missionNo,{grandpa:true,bandage:true}),250,250);pt.el.style.zIndex=25;stage.appendChild(pt.el);
+  say(doc.el?doc:doc,'交給我們吧!',1500);await wait(900);say(pt,'謝謝你們!',1400);S.yay();addStar(3,200,220);await wait(1200);
+  complete('平安送到醫院!','傷患得救了,好厲害')}
+
+/* ================= 任務完成 ================= */
+function complete(title,sub){H={};sirenOff();S.win();missionNo++;
+  const d=el('done',{},`<h2>${title}</h2><p>${sub}!已經有 ${stars} 顆星星</p>`);
+  const b=document.createElement('button');b.type='button';b.className='big red';b.innerHTML=ICON.home+'<span class="t">回消防局</span>';
+  b.addEventListener('click',()=>{stage.style.background='';station()});d.appendChild(b);stage.appendChild(d);
+  banner('任務完成!');setControls([])}
+
+station();
+</script>
+
+</body>
+</html>
