@@ -11,16 +11,19 @@ function pull_(b) {
   var since = Number(b.since) || 0;
   var tripId = b.tripId ? String(b.tripId) : '';
   if (tripId && !ID_RE.test(tripId)) throw ue_('旅程代號不對');
-  var docs = [];
+  var seq = Number(prop_('SEQ') || 0);
+  if (since > 0 && since >= seq) return { seq: seq, docs: [], log: null };   // 沒有任何變動：不用開試算表
+  var cseq = collSeq_(), docs = [];
   Object.keys(COLLS).forEach(function (coll) {
     if (coll !== 'trip' && !tripId) return;
+    if (since > 0 && cseq[coll] != null && Number(cseq[coll]) <= since) return;   // 這種資料沒變動：整張跳過
     readAll_(coll).rows.forEach(function (r) {
       if (r.seq <= since) return;
       if (coll !== 'trip' && r.tripId !== tripId) return;
       docs.push(toDoc_(coll, r));
     });
   });
-  return { seq: Number(prop_('SEQ') || 0), docs: docs, log: tripId ? recentLogs_(tripId, 15) : [] };
+  return { seq: seq, docs: docs, log: tripId && (docs.length || !since) ? recentLogs_(tripId, 15) : null };
 }
 
 function toDoc_(coll, r) {
@@ -51,7 +54,10 @@ function push_(b, who) {
   var jsons = ops.map(validateOp_);
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) throw ue_('現在有家人正在存檔，請幾秒後再試');
+  var seq = null, cseq = null;
   try {
+    propsFresh_();                                   // 上鎖後重新讀，拿到最新的流水號
+    seq = Number(prop_('SEQ') || 0); cseq = collSeq_();
     var tables = {}, logs = [], results = [], now = Date.now();
     ops.forEach(function (op, i) {
       var t = tables[op.coll] || (tables[op.coll] = readAll_(op.coll));
@@ -66,16 +72,20 @@ function push_(b, who) {
         results.push({ i: i, status: 'conflict', server: null });
         return;
       }
-      var rec = { tripId: op.tripId, key: op.key, data: jsons[i], rev: (cur ? cur.rev : 0) + 1, seq: nextSeq_(), by: who, at: now, deleted: !!op.deleted };
-      if (cur) { writeRow_(t.sh, cur.row, rec); rec.row = cur.row; t.rows[t.rows.indexOf(cur)] = Object.assign({}, cur, rec); }
-      else { rec.row = appendRow_(t.sh, rec); t.rows.push(rec); }
+      var rec = { tripId: op.tripId, key: op.key, data: jsons[i], rev: (cur ? cur.rev : 0) + 1, seq: ++seq, by: who, at: now, deleted: !!op.deleted };
+      cseq[op.coll] = seq;
+      if (cur && cur.pending) Object.assign(cur, rec);                 // 同一批剛新增的又改一次：改排隊中的那筆
+      else if (cur) { writeRow_(t.sh, cur.row, rec); rec.row = cur.row; t.rows[t.rows.indexOf(cur)] = Object.assign({}, cur, rec); }
+      else queueAdd_(t, rec);
       if (op.coll === 'file' && op.deleted && op.data && op.data.driveId) trashFile_(op.data.driveId);
       results.push({ i: i, status: 'ok', rev: rec.rev, seq: rec.seq });
       logs.push([new Date(now), who, op.tripId, op.coll, op.key, op.deleted ? 'delete' : (cur ? 'update' : 'create'), op.msg ? String(op.msg).slice(0, 120) : '']);
     });
+    Object.keys(tables).forEach(function (c) { flushAdds_(tables[c]); });
     appendLogs_(logs);
-    return { results: results, seq: Number(prop_('SEQ') || 0) };
+    return { results: results, seq: seq };
   } finally {
+    if (seq !== null && seq !== Number(prop_('SEQ') || 0)) propsSet_({ SEQ: seq, CSEQ: JSON.stringify(cseq) });   // 就算中途出錯，已寫入的流水號也要記住
     lock.releaseLock();
   }
 }

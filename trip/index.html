@@ -1307,6 +1307,7 @@ function showLogin(msg){
   $("#pwerr").textContent = msg || "";
   const w = gstore.get("who", null); if (w) $("#who").value = w;
   (Sync.enabled ? $("#pw") : $("#who")).focus();
+  if (Sync.enabled && navigator.onLine && !showLogin.warmed){ showLogin.warmed = true; fetch(API_URL, {mode: "no-cors", cache: "no-store"}).catch(() => {}); }   // 趁輸入密碼時先叫醒後端（冷啟動要好幾秒）
 }
 function gate(next){
   gateNext = next;
@@ -1314,14 +1315,14 @@ function gate(next){
     e.preventDefault();
     const who = $("#who").value;
     if (Sync.enabled){
-      const btn = $("#gate-btn"); btn.disabled = true; $("#pwerr").textContent = "";
+      const btn = $("#gate-btn"); btn.disabled = true; btn.textContent = "登入中…"; $("#pwerr").textContent = "";
       try {
         const r = await Sync.call("login", {password: $("#pw").value, who});
         Sync.token = r.token; gstore.set("token", r.token); gstore.set("who", r.who);
         $("#pw").value = ""; $("#gate").hidden = true;
         if (gateNext){ const n = gateNext; gateNext = null; n(); } else Sync.run();
       } catch(err){ $("#pwerr").textContent = err.message; }
-      btn.disabled = false;
+      btn.disabled = false; btn.textContent = "登入";
     } else {
       gstore.set("who", who); $("#gate").hidden = true;
       if (gateNext){ const n = gateNext; gateNext = null; n(); }
@@ -2321,17 +2322,18 @@ function renderAll(pickDay){
 }
 function startRender(){ renderAll(true); }
 function modeNote(){ const n = $("#mode-note"); if (n) n.textContent = Sync.enabled ? "全家同步版" : "本機模式（資料只在這支手機）"; }
-async function switchTrip(id){
+async function switchTrip(id, opt = {}){
   DB.open(id);
+  let pulled = false;
   if (!DB.get("trip", "meta") && Sync.enabled && Sync.token && id !== SAMPLE_ID && navigator.onLine){
     toast("正在下載這趟旅程…");
-    try { await Sync.pull(true); } catch(e){ toast("下載失敗：" + e.message); }
+    try { await Sync.pull(true); pulled = true; } catch(e){ toast("下載失敗：" + e.message); }
   }
   TRIP = materialize();
   if (!TRIP){ if (!DB.exists(SAMPLE_ID)) importTrip(SAMPLE, {keepId: true}); DB.open(SAMPLE_ID); TRIP = materialize(); id = SAMPLE_ID; }
   Trips.setCurrent(id);
   preview = null; editMode = false; renderAll(true);
-  if (Sync.enabled && Sync.token && id !== SAMPLE_ID) Sync.kick(300);
+  if (Sync.enabled && Sync.token && id !== SAMPLE_ID && !pulled && !opt.noKick) Sync.kick(300);   // 剛整趟下載完就不用馬上再同步
 }
 async function boot(){
   await migrateV01();
@@ -2339,7 +2341,7 @@ async function boot(){
   if (!id || !DB.exists(id)) id = SAMPLE_ID;
   if (!DB.exists(SAMPLE_ID)) { const keep = DB.tripId; importTrip(SAMPLE, {keepId: true}); if (keep) DB.open(keep); }
   gate(async () => {
-    await switchTrip(id);
+    await switchTrip(id, {noKick: true});   // 下面馬上會 Sync.run，不要再排一次（會變成連跑兩輪）
     if (Sync.enabled && Sync.token){
       await Sync.run();
       /* 第一次登入：伺服器上已經有旅程、手機上只有範例 → 自動打開最近的一趟 */

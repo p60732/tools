@@ -25,10 +25,18 @@ var LOG_HEAD = ['time', 'who', 'tripId', 'coll', 'key', 'action', 'summary'];
 function cfg_(k) {
   return CFG[k] || PropertiesService.getScriptProperties().getProperty(k) || '';
 }
+/** 指令碼屬性：一次請求只整包讀一次（每讀一次約 30ms）；寫入直接寫並更新暫存。上鎖後要先 propsFresh_() 拿最新值 */
+var _props = null;
+function propsFresh_() { _props = PropertiesService.getScriptProperties().getProperties(); return _props; }
 function prop_(k, v) {
+  if (v === undefined) { var all = _props || propsFresh_(); return Object.prototype.hasOwnProperty.call(all, k) ? all[k] : null; }
   var p = PropertiesService.getScriptProperties();
-  if (v === undefined) return p.getProperty(k);
+  if (_props) { if (v === null) delete _props[k]; else _props[k] = String(v); }
   if (v === null) p.deleteProperty(k); else p.setProperty(k, String(v));
+}
+function propsSet_(obj) {   // 一次寫多個屬性
+  PropertiesService.getScriptProperties().setProperties(obj);
+  if (_props) Object.keys(obj).forEach(function (k) { _props[k] = String(obj[k]); });
 }
 /** 給使用者看的錯誤（訊息會原樣顯示，不含任何 ID） */
 function ue_(msg) { var e = new Error(msg); e.userFacing = true; return e; }

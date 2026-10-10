@@ -55,7 +55,7 @@ t('找不到工作表就報錯，不自動建立', /找不到工作表/.test(g.c
 saved.name = '景點'; const h = saved.rows[0][2]; saved.rows[0][2] = 'oops'; g._ss = null;
 t('表頭不對就報錯', /欄位不對/.test(g.call({ action: 'pull', token: tok, tripId: 't1', since: 0 }).error));
 saved.rows[0][2] = h;
-t('已有資料拒絕重新初始化', (() => { try { g.DANGER_setupTripNotebook(); return false; } catch (e) { return /拒絕/.test(e.message); } })());
+t('已有資料拒絕重新初始化', (() => { try { g.fresh(); g.DANGER_setupTripNotebook(); return false; } catch (e) { return /拒絕/.test(e.message); } })());
 // 檔案
 const up = g.call({ action: 'upload', token: tok, tripId: 't1', fileId: 'f1', name: 'qr.png', type: 'image/png', b64: Buffer.from('PNGDATA').toString('base64') });
 t('上傳成功', up.success && up.data.driveId);
@@ -72,7 +72,7 @@ t('匯率解析', fx.success && fx.data.rates.USD === 32.15 && fx.data.rates.KRW
 t('短網址展開', g.call({ action: 'resolveMap', token: tok, url: 'https://maps.app.goo.gl/abc' }).data.url.includes('!3d35.01'));
 t('不展開別的網址', /只能展開/.test(g.call({ action: 'resolveMap', token: tok, url: 'https://evil.com/x' }).error));
 // 登出全部
-g.LOGOUT_EVERYONE();
+g.fresh(); g.LOGOUT_EVERYONE();
 t('全部登出後舊 token 失效', g.call({ action: 'pull', token: tok, tripId: 't1', since: 0 }).code === 'auth');
 // 節流
 for (let i = 0; i < 5; i++) g.call({ action: 'login', password: 'bad', who: 'x' });
@@ -83,5 +83,28 @@ t('每日備份產生副本', Object.values(g.__drive).filter(d => / \d{4}-\d{2}
 // 錯誤不外洩
 t('錯誤訊息不含試算表 ID', !JSON.stringify(g.call({ action: 'pull', token: 'x.y', tripId: 't1', since: 0 })).includes(g.__props.SHEET_ID));
 
+// 效能改寫的正確性：批次新增、同批改兩次、沒變動快速回應、只跳過真的沒變的表
+{
+  const { makeEnv, setup } = require('./gas-sim');
+  const h = setup(makeEnv({ quiet: true }));
+  const tk = h.call({ action: 'login', password: 'family123', who: '媽媽' }).data.token;
+  const r = h.call({ action: 'push', token: tk, ops: [
+    { coll: 'stop', tripId: 'p1', key: 'a', data: { n: 1 }, baseRev: 0 },
+    { coll: 'stop', tripId: 'p1', key: 'b', data: { n: 2 }, baseRev: 0 },
+    { coll: 'stop', tripId: 'p1', key: 'a', data: { n: 3 }, baseRev: 1 },
+    { coll: 'todo', tripId: 'p1', key: 'c', data: { n: 4 }, baseRev: 0 }] });
+  t('批次寫入都成功', r.success && r.data.results.every(x => x.status === 'ok') && r.data.seq === 4);
+  const all = h.call({ action: 'pull', token: tk, tripId: 'p1', since: 0 }).data.docs;
+  t('同批改兩次只留一列且是新的', all.filter(d => d.key === 'a').length === 1 && all.find(d => d.key === 'a').data.n === 3 && all.find(d => d.key === 'a').rev === 2);
+  t('批次新增的列都在', all.length === 3);
+  h.fresh(); h.__calls && Object.keys(h.__calls).forEach(k => delete h.__calls[k]);
+  const idle = h.call({ action: 'pull', token: tk, tripId: 'p1', since: 4 });
+  t('沒變動的輪詢不開試算表', idle.success && idle.data.docs.length === 0 && !h.__calls.openById && !h.__calls.getValues);
+  h.call({ action: 'push', token: tk, ops: [{ coll: 'todo', tripId: 'p1', key: 'c', data: { n: 5 }, baseRev: 1 }] });
+  const inc = h.call({ action: 'pull', token: tk, tripId: 'p1', since: 4 }).data.docs;
+  t('只拿到有變動的那筆', inc.length === 1 && inc[0].key === 'c' && inc[0].data.n === 5);
+  const seqProp = Number(h.__props.SEQ);
+  t('流水號一次寫回', seqProp === 5 && JSON.parse(h.__props.CSEQ).todo === 5 && JSON.parse(h.__props.CSEQ).stop === 3);
+}
 console.log(`後端測試：${pass} 通過，${fail} 失敗`);
 process.exit(fail ? 1 : 0);

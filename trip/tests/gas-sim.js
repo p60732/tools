@@ -4,24 +4,25 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = r
 function makeEnv(opts = {}) {
   let idn = 0; const nid = p => p + (++idn).toString().padStart(4, '0') + 'xxxxxxxxxxxx';
   const props = {}, cache = new Map(), sheetsById = {}, drive = {};
+  const calls = {}; const C = k => { calls[k] = (calls[k] || 0) + 1; };   // 數一下慢的 Google 服務呼叫（效能測試用）
   class Range {
     constructor(sh, r, c, nr, nc) { Object.assign(this, { sh, r, c, nr, nc }); }
-    getValues() { const out = []; for (let i = 0; i < this.nr; i++) { const row = this.sh.rows[this.r - 1 + i] || []; out.push(Array.from({ length: this.nc }, (_, j) => row[this.c - 1 + j] ?? '')); } return out; }
-    setValues(v) { v.forEach((row, i) => { const R = this.sh.rows[this.r - 1 + i] || (this.sh.rows[this.r - 1 + i] = []); row.forEach((x, j) => R[this.c - 1 + j] = x); }); return this; }
+    getValues() { C('getValues'); const out = []; for (let i = 0; i < this.nr; i++) { const row = this.sh.rows[this.r - 1 + i] || []; out.push(Array.from({ length: this.nc }, (_, j) => row[this.c - 1 + j] ?? '')); } return out; }
+    setValues(v) { C('setValues'); v.forEach((row, i) => { const R = this.sh.rows[this.r - 1 + i] || (this.sh.rows[this.r - 1 + i] = []); row.forEach((x, j) => R[this.c - 1 + j] = x); }); return this; }
     setFontWeight() { return this; }
   }
   class Sheet {
     constructor(name) { this.name = name; this.rows = []; }
     getName() { return this.name; } setName(n) { this.name = n; return this; }
     getRange(r, c, nr = 1, nc = 1) { return new Range(this, r, c, nr, nc); }
-    getLastRow() { let n = this.rows.length; while (n > 0 && !(this.rows[n - 1] || []).some(x => x !== '' && x != null)) n--; return n; }
-    appendRow(v) { this.rows[this.getLastRow()] = v.slice(); }
+    getLastRow() { C('getLastRow'); let n = this.rows.length; while (n > 0 && !(this.rows[n - 1] || []).some(x => x !== '' && x != null)) n--; return n; }
+    appendRow(v) { C('appendRow'); this.rows[this.getLastRow()] = v.slice(); }
     setFrozenRows() { return this; }
   }
   class SS {
     constructor(name) { this.id = nid('ss'); this.name = name; this.sheets = [new Sheet('工作表1')]; sheetsById[this.id] = this; drive[this.id] = { kind: 'file', id: this.id, name, parents: [], trashed: false, created: Date.now(), ss: this }; }
     getId() { return this.id; } getSheets() { return this.sheets; }
-    getSheetByName(n) { return this.sheets.find(s => s.name === n) || null; }
+    getSheetByName(n) { C('getSheetByName'); return this.sheets.find(s => s.name === n) || null; }
     insertSheet(n) { const s = new Sheet(n); this.sheets.push(s); return s; }
   }
   const iter = arr => { let i = 0; return { hasNext: () => i < arr.length, next: () => arr[i++] }; };
@@ -46,10 +47,10 @@ function makeEnv(opts = {}) {
   const blob = (bytes, type, name) => ({ getBytes: () => signed(toBuf(bytes)), getDataAsString: () => toBuf(bytes).toString('utf8'), getContentType: () => type, getName: () => name });
   const env = {
     console: opts.quiet ? { log() {}, error() {} } : console,
-    PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: k => { delete props[k]; } }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => { C('propGet'); return props[k] ?? null; }, getProperties: () => { C('propGetAll'); return Object.assign({}, props); }, setProperty: (k, v) => { C('propSet'); props[k] = String(v); }, setProperties: o => { C('propSet'); Object.keys(o).forEach(k => { props[k] = String(o[k]); }); }, deleteProperty: k => { C('propSet'); delete props[k]; } }) },
     CacheService: { getScriptCache: () => ({ get: k => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), remove: k => cache.delete(k) }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock: () => {}, releaseLock: () => {} }) },
-    SpreadsheetApp: { openById: id => { if (!sheetsById[id]) throw new Error('not found'); return sheetsById[id]; }, create: n => new SS(n) },
+    SpreadsheetApp: { openById: id => { C('openById'); if (!sheetsById[id]) throw new Error('not found'); return sheetsById[id]; }, create: n => new SS(n) },
     DriveApp: {
       createFolder: name => { const f = { kind: 'folder', id: nid('fd'), name, parents: [] }; drive[f.id] = f; return folderObj(f); },
       getFolderById: id => { if (!drive[id] || drive[id].kind !== 'folder') throw new Error('nf'); return folderObj(drive[id]); },
@@ -79,15 +80,18 @@ function makeEnv(opts = {}) {
   vm.createContext(env);
   const dir = process.env.GAS_DIR || path.join(__dirname, '..', 'gas');
   fs.readdirSync(dir).filter(f => f.endsWith('.gs')).sort().forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), env, { filename: f }));
+  env.__calls = calls;
   env.__props = props; env.__drive = drive; env.__sheets = sheetsById; env.__cache = cache;
-  env.call = (body) => JSON.parse(env.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).content);
+  env.fresh = () => { env._props = null; env._ss = null; };   // 真的 GAS 每次請求都是全新的全域變數
+  env.call = (body) => { env.fresh(); return env.callRaw(body); };
+  env.callRaw = (body) => JSON.parse(env.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).content);
   return env;
 }
 
 function setup(env, password = 'family123') {
   env.DANGER_setupTripNotebook();
   env.__props.NEW_PASSWORD = password;
-  env.APPLY_NEW_PASSWORD();
+  env.fresh(); env.APPLY_NEW_PASSWORD(); env.fresh();
   return env;
 }
 module.exports = { makeEnv, setup };

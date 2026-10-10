@@ -18,6 +18,7 @@
     "PW_HASH",
     "SESSION_VER",
     "SEQ",
+    "CSEQ",
     "FX_LAST",
     "NEW_PASSWORD（只在改密碼時暫時存在）"
   ],
