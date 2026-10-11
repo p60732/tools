@@ -1,5 +1,5 @@
 /* 旅遊小筆記 離線快取 */
-const VERSION = "trip-v0.3.3";
+const VERSION = "trip-v0.3.4";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

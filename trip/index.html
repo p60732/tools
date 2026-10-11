@@ -389,7 +389,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.3 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.4 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -2324,6 +2324,46 @@ D. 原本行程裡的航班、住宿、待辦事項也一起轉進對應欄位�
 ${f.who ? "同行：" + f.who + "\n" : ""}${f.flights ? "搭乘航班：" + f.flights + "\n" : ""}${f.paste ? "\n【行程內容（如果這個對話裡沒有，就以這段為準）】\n" + f.paste + "\n" : ""}
 ` + promptBody();
 }
+/* 修改目前這趟：把現在的行程（含自己改過的順序、預約狀態）整份附上，請 AI 只改指定的地方 */
+function currentPlanJSON(){
+  const pick = (o, ks) => { const r = {}; ks.forEach(k => { if (o[k] != null && o[k] !== "" && !(Array.isArray(o[k]) && !o[k].length)) r[k] = o[k]; }); return r; };
+  const placeKs = ["name","local","addr","lat","lng","hours","closed","why"];
+  const skipped = [];
+  const days = TRIP.days.map((d, i) => ({date: d.date, title: d.title, stops: dayStops(i).filter(st => { if (st.skipped){ skipped.push(d.date + " " + st.name); return false; } return true; }).map(st => {
+    const b = bookOf(st), base = st.swappedFrom ? Object.assign({}, st, {name: st.name}) : st;
+    return Object.assign(pick(base, ["t","name","local","addr","lat","lng","hours","closed","note"]), st.move ? {move: st.move} : {}, st.must ? {must: true} : {},
+      b ? {book: b.s, bookRef: b.ref || undefined} : {}, st.alts && st.alts.length ? {alts: st.alts.map(a => pick(a, placeKs))} : {});
+  })}));
+  const plan = Object.assign(pick(TRIP, ["title","who","lang","askText","scene","routeMap"]), {
+    flights: flightList().map(f => pick(f, ["dir","no","date","dep","arr","from","fromName","to","toName","tz"])),
+    days, hotels: (store.get("hotels", null) || TRIP.hotels || []).map(x => pick(x, ["name","local","addr","lat","lng","inDate","inTime","outDate","outTime","room"]))});
+  const ctx = [].concat(
+    transferList().map(t => "接送 " + t.date + " " + t.time + " " + (t.way || "") + "：" + t.from + " → " + t.to),
+    bagList().map(b => "行李寄送 " + b.date + " " + (b.time || "") + "：" + b.from + " → " + b.to + (b.arrive ? "（預計送達 " + b.arrive + "）" : "")));
+  return {json: JSON.stringify(plan), skipped, ctx};
+}
+function buildEditPrompt(f){
+  const c = currentPlanJSON();
+  return `下面是我們目前的旅遊行程 JSON（已經包含我們自己調整過的順序和預約狀態）。請依照【想調整的地方】修改，並「只」回傳修改後的完整 JSON（放在 \`\`\`json 區塊裡），不要其他說明。
+
+【想調整的地方】
+${f.ask || "（請幫我檢查行程是否順暢，時間太趕或營業時間不合的地方幫我調整）"}
+
+【修改規則】
+A. 沒提到的部分盡量保持原樣：景點、時間、順序、交通、備註都不要動。
+B. 已經預約的（book 是 done，或有 bookRef）一定要保留，時間不要改；如果改動會撞到，請在 note 說明。
+C. 新加的地點要補齊：時間 t、當地語言名稱 local、地址 addr、經緯度、營業時間、公休日、交通方式 move，必要時附餐廳備案 alts。
+D. 新加的點要和前後景點的交通時間、營業時間對得上；排不下就調整前後時間並在 note 說明。
+E. 不確定的資料留空字串，不要猜。
+F. 格式和原本一樣，title、who、flights、hotels 也照原樣放回去。
+${c.skipped.length ? "\n【我們已經決定不去的】（不要再排回來）\n" + c.skipped.join("、") + "\n" : ""}${c.ctx.length ? "\n【其他已經安排好的交通】（排行程時請避開這些時間）\n" + c.ctx.join("\n") + "\n" : ""}
+【目前的行程 JSON】
+\`\`\`json
+${c.json}
+\`\`\`
+
+` + promptBody();
+}
 function promptBody(){
   return `【JSON 格式】
 {
@@ -2379,7 +2419,7 @@ function validateTrip(o){
     const stops = (Array.isArray(d.stops) ? d.stops : []).slice(0,20).map((x,si) => {
       const p = cleanPlace(x);
       if (p.lat == null) probs.push("Day " + (di+1) + "「" + p.name + "」沒有座標");
-      return Object.assign(p, {id:"d"+(di+1)+"s"+(si+1), t: isTime(x.t) ? x.t : "--:--", must: !!x.must, book: x.book === "todo" || x.book === "done" ? x.book : "none", bookRef: clip(x.bookRef,30), note: clip(x.note,120),
+      return Object.assign(p, {id:"d"+(di+1)+"s"+(si+1), t: isTime(x.t) ? x.t : "--:--", must: !!x.must, book: ["todo","done","wait","fail"].includes(x.book) ? x.book : "none", bookRef: clip(x.bookRef,30), note: clip(x.note,120),
         move: x.move && MOVE[x.move.type] ? {type:x.move.type, text:clip(x.move.text,40)} : null,
         alts: (Array.isArray(x.alts) ? x.alts : []).slice(0,3).map(cleanPlace)});
     });
@@ -2407,7 +2447,7 @@ function validateTrip(o){
   };
   return {trip, probs};
 }
-let toolMode = "new";
+let toolMode = null;   // null = 自動：有自己的旅程就預設「修改這趟」
 /* 短網址（maps.app.goo.gl）交給後端展開，展開後當成新貼上的連結再解析一次 */
 async function expandShort(input, hint){
   if (!Sync.enabled || !Sync.token || !navigator.onLine){ hint.textContent = Sync.enabled ? "短網址要有網路才能展開；也可以先手動填名稱" : "這是短網址，本機模式沒辦法展開；請在 Google 地圖按「分享 → 複製連結」後改用電腦版長網址，或手動填名稱"; return; }
@@ -2457,9 +2497,11 @@ function renderTools(){
   const inputs = {};
   const fld = (k, label, type) => { inputs[k] = h("input",{id:"tp-"+k,type:type||"text",value:f[k],maxlength:"80"}); return h("div",{class:"field"}, h("label",{for:"tp-"+k},label), inputs[k]); };
   const out = h("textarea",{id:"tp-out",readonly:true,"aria-label":"產生的提示詞"});
+  if (!toolMode) toolMode = TRIP.id !== SAMPLE_ID ? "edit" : "new";
   const gen = () => {
     const flights = flightList().map(f => f.no + "（" + f.date + " " + f.from + "→" + f.to + "）").join("、");
-    out.value = toolMode === "convert"
+    out.value = toolMode === "edit" ? buildEditPrompt({ask: inputs.ask ? inputs.ask.value.trim() : ""})
+      : toolMode === "convert"
       ? buildConvertPrompt({who: inputs.who.value, flights, paste: inputs.paste ? inputs.paste.value.trim() : ""})
       : buildPrompt({dest:inputs.dest.value, from:inputs.from.value, to:inputs.to.value, who:inputs.who.value, need:inputs.need.value, flights});
   };
@@ -2489,8 +2531,11 @@ function renderTools(){
     h("div",{class:"box"},
       h("h3",null, h("span",{class:"step"},"1"), "產生提示詞"),
       h("div",{class:"seg",role:"tablist","aria-label":"提示詞類型",style:"margin:8px 0 12px"},
-        [["new","規劃新行程"],["convert","我已經有行程"]].map(([k,l]) => h("button",{type:"button",role:"tab","aria-selected":toolMode===k?"true":"false",class:toolMode===k?"on":"",onclick:()=>{toolMode=k; renderTools();}}, l))),
-      toolMode === "new"
+        [["edit","修改這趟"],["new","規劃新行程"],["convert","我已經有行程"]].map(([k,l]) => h("button",{type:"button",role:"tab","aria-selected":toolMode===k?"true":"false",class:toolMode===k?"on":"",onclick:()=>{toolMode=k; renderTools();}}, l))),
+      toolMode === "edit"
+        ? [h("div",{class:"hint",style:"margin:0 0 12px"},"會把「" + TRIP.title + "」目前的行程（含你改過的順序、預約狀態、不去的景點、接送和行李時間）一起附上，AI 只改你說的地方。貼回來後按「更新這一趟」。"),
+           h("div",{class:"field"}, h("label",{for:"tp-ask"},"想調整的地方"), (inputs.ask = h("textarea",{id:"tp-ask",maxlength:"2000",placeholder:"例：10/15 想加 ARTE MUSEUM，幫我排在最順的位置",oninput:()=>gen()})))]
+        : toolMode === "new"
         ? [h("p",{class:"small",style:"margin:0 0 10px"},"填好條件，複製提示詞，貼給 Claude 或任何 AI"),
            fld("dest","目的地"), h("div",{class:"row2"}, fld("from","出發日","date"), fld("to","回程日","date")), fld("who","同行"), fld("need","特別需求")]
         : [h("div",{class:"hint",style:"margin:0 0 12px"},"到原本規劃行程的那個對話，把下面的提示詞貼進去。AI 會照原行程轉成小筆記的格式，只補座標、地址、備案和行李規定，不會改你的行程。"),

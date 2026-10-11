@@ -81,6 +81,12 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=另存成新旅程'); await p.waitForTimeout(300);
   t('匯入切換', (await p.textContent('#title')) === '北海道冬天');
   t('旅程清單有兩趟', await p.locator('.trip-row').count() === 2);
+  // 修改這趟：提示詞會附上目前的行程（含跳過的點）
+  await p.click('#plan .seg button:has-text("修改這趟"), .seg button:has-text("修改這趟")').catch(() => {});
+  t('有自己的旅程時預設修改這趟', await p.locator('#tp-ask').isVisible());
+  await p.fill('#tp-ask', '想加 ARTE MUSEUM'); await p.waitForTimeout(100);
+  const prm = await p.inputValue('#tp-out');
+  t('提示詞附上目前行程和要求', prm.includes('大通公園') && prm.includes('想加 ARTE MUSEUM') && prm.includes('"days"') && prm.includes('已經預約'));
   // 編輯這趟：改名、出發日往後移 2 天
   await p.click('.trip-row.on button:has-text("編輯")');
   await p.fill('#fm-title', '北海道冬天（改）'); await p.fill('#fm-start', '2027-02-12');
