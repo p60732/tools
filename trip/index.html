@@ -389,7 +389,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.2 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.3 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -670,14 +670,31 @@ function tripForm(){
     logChange("修改旅程：" + v.title + (shift ? "（日期移動 " + (shift > 0 ? "+" : "") + shift + " 天）" : ""));
     TRIP = materialize(); renderAll(false);
     if (shift) toast("每天的日期已移動；航班、住宿的日期請自己確認");
-  }, DB.tripId === SAMPLE_ID ? null : () => {
-    const id = DB.tripId, meta = DB.get("trip", "meta").data;
-    DB.put("trip", "meta", meta, {deleted: true});
-    Trips.upsert(id, {deleted: true});
-    logChange("刪除旅程：" + meta.title);
-    const next = Object.entries(Trips.list()).filter(([k, t]) => k !== id && !t.deleted && (DB.exists(k) || (Sync.enabled && !t.local))).sort((a, b) => (a[0] === SAMPLE_ID) - (b[0] === SAMPLE_ID))[0];
-    switchTrip(next ? next[0] : SAMPLE_ID); toast("已刪除「" + meta.title + "」（試算表和備份裡還找得回來）");
-  });
+  }, DB.tripId === SAMPLE_ID ? null : () => deleteTrip(DB.tripId));
+}
+/* ---- 刪除一趟旅程（軟刪除：雲端試算表、每日備份都還找得回來）。可以刪目前這趟，也可以刪清單裡別趟 ---- */
+function nextTripAfter(id){
+  const next = Object.entries(Trips.list()).filter(([k, t]) => k !== id && !t.deleted && (DB.exists(k) || (Sync.enabled && !t.local)))
+    .sort((a, b) => (a[0] === SAMPLE_ID) - (b[0] === SAMPLE_ID) || String(b[1].start || "").localeCompare(String(a[1].start || "")))[0];
+  return next ? next[0] : SAMPLE_ID;
+}
+function deleteTrip(id){
+  if (id === SAMPLE_ID) return;
+  const info = Trips.list()[id] || {}, title = info.title || "旅程";
+  if (id === DB.tripId){
+    const meta = DB.get("trip", "meta");
+    DB.put("trip", "meta", meta ? meta.data : {title}, {deleted: true, system: true});
+    logChange("刪除旅程：" + title);
+  } else {
+    const all = gstore.get("db." + id, null) || {}, k = "trip|meta", old = all[k];
+    all[k] = {coll: "trip", key: "meta", data: old ? old.data : {title}, rev: old ? old.rev : 0, by: me(), at: Date.now(), deleted: true};
+    gstore.set("db." + id, all);
+    if (Sync.enabled && !info.local){ const q = Sync.queue().filter(o => !(o.tripId === id && o.coll === "trip" && o.key === "meta")); q.push({tripId: id, coll: "trip", key: "meta", t: Date.now(), force: true}); Sync.setQueue(q); Sync.kick(); }
+  }
+  Trips.upsert(id, {deleted: true});
+  gstore.set("undo." + id, null);
+  if (id === DB.tripId) switchTrip(nextTripAfter(id)); else renderTools();
+  toast("已刪除「" + title + "」（雲端試算表和備份裡還找得回來）");
 }
 
 /* ---- 文件 → 畫面要用的 TRIP 物件 ---- */
@@ -811,17 +828,22 @@ const Sync = {
     return this.current;
   },
   async push(){
-    let q = this.queue().filter(o => o.tripId === DB.tripId);
+    let q = this.queue().filter(o => o.tripId === DB.tripId || (o.coll === "trip" && o.key === "meta" && o.force));   // 別趟只送「刪除旅程」
     if (!q.length) return;
     q = q.slice(0, 150);
     const msgs = gstore.get("opmsg", {}) || {};
-    const ops = q.map(o => { const d = DB.get(o.coll, o.key); return {coll: o.coll, tripId: o.tripId, key: o.key, data: d ? d.data : null, baseRev: d ? d.rev : 0, deleted: d ? !!d.deleted : true, force: !!o.force, msg: msgs[o.t] || undefined}; });
+    const docOf = o => o.tripId === DB.tripId ? DB.get(o.coll, o.key) : ((gstore.get("db." + o.tripId, null) || {})[o.coll + "|" + o.key] || null);
+    const ops = q.map(o => { const d = docOf(o); return {coll: o.coll, tripId: o.tripId, key: o.key, data: d ? d.data : null, baseRev: d ? d.rev : 0, deleted: d ? !!d.deleted : true, force: !!o.force, msg: msgs[o.t] || undefined}; });
     const sentKeys = new Set(q.map(o => o.coll + "|" + o.key + "|" + o.t));
     const res = await this.call("push", {ops});
     const conflicts = [];
     res.results.forEach(r => {
       const o = q[r.i];
-      if (r.status === "ok") DB.setRev(o.coll, o.key, r.rev);
+      if (r.status === "ok"){
+        if (o.tripId === DB.tripId) DB.setRev(o.coll, o.key, r.rev);
+        else { const all = gstore.get("db." + o.tripId, null); if (all && all[o.coll + "|" + o.key]){ all[o.coll + "|" + o.key].rev = r.rev; gstore.set("db." + o.tripId, all); } }
+      }
+      else if (o.tripId !== DB.tripId) {}   // 別趟的刪除用 force 送，不會衝突
       else conflicts.push({op: o, server: r.server, mine: DB.get(o.coll, o.key)});
     });
     const rest = this.queue().filter(o => !sentKeys.has(o.coll + "|" + o.key + "|" + o.t));
@@ -843,7 +865,8 @@ const Sync = {
     });
     if (DB.tripId !== SAMPLE_ID) gstore.set(this.seqKey(DB.tripId), res.seq);
     if (res.log && res.log.length) store.set("log", res.log);
-    if (changed) refreshAfterRemote();
+    if (DB.tripId !== SAMPLE_ID && (Trips.list()[DB.tripId] || {}).deleted){ const t = (Trips.list()[DB.tripId] || {}).title; setTimeout(() => { switchTrip(nextTripAfter(DB.tripId)); toast("家人刪除了「" + t + "」"); }, 0); }
+    else if (changed) refreshAfterRemote();
     else if (tripsChanged && TRIP) renderTools();
     return res;
   },
@@ -2406,6 +2429,10 @@ function tripsCard(){
         curTrip ? null : h("button",{class:"btn tiny",type:"button",onclick:()=>{ switchTrip(id); scrollTo(0,0); }},"打開"),
         curTrip && !Trips.readOnly(id) ? h("button",{class:"btn tiny",type:"button",onclick:tripForm},"✏️ 編輯") : null,
         curTrip && gstore.get("undo." + id, null) ? h("button",{class:"btn tiny",type:"button",onclick:()=>undoReplace(id)},"↩️ 復原 AI 更新前") : null,
+        id !== SAMPLE_ID ? h("button",{class:"btn tiny c",type:"button","aria-label":"刪除「" + (v.title || "旅程") + "」",onclick:e=>{
+          if (!e.currentTarget.dataset.armed){ e.currentTarget.dataset.armed = "1"; e.currentTarget.textContent = "確定刪除？"; return; }
+          deleteTrip(id);
+        }},"🗑 刪除") : null,
         Sync.enabled && Sync.token && v.local && id !== SAMPLE_ID ? h("button",{class:"btn tiny g",type:"button",onclick:()=>uploadTrip(id)},"☁️ 上傳給全家") : null,
         ended && id !== SAMPLE_ID ? h("button",{class:"btn tiny",type:"button",onclick:()=>{ gstore.set("unlock." + id, !unlocked); renderAll(false); }}, unlocked ? "🔒 鎖回唯讀" : "🔓 解鎖編輯") : null));
   });

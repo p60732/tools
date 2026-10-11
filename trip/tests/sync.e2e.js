@@ -137,6 +137,12 @@ const names = u => u.p.$$eval('#dayview .tl .nm b', a => a.map(x => x.textConten
   await sync(mom); await sync(dad);
   t('爸爸看到更新後的行程', (await dad.p.textContent('#dayview')).includes('弘大商圈') && (await dad.p.textContent('#title')) === '首爾親子四日');
   t('更新後航班還在、旅程沒變多', (await dad.p.textContent('#flights')).includes('KE692') && await mom.p.locator('.trip-row').count() === before2);
+  // 爸爸在清單上刪掉台南（不是他目前打開的那趟）→ 媽媽清單也不見
+  await sync(dad); await sync(mom);
+  t('刪之前媽媽看得到台南', (await mom.p.textContent('#toolbox')).includes('台南小旅行'));
+  await dad.p.click('.trip-row:has-text("台南") button:has-text("刪除")'); await dad.p.click('.trip-row:has-text("台南") button:has-text("確定刪除？")'); await sleep(300);
+  await sync(dad); await sync(mom); await sleep(200);
+  t('媽媽清單也刪掉台南', !(await mom.p.textContent('#toolbox')).includes('台南小旅行') && (await mom.p.textContent('#title')) === '首爾親子四日');
   // 舊旅程唯讀
   await mom.p.evaluate(() => { Trips.upsert(DB.tripId, { end: '2020-01-01' }); renderAll(false); });
   t('結束的旅程顯示唯讀', (await mom.p.textContent('#sample-note')).includes('唯讀'));

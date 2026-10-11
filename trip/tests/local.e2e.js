@@ -110,6 +110,14 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.fill('#tp-paste', JSON.stringify({ title: '北海道冬天（改）', days: [{ date: '2027-03-01', title: 'x', stops: [{ t: '09:00', name: '測試點', lat: 43, lng: 141 }] }] })); await p.click('text=檢查');
   await p.click('text=另存成新旅程'); await p.waitForTimeout(200);
   t('同名另存會先提醒', (await p.textContent('#toolbox')).includes('確定要多一趟') && await p.locator('.trip-row').count() === 2);
+  // 清單上直接刪別趟（不是目前這趟），按兩次才刪
+  await p.click('text=確定要多一趟'); await p.waitForTimeout(300);
+  t('確認後多一趟', await p.locator('.trip-row').count() === 3);
+  const other = p.locator('.trip-row:not(.on):has-text("北海道冬天（改）") button:has-text("刪除")');
+  await other.click(); t('第一次只是確認', await p.locator('.trip-row').count() === 3 && (await p.textContent('#toolbox')).includes('確定刪除？'));
+  await p.click('.trip-row button:has-text("確定刪除？")'); await p.waitForTimeout(300);
+  t('刪掉別趟、目前這趟不受影響', await p.locator('.trip-row').count() === 2 && (await p.textContent('#title')) === '北海道冬天（改）');
+  t('範例沒有刪除鈕', await p.locator('.trip-row:has-text("京阪") button:has-text("刪除")').count() === 0);
   // 刪除這趟
   await p.click('.trip-row.on button:has-text("編輯")');
   await p.click('#modal button:has-text("刪除")'); await p.click('#modal button:has-text("確定刪除")'); await p.waitForTimeout(300);
