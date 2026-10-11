@@ -87,17 +87,29 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.click('#modal button[type=submit]'); await p.waitForTimeout(300);
   t('改名成功', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#toolbox')).includes('北海道冬天（改）'));
   t('日期跟著移動', await p.evaluate(() => TRIP.days[0].date) === '2027-02-12');
-  // AI 改好的版本「更新目前這趟」：行程換掉，自己加的網路卡保留，不會多一趟
+  // AI 改好的版本「更新這一趟」：行程換掉，自己加的網路卡保留，不會多一趟
   await p.click('text=＋ 新增 eSIM／SIM 卡／當地門號'); await p.fill('#fm-who', '爸爸'); await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
   const json2 = JSON.stringify({ title: 'AI 取的新名字', days: [{ date: '2027-02-12', title: '小樽', stops: [{ t: '09:00', name: '小樽運河', lat: 43.2, lng: 141.0 }, { t: '12:00', name: '三角市場', lat: 43.19, lng: 140.99 }] }] });
   await p.fill('#tp-paste', json2); await p.click('text=檢查');
-  t('有更新目前這趟的選項', await p.locator('button:has-text("更新目前這趟")').isVisible());
-  await p.click('button:has-text("更新目前這趟")'); await p.waitForTimeout(300);
+  t('有更新這一趟的選項', await p.locator('button:has-text("更新這一趟")').isVisible());
+  await p.click('button:has-text("更新這一趟")'); await p.waitForTimeout(300);
   t('名稱保留、行程換新', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#dayview')).includes('小樽運河') && !(await p.textContent('#dayview')).includes('大通公園'));
   t('自己加的網路卡還在', await p.locator('#sims article:has-text("爸爸")').count() === 1);
   t('沒有多一趟', await p.locator('.trip-row').count() === 2);
   await p.reload(); await p.waitForTimeout(500);
   t('重新整理後還是新行程', (await p.textContent('#dayview')).includes('三角市場'));
+  t('旅程清單看得出內容', (await p.textContent('.trip-row.on')).includes('網路 1'));
+  await p.click('button:has-text("復原 AI 更新前")'); await p.waitForTimeout(300);
+  t('復原成更新前', (await p.textContent('#dayview')).includes('大通公園') && !(await p.textContent('#dayview')).includes('小樽運河') && await p.locator('#sims article:has-text("爸爸")').count() === 1);
+  // 在範例上也能選「更新哪一趟」；同名另存要再按一次確認
+  await p.locator('.trip-row:has-text("京阪") button:has-text("打開")').click(); await p.waitForTimeout(300);
+  await p.fill('#tp-paste', json2); await p.click('text=檢查');
+  t('範例上也能更新別趟', await p.locator('#tp-target').isVisible() && (await p.textContent('#tp-target')).includes('北海道冬天（改）'));
+  await p.click('button:has-text("更新這一趟")'); await p.waitForTimeout(300);
+  t('更新後切到那一趟', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#dayview')).includes('小樽運河'));
+  await p.fill('#tp-paste', JSON.stringify({ title: '北海道冬天（改）', days: [{ date: '2027-03-01', title: 'x', stops: [{ t: '09:00', name: '測試點', lat: 43, lng: 141 }] }] })); await p.click('text=檢查');
+  await p.click('text=另存成新旅程'); await p.waitForTimeout(200);
+  t('同名另存會先提醒', (await p.textContent('#toolbox')).includes('確定要多一趟') && await p.locator('.trip-row').count() === 2);
   // 刪除這趟
   await p.click('.trip-row.on button:has-text("編輯")');
   await p.click('#modal button:has-text("刪除")'); await p.click('#modal button:has-text("確定刪除")'); await p.waitForTimeout(300);

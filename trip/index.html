@@ -389,7 +389,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.1 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.2 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -617,6 +617,7 @@ function replaceItinerary(id, trip){
   if (DB.tripId !== id) DB.open(id);
   if (Trips.readOnly(id)) { toast("這趟旅程是唯讀的，先到「我的旅程」解鎖"); return false; }
   const old = DB.get("trip", "meta").data;
+  gstore.set("undo." + id, {at: Date.now(), meta: old, stops: DB.live("stop").map(d => ({key: d.key, data: d.data}))});   // 這支手機留一份「更新前」可以復原
   const meta = Object.assign({}, old, {lang: trip.lang || old.lang, askText: trip.askText || old.askText, scene: trip.scene || old.scene,
     routeMap: trip.routeMap || null, rules: trip.rules && trip.rules.length ? trip.rules : (old.rules || []), rulesCheckedAt: trip.rulesCheckedAt || old.rulesCheckedAt || "",
     todos: trip.todos && trip.todos.length ? trip.todos : (old.todos || []), days: (trip.days || []).map(d => ({date: d.date, title: d.title || ""}))});
@@ -633,6 +634,26 @@ function replaceItinerary(id, trip){
   Trips.upsert(id, tripInfoFromMeta(id, meta));
   return true;
 }
+/* ---- 復原 AI 更新前的行程（只在按過「更新」的那支手機上有） ---- */
+function undoReplace(id){
+  const u = gstore.get("undo." + id, null);
+  if (!u || DB.tripId !== id) return;
+  DB.put("trip", "meta", u.meta);
+  const keep = new Set(u.stops.map(s => s.key));
+  DB.live("stop").forEach(d => { if (!keep.has(d.key)) DB.put("stop", d.key, d.data, {deleted: true}); });
+  u.stops.forEach(s => DB.put("stop", s.key, s.data));
+  Trips.upsert(id, tripInfoFromMeta(id, u.meta));
+  gstore.set("undo." + id, null);
+  logChange("復原成 AI 更新前的行程"); TRIP = materialize(); renderAll(false); toast("已復原成更新前的行程");
+}
+/* ---- 每趟旅程裡有什麼（分辨同名的旅程用） ---- */
+function tripSummary(id){
+  const docs = id === DB.tripId ? DB.raw() : (gstore.get("db." + id, null) || null);
+  if (!docs) return "";
+  const n = {}; Object.values(docs).forEach(d => { if (!d.deleted) n[d.coll] = (n[d.coll] || 0) + 1; });
+  return [["stop","景點"],["flight","航班"],["hotel","住宿"],["transfer","接送"],["bag","行李"],["sim","網路"],["file","票券"]].filter(([c]) => n[c]).map(([c, l]) => l + " " + n[c]).join("・");
+}
+
 /* ---- 改這趟的名稱、同行、出發日（出發日改了，每天的日期一起往前／往後移） ---- */
 function tripForm(){
   const m = DB.get("trip", "meta").data, days = m.days || [];
@@ -2379,10 +2400,12 @@ function tripsCard(){
     const curTrip = id === TRIP.id, ended = Trips.ended(id), unlocked = gstore.get("unlock." + id, false);
     const tags = [curTrip ? "目前" : null, id === SAMPLE_ID ? "範例" : null, Sync.enabled && v.local && id !== SAMPLE_ID ? "只在這支手機" : null, ended ? (unlocked ? "已結束・已解鎖" : "已結束・唯讀") : null].filter(Boolean);
     return h("div",{class:"trip-row" + (curTrip ? " on" : "")},
-      h("div",{style:"min-width:0;flex:1"}, h("b",null, v.title || "旅程"), h("div",{class:"small"}, (v.start ? v.start.replaceAll("-","/") + (v.end ? " – " + v.end.slice(5).replace("-","/") : "") : "") + (tags.length ? "・" + tags.join("・") : ""))),
+      h("div",{style:"min-width:0;flex:1"}, h("b",null, v.title || "旅程"), h("div",{class:"small"}, (v.start ? v.start.replaceAll("-","/") + (v.end ? " – " + v.end.slice(5).replace("-","/") : "") : "") + (tags.length ? "・" + tags.join("・") : "")),
+        tripSummary(id) ? h("div",{class:"small",style:"color:var(--ink2)"}, tripSummary(id)) : null),
       h("div",{class:"acts",style:"margin:0;flex:0 0 auto"},
         curTrip ? null : h("button",{class:"btn tiny",type:"button",onclick:()=>{ switchTrip(id); scrollTo(0,0); }},"打開"),
         curTrip && !Trips.readOnly(id) ? h("button",{class:"btn tiny",type:"button",onclick:tripForm},"✏️ 編輯") : null,
+        curTrip && gstore.get("undo." + id, null) ? h("button",{class:"btn tiny",type:"button",onclick:()=>undoReplace(id)},"↩️ 復原 AI 更新前") : null,
         Sync.enabled && Sync.token && v.local && id !== SAMPLE_ID ? h("button",{class:"btn tiny g",type:"button",onclick:()=>uploadTrip(id)},"☁️ 上傳給全家") : null,
         ended && id !== SAMPLE_ID ? h("button",{class:"btn tiny",type:"button",onclick:()=>{ gstore.set("unlock." + id, !unlocked); renderAll(false); }}, unlocked ? "🔒 鎖回唯讀" : "🔓 解鎖編輯") : null));
   });
@@ -2416,13 +2439,23 @@ function renderTools(){
   const paste = h("textarea",{id:"tp-paste",placeholder:"把 AI 的整段回答貼在這裡","aria-label":"貼上 AI 回答"});
   const res = h("div",{class:"hint"},"貼上之後按「檢查」，我會先告訴你讀到什麼，再讓你選要更新目前這趟還是另存新旅程");
   let pendingTrip = null;
-  const canReplace = TRIP.id !== SAMPLE_ID && !Trips.readOnly(TRIP.id);
+  /* 可以被「更新」的旅程：手機上有、不是範例、沒鎖住。預設目前這趟，不然選日期最近的 */
+  const editable = Object.entries(Trips.list()).filter(([k, v]) => k !== SAMPLE_ID && !v.deleted && DB.exists(k) && !Trips.readOnly(k))
+    .sort((a, b) => (b[0] === TRIP.id) - (a[0] === TRIP.id) || String(b[1].start || "").localeCompare(String(a[1].start || "")));
+  const canReplace = editable.length > 0;
+  const target = h("select",{id:"tp-target","aria-label":"要更新哪一趟"}, editable.map(([k, v]) => h("option",{value:k}, (v.title || "旅程") + (v.start ? "（" + v.start.slice(5).replace("-","/") + "）" : "") + (tripSummary(k) ? "・" + tripSummary(k) : ""))));
+  const targetRow = h("div",{class:"field",hidden:true,style:"margin-top:8px"}, h("label",{for:"tp-target"},"要更新哪一趟"), target);
   const replaceBtn = h("button",{class:"btn c",type:"button",hidden:true,onclick:()=>{
-    if (!replaceItinerary(TRIP.id, pendingTrip)) return;
-    logChange("用 AI 的版本更新了每日行程"); TRIP = materialize(); renderAll(true);
-    toast("已更新「" + TRIP.title + "」的行程（航班、住宿、接送、網路、票券都保留）"); scrollTo(0,0);
-  }},"更新目前這趟");
-  const applyBtn = h("button",{class:"btn" + (canReplace ? "" : " c"),type:"button",hidden:true,onclick:()=>{
+    const id = target.value;
+    if (!replaceItinerary(id, pendingTrip)) return;
+    switchTrip(id);
+    logChange("用 AI 的版本更新了每日行程");
+    toast("已更新「" + (Trips.list()[id] || {}).title + "」的行程（航班、住宿、接送、行李、網路、票券都保留；不滿意可到「我的旅程」復原）"); scrollTo(0,0);
+  }},"更新這一趟");
+  let newArmed = false;
+  const applyBtn = h("button",{class:"btn" + (canReplace ? "" : " c"),type:"button",hidden:true,onclick:e=>{
+    const same = editable.find(([k, v]) => v.title === pendingTrip.title || (v.start && v.start === pendingTrip.days[0].date));
+    if (same && !newArmed){ newArmed = true; e.currentTarget.textContent = "已經有「" + same[1].title + "」，確定要多一趟？"; return; }
     const id = importTrip(pendingTrip); switchTrip(id); toast(Sync.enabled ? "已建立新旅程，正在上傳給全家…" : "已建立新旅程 ✓"); scrollTo(0,0);
   }},"另存成新旅程");
   box.append(
@@ -2445,18 +2478,19 @@ function renderTools(){
       h("div",{class:"field",style:"margin-top:8px"}, paste),
       h("div",{class:"acts",style:"margin-bottom:10px"},
         h("button",{class:"btn y",type:"button",onclick:()=>{
-          applyBtn.hidden = true; replaceBtn.hidden = true;
+          applyBtn.hidden = true; replaceBtn.hidden = true; targetRow.hidden = true; newArmed = false; applyBtn.textContent = "另存成新旅程";
           try {
             const {trip, probs} = validateTrip(extractJSON(paste.value));
             pendingTrip = trip; const n = trip.days.reduce((a,d)=>a+d.stops.length,0);
             res.className = "hint ok";
             res.textContent = "✓ 讀到「" + trip.title + "」：" + trip.days.length + " 天、" + n + " 個地點、場景是" + LANDMARK[trip.scene.landmark].label + "＋" + VEHICLE[trip.scene.vehicle].label + (probs.length ? "。要注意：" + probs.slice(0,3).join("、") + (probs.length>3?"…":"") : "");
-            applyBtn.hidden = false; replaceBtn.hidden = !canReplace;
-            if (canReplace) res.append(h("div",{class:"small",style:"margin-top:6px"}, "「更新目前這趟」：只換「" + TRIP.title + "」的每日行程和清單，你填的航班、住宿、接送、行李、網路、票券都保留。「另存成新旅程」：多一趟新的。"));
+            applyBtn.hidden = false; replaceBtn.hidden = !canReplace; targetRow.hidden = !canReplace;
+            if (canReplace) res.append(h("div",{class:"small",style:"margin-top:6px"}, "「更新這一趟」：只換每日行程和清單，你填的航班、住宿、接送、行李、網路、票券都保留，更新後也能復原。「另存成新旅程」：多一趟新的。"));
           } catch(e){ res.className = "hint"; res.textContent = "讀不懂：" + e.message; }
         }},"檢查"),
-        h("button",{class:"btn",type:"button",onclick:()=>{paste.value=""; res.className="hint"; res.textContent="已清空"; applyBtn.hidden=true; replaceBtn.hidden=true;}},"清空"),
+        h("button",{class:"btn",type:"button",onclick:()=>{paste.value=""; res.className="hint"; res.textContent="已清空"; applyBtn.hidden=true; replaceBtn.hidden=true; targetRow.hidden=true;}},"清空"),
         replaceBtn, applyBtn),
+      targetRow,
       res),
     h("div",{class:"box"},
       h("h3",null, h("span",{class:"step"},"3"), "手動加地點"),

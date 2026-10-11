@@ -129,11 +129,11 @@ const names = u => u.p.$$eval('#dayview .tl .nm b', a => a.map(x => x.textConten
   await login(dad, 'family123'); await sync(dad);
   t('爸爸的旅程清單看到台南', (await dad.p.textContent('#toolbox')).includes('台南小旅行'));
 
-  // 媽媽用 AI 改好的版本「更新目前這趟」→ 爸爸看到新行程，旅程數不變、航班還在
+  // 媽媽用 AI 改好的版本「更新這一趟」→ 爸爸看到新行程，旅程數不變、航班還在
   await sync(mom);
   const before2 = await mom.p.locator('.trip-row').count();
   const upd = { title: '首爾（AI 新版）', days: [{ date: '2027-03-01', title: '弘大', stops: [{ t: '11:00', name: '弘大商圈', lat: 37.556, lng: 126.923 }] }] };
-  await mom.p.fill('#tp-paste', JSON.stringify(upd)); await mom.p.click('text=檢查'); await mom.p.click('button:has-text("更新目前這趟")'); await sleep(300);
+  await mom.p.fill('#tp-paste', JSON.stringify(upd)); await mom.p.click('text=檢查'); await mom.p.click('button:has-text("更新這一趟")'); await sleep(300);
   await sync(mom); await sync(dad);
   t('爸爸看到更新後的行程', (await dad.p.textContent('#dayview')).includes('弘大商圈') && (await dad.p.textContent('#title')) === '首爾親子四日');
   t('更新後航班還在、旅程沒變多', (await dad.p.textContent('#flights')).includes('KE692') && await mom.p.locator('.trip-row').count() === before2);
