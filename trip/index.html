@@ -389,7 +389,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.4 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.5 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -2400,10 +2400,20 @@ function promptBody(){
 7. routeMap 是首頁的路線地圖：3–8 個主要城市／機場／港口，從台灣出發的那站加 "far": true，相距不到 5 公里的地點合併成一站。
 8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。`;
 }
+/* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
-  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/); const raw = (m ? m[1] : text).trim();
-  const a = raw.indexOf("{"), b = raw.lastIndexOf("}"); if (a < 0 || b < a) throw new Error("找不到 JSON，請確認有把 AI 的整段回答貼上");
-  return JSON.parse(raw.slice(a, b+1));
+  // ```json 一定是開頭；單獨的 ``` 是結尾。被截斷的區塊沒有結尾，下一段 ```json 就直接接上
+  const parts = []; let inside = false, last = 0, any = false;
+  for (const m of text.matchAll(/```(json)?[ \t]*\n?/gi)){
+    if (inside) parts.push(text.slice(last, m.index));
+    inside = m[1] ? true : (inside ? false : true); any = true; last = m.index + m[0].length;
+  }
+  if (inside) parts.push(text.slice(last));
+  const raw = (any ? parts.join("") : text).trim();
+  const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
+  if (a < 0) throw new Error("找不到 JSON，請確認有把 AI 的整段回答貼上");
+  try { if (b < a) throw 0; return JSON.parse(raw.slice(a, b+1)); }
+  catch(e){ throw new Error("AI 的回答好像不完整（被截斷了）。到 AI 對話裡說「繼續」，把後半段也接在後面貼上；或請 AI「note 寫短一點，只回傳 JSON」再試一次"); }
 }
 const clip = (v, n) => typeof v === "string" ? v.slice(0, n) : (v == null ? "" : String(v).slice(0, n));
 const num = v => (typeof v === "number" && isFinite(v)) ? v : undefined;
@@ -2534,13 +2544,13 @@ function renderTools(){
         [["edit","修改這趟"],["new","規劃新行程"],["convert","我已經有行程"]].map(([k,l]) => h("button",{type:"button",role:"tab","aria-selected":toolMode===k?"true":"false",class:toolMode===k?"on":"",onclick:()=>{toolMode=k; renderTools();}}, l))),
       toolMode === "edit"
         ? [h("div",{class:"hint",style:"margin:0 0 12px"},"會把「" + TRIP.title + "」目前的行程（含你改過的順序、預約狀態、不去的景點、接送和行李時間）一起附上，AI 只改你說的地方。貼回來後按「更新這一趟」。"),
-           h("div",{class:"field"}, h("label",{for:"tp-ask"},"想調整的地方"), (inputs.ask = h("textarea",{id:"tp-ask",maxlength:"2000",placeholder:"例：10/15 想加 ARTE MUSEUM，幫我排在最順的位置",oninput:()=>gen()})))]
+           h("div",{class:"field"}, h("label",{for:"tp-ask"},"想調整的地方"), (inputs.ask = h("textarea",{id:"tp-ask",maxlength:"10000",placeholder:"例：10/15 想加 ARTE MUSEUM，幫我排在最順的位置",oninput:()=>gen()})))]
         : toolMode === "new"
         ? [h("p",{class:"small",style:"margin:0 0 10px"},"填好條件，複製提示詞，貼給 Claude 或任何 AI"),
            fld("dest","目的地"), h("div",{class:"row2"}, fld("from","出發日","date"), fld("to","回程日","date")), fld("who","同行"), fld("need","特別需求")]
         : [h("div",{class:"hint",style:"margin:0 0 12px"},"到原本規劃行程的那個對話，把下面的提示詞貼進去。AI 會照原行程轉成小筆記的格式，只補座標、地址、備案和行李規定，不會改你的行程。"),
            fld("who","同行"),
-           h("div",{class:"field"}, h("label",{for:"tp-paste-src"},"行程內容（不在同一個對話時才需要貼）"), (inputs.paste = h("textarea",{id:"tp-paste-src",placeholder:"例：把行程表、筆記或文件的文字貼在這裡",maxlength:"20000"})))],
+           h("div",{class:"field"}, h("label",{for:"tp-paste-src"},"行程內容（不在同一個對話時才需要貼）"), (inputs.paste = h("textarea",{id:"tp-paste-src",placeholder:"例：把行程表、筆記或文件的文字貼在這裡（長度不限）",maxlength:"300000",oninput:e=>{ $("#tp-paste-n").textContent = e.target.value.length ? "已貼上 " + e.target.value.length.toLocaleString() + " 字" : ""; }})), h("div",{id:"tp-paste-n",class:"small",style:"text-align:right"}))],
       h("div",{class:"acts",style:"margin-bottom:10px"},
         h("button",{class:"btn y",type:"button",onclick:gen},"產生提示詞"),
         h("button",{class:"btn",type:"button",onclick:()=>{ if(!out.value) gen(); try{ navigator.clipboard.writeText(out.value).then(()=>toast("已複製"),()=>{out.select();toast("請手動長按複製");}); }catch(e){ out.select(); } }},"複製")),

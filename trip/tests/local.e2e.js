@@ -132,6 +132,17 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=另存成新旅程'); await p.waitForTimeout(300);
   await p.locator('.trip-row:has-text("京阪") button:has-text("打開")').click(); await p.waitForTimeout(300);
   t('切回京阪且資料還在', (await p.textContent('#title')).includes('京阪') && await p.locator('#flights .pass').count() === 3);
+  // 長行程內容不會被截斷；AI 回答分兩段也能讀；被截斷會說明
+  await p.click('.seg button:has-text("我已經有行程")');
+  const long = '第1天 景點描述'.repeat(4000);
+  await p.fill('#tp-paste-src', long);
+  t('長行程內容整份保留', (await p.inputValue('#tp-paste-src')).length === long.length && (await p.inputValue('#tp-out')).length > 0);
+  const full = JSON.stringify({ title: '分段測試', days: [{ date: '2027-04-01', title: 'A', stops: [{ t: '09:00', name: '甲地', lat: 35, lng: 139 }] }] });
+  const cut = Math.floor(full.length / 2);
+  await p.fill('#tp-paste', '```json\n' + full.slice(0, cut) + '```json\n' + full.slice(cut) + '\n```'); await p.click('text=檢查');
+  t('兩段接起來讀得到', (await p.textContent('#toolbox')).includes('讀到「分段測試」'));
+  await p.fill('#tp-paste', '```json\n' + full.slice(0, cut)); await p.click('text=檢查');
+  t('被截斷時提示叫 AI 繼續', (await p.textContent('#toolbox')).includes('被截斷'));
   t('沒有錯誤', errs.length === 0); if (errs.length) console.log(errs);
   console.log(`本機模式測試：${pass} 通過，${fail} 失敗`);
   await b.close(); process.exit(fail ? 1 : 0);
