@@ -96,6 +96,13 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("跳過")').click(); await p.waitForTimeout(200);
   t('跳過的餐不再出現', !(await p.textContent('#food-list')).includes('稻荷壽司老店'));
   await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("恢復")').click().catch(() => {}); await p.click('text=完成').catch(() => {});
+  // 行程裡的備案一鍵收進口袋名單（不重複）
+  const before3 = await p.locator('#food-pocket article').count();
+  await p.click('button:has-text("家備案也收進口袋名單")'); await p.waitForTimeout(300);
+  const after3 = await p.locator('#food-pocket article').count();
+  t('備案收進口袋名單', after3 > before3 && (await p.textContent('#food-pocket')).includes('京都站拉麵小路') && (await p.textContent('#food-pocket')).includes('12/20 附近'));
+  await p.click('button:has-text("家備案也收進口袋名單")'); await p.waitForTimeout(300);
+  t('再按一次不會重複', await p.locator('#food-pocket article').count() === after3);
   // 優惠券・門票：新增、存圖、標成已使用
   t('範例有一張優惠券', await p.locator('#coupons article').count() === 1);
   await p.click('text=＋ 填資料新增');
@@ -145,10 +152,11 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   t('日期跟著移動', await p.evaluate(() => TRIP.days[0].date) === '2027-02-12');
   // AI 改好的版本「更新這一趟」：行程換掉，自己加的網路卡保留，不會多一趟
   await p.click('text=＋ 新增 eSIM／SIM 卡／當地門號'); await p.fill('#fm-who', '爸爸'); await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
-  const json2 = JSON.stringify({ title: 'AI 取的新名字', days: [{ date: '2027-02-12', title: '小樽', stops: [{ t: '09:00', name: '小樽運河', lat: 43.2, lng: 141.0 }, { t: '12:00', name: '三角市場', lat: 43.19, lng: 140.99 }] }] });
+  const json2 = JSON.stringify({ title: 'AI 取的新名字', foods: [{ name: '小樽壽司屋通', local: '小樽寿司屋通り', lat: 43.19, lng: 141.0, day: '2027-02-12', dish: '海鮮丼' }, { name: '北菓樓', cat: '甜點' }], days: [{ date: '2027-02-12', title: '小樽', stops: [{ t: '09:00', name: '小樽運河', lat: 43.2, lng: 141.0 }, { t: '12:00', name: '三角市場', lat: 43.19, lng: 140.99 }] }] });
   await p.fill('#tp-paste', json2); await p.click('text=檢查');
   t('有更新這一趟的選項', await p.locator('button:has-text("更新這一趟")').isVisible());
   await p.click('button:has-text("更新這一趟")'); await p.waitForTimeout(300);
+  t('AI 的口袋名單也加進來', (await p.textContent('#food-pocket')).includes('小樽壽司屋通') && (await p.textContent('#food-pocket')).includes('北菓樓'));
   t('名稱保留、行程換新', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#dayview')).includes('小樽運河') && !(await p.textContent('#dayview')).includes('大通公園'));
   t('自己加的網路卡還在', await p.locator('#sims article:has-text("爸爸")').count() === 1);
   t('沒有多一趟', await p.locator('.trip-row').count() === 2);

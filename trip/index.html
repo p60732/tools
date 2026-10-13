@@ -422,7 +422,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.9 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.0 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -641,7 +641,7 @@ function importTrip(trip, opt = {}){
     seen.add(sid);
     DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}), sys);
   }));
-  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers], ["sim", trip.sims], ["bag", trip.bags], ["coupon", trip.coupons]].forEach(([coll, list]) =>
+  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers], ["sim", trip.sims], ["bag", trip.bags], ["coupon", trip.coupons], ["food", trip.foods]].forEach(([coll, list]) =>
     (list || []).forEach(x => { const uid = x.uid || rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid}), sys); }));
   Trips.upsert(id, tripInfoFromMeta(id, meta, {local: id === SAMPLE_ID || !!opt.localOnly}));
   return id;
@@ -663,6 +663,7 @@ function replaceItinerary(id, trip){
     const sid = rid("s");   // 一律新代號：舊景點的附件不會掛到新的地點上
     DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}));
   }));
+  mergeFoods(trip.foods);
   [["flight", trip.flights], ["hotel", trip.hotels]].forEach(([coll, list]) => {
     if (DB.live(coll).length) return;
     (list || []).forEach(x => { const uid = rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid})); });
@@ -670,6 +671,30 @@ function replaceItinerary(id, trip){
   Trips.upsert(id, tripInfoFromMeta(id, meta));
   return true;
 }
+/* ---- 口袋名單合併：同名（或同當地店名）的不重複加，已有的保留你自己填的資料，只補空的欄位 ---- */
+const foodKey = s => String(s || "").replace(/\s|（.*?）|\(.*?\)/g, "").toLowerCase();
+function mergeFoods(list){
+  if (!Array.isArray(list) || !list.length) return 0;
+  const now = DB.live("food"); let added = 0;
+  list.forEach(f => {
+    const hit = now.find(d => foodKey(d.data.name) === foodKey(f.name) || (f.local && foodKey(d.data.local) === foodKey(f.local)));
+    if (hit){
+      const fill = {}; Object.keys(f).forEach(k => { if ((hit.data[k] == null || hit.data[k] === "" || (Array.isArray(hit.data[k]) && !hit.data[k].length)) && f[k] != null && f[k] !== "") fill[k] = f[k]; });
+      if (Object.keys(fill).length) DB.put("food", hit.key, Object.assign({}, hit.data, fill));
+      return;
+    }
+    const uid = rid("fd"); DB.put("food", uid, Object.assign({}, f, {uid})); now.push({key: uid, data: f}); added++;
+  });
+  return added;
+}
+/* 行程裡每一餐的備案，一鍵收進口袋名單（記住是哪天的備案） */
+function altsToPocket(){
+  const items = [];
+  TRIP.days.forEach((d, i) => dayStops(i).filter(st => !st.skipped && mealOf(st)).forEach(st => (st.alts || []).forEach(a => items.push(Object.assign({}, a, {day: d.date, cat: MEALS[mealOf(st)][0] + "備案", note: (a.why ? a.why + "；" : "") + "原本是「" + mealName(st.name) + "」的備案"})))));
+  const n = mergeFoods(items);
+  logChange("把行程裡的備案收進口袋名單（" + n + " 家）"); renderFood(); toast(n ? "已加入 " + n + " 家到口袋名單" : "備案都已經在口袋名單裡了");
+}
+
 /* ---- 復原 AI 更新前的行程（只在按過「更新」的那支手機上有） ---- */
 function undoReplace(id){
   const u = gstore.get("undo." + id, null);
@@ -2358,6 +2383,8 @@ function renderFood(){
   pockets.forEach(f => pb.append(pocketCard(f)));
   if (!pockets.length) pb.append(h("div",{class:"box small",style:"text-align:center"},"還沒有口袋名單"));
   pb.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>foodForm(null)},"＋ 加到口袋名單"));
+  const altN = TRIP.days.reduce((n, d, i) => n + dayStops(i).filter(st => !st.skipped && mealOf(st)).reduce((m, st) => m + (st.alts || []).length, 0), 0);
+  if (altN) pb.append(h("button",{class:"btn",type:"button",style:"width:100%;margin-top:8px",onclick:altsToPocket},"⭐ 把行程裡的 " + altN + " 家備案也收進口袋名單"));
 }
 function pocketCard(f, inDay){
   return h("article",{class:"box meal"},
@@ -2372,6 +2399,7 @@ function pocketCard(f, inDay){
       f.dish ? h("div",null,h("span",null,"必點"), f.dish) : null,
       f.price ? h("div",null,h("span",null,"價位"), f.price) : null,
       f.hours ? h("div",null,h("span",null,"營業"), f.hours) : null),
+    f.day ? closedWarn(f, f.day) : null,
     f.note ? h("p",{class:"note"}, "💡 " + f.note) : null,
     inDay ? null : attachRow("food", f, "美食 " + f.name),
     foodNav(f));
@@ -2572,6 +2600,7 @@ A. 景點、餐廳、時間、順序、交通方式都照原本的行程，不�
 B. 原本沒有的資料才由你補上：經緯度、當地語言名稱與地址、營業時間、公休日、餐廳備案 alts、路線地圖 routeMap、行李規定 rules。
 C. 補上的資料如果不確定，就留空字串，不要猜。
 D. 原本行程裡的航班、住宿、待辦事項也一起轉進對應欄位。
+D2. 原本計畫裡提到的「備選」餐廳、點心、小吃、咖啡（不管是寫成備案、口袋名單、有空可以吃、推薦清單），只要沒排進每天行程，全部放進 foods。
 ${f.who ? "同行：" + f.who + "\n" : ""}${f.flights ? "搭乘航班：" + f.flights + "\n" : ""}${f.paste ? "\n【行程內容（如果這個對話裡沒有，就以這段為準）】\n" + f.paste + "\n" : ""}
 ` + promptBody();
 }
@@ -2608,6 +2637,7 @@ C. 新加的地點要補齊：時間 t、當地語言名稱 local、地址 addr�
 D. 新加的點要和前後景點的交通時間、營業時間對得上；排不下就調整前後時間並在 note 說明。
 E. 不確定的資料留空字串，不要猜。
 F. 格式和原本一樣，title、who、flights、hotels 也照原樣放回去。
+G. 這次對話或原本計畫裡提到、但沒排進行程的備選餐廳、點心、小吃、咖啡，放進 foods（已經在口袋名單的不用重複）。
 ${c.skipped.length ? "\n【我們已經決定不去的】（不要再排回來）\n" + c.skipped.join("、") + "\n" : ""}${c.ctx.length ? "\n【其他已經安排好的交通、口袋名單】（排行程時請避開這些時間；口袋名單可以優先排進去）\n" + c.ctx.join("\n") + "\n" : ""}
 【目前的行程 JSON】
 \`\`\`json
@@ -2635,6 +2665,7 @@ function promptBody(){
       "alts":[ { "name":"","local":"","addr":"","lat":0,"lng":0,"hours":"","closed":[],"why":"為什麼適合當備案" } ] } ] } ],
   "hotels": [ { "name":"","local":"","addr":"","lat":0,"lng":0,"inDate":"YYYY-MM-DD","inTime":"HH:MM","outDate":"YYYY-MM-DD","outTime":"HH:MM","room":"" } ],
   "todos": [ { "g":"分類", "items":[ { "t":"項目", "tag":"carry | check | any", "why":"一句話原因（可省略）" } ] } ],
+  "foods": [ { "name":"中文店名","local":"當地語言店名","addr":"當地語言地址","lat":0,"lng":0,"cat":"種類，例：湯飯／烤肉／咖啡／甜點","area":"區域","day":"YYYY-MM-DD（哪天會在附近，不確定就空字串）","dish":"必點","price":"價位","hours":"營業時間","closed":[],"note":"小提醒" } ],
   "rulesCheckedAt": "你查詢的日期 YYYY-MM-DD",
   "rules": [ { "tag":"carry | check | ban | declare", "title":"短標題", "text":"一兩句說明", "src":"官方來源名稱" } ]
 }
@@ -2651,7 +2682,8 @@ function promptBody(){
    - 回台灣禁止帶的東西與罰則
    tag：carry＝只能隨身、check＝只能托運、ban＝禁止、declare＝要注意或申報。
 7. routeMap 是首頁的路線地圖：3–8 個主要城市／機場／港口，從台灣出發的那站加 "far": true，相距不到 5 公里的地點合併成一站。
-8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。`;
+8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。
+9. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，全部放進來（不要漏）；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
 }
 /* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
@@ -2706,6 +2738,7 @@ function validateTrip(o){
       return nodes.length ? {nodes, legs} : null; })() : null,
     hotels: (Array.isArray(o.hotels) ? o.hotels : []).slice(0,10).map(x => Object.assign(cleanPlace(x), {inDate:isDate(x.inDate)?x.inDate:"", inTime:isTime(x.inTime)?x.inTime:"", outDate:isDate(x.outDate)?x.outDate:"", outTime:isTime(x.outTime)?x.outTime:"", in:clip(x.in,20), out:clip(x.out,20), room:clip(x.room,30)})),
     todos: (Array.isArray(o.todos) ? o.todos : []).slice(0,10).map(g => ({g:clip(g.g,20), items:(Array.isArray(g.items)?g.items:[]).slice(0,30).map(x => typeof x === "string" ? clip(x,60) : {t:clip(x.t,60), tag: ["carry","check","any"].includes(x.tag) ? x.tag : "any", why:clip(x.why,60)}).filter(x => typeof x === "string" ? x : x.t)})),
+    foods: (Array.isArray(o.foods) ? o.foods : []).slice(0, 80).filter(f => f && f.name).map(f => Object.assign(cleanPlace(f), {cat: clip(f.cat,20), area: clip(f.area,30), day: isDate(f.day) ? f.day : "", dish: clip(f.dish,40), price: clip(f.price,20), note: clip(f.note,120)})),
     rulesCheckedAt: isDate(o.rulesCheckedAt) ? o.rulesCheckedAt : "",
     rules: (Array.isArray(o.rules) ? o.rules : []).slice(0,30).filter(r => r && TAG[r.tag] && r.title).map(r => ({tag:r.tag, title:clip(r.title,30), text:clip(r.text,200), src:clip(r.src,60)}))
   };
