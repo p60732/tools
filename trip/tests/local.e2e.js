@@ -116,6 +116,16 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.fill('#fm-title', '海雲台膠囊列車'); await p.fill('#fm-until', '2026-12-31'); await p.click('#modal button[type=submit]'); await p.waitForTimeout(300);
   t('補完資料提示消失', await p.locator('#coupons article:has-text("海雲台膠囊列車")').count() === 1 && await p.locator('#coupons article:has-text("海雲台膠囊列車"):has-text("先存了圖")').count() === 0 && await p.locator('#coupons article:has-text("海雲台膠囊列車") .att-th img').count() === 1);
   t('票券夾的名稱也更新', (await p.textContent('#tickets')).includes('券 海雲台膠囊列車'));
+  // 同一張卡片多張圖：可以左右切換
+  const gcard = p.locator('#coupons article:has-text("海雲台膠囊列車")');
+  await gcard.locator('.att input[type=file]').setInputFiles([__dirname + '/qr.png', __dirname + '/qr.png']); await p.waitForTimeout(1200);
+  await gcard.locator('.att-th').first().click(); await p.waitForTimeout(400);
+  t('看圖時顯示 1 / 3', (await p.textContent('#modal .gal-bar')).includes('1 / 3') && await p.locator('#modal .gal .slide img').count() === 3);
+  await p.click('#modal button[aria-label="下一張"]'); await p.waitForTimeout(600);
+  t('按下一張變 2 / 3', (await p.textContent('#modal .gal-bar')).includes('2 / 3'));
+  await p.locator('#modal .gal').evaluate(g => g.scrollTo({left: g.clientWidth * 2})); await p.waitForTimeout(500);
+  t('滑到最後一張變 3 / 3', (await p.textContent('#modal .gal-bar')).includes('3 / 3'));
+  await p.click('#modal button:has-text("關閉")');
   // 匯入新行程
   const json = JSON.stringify({ title: '北海道冬天', days: [{ date: '2027-02-10', title: '札幌', stops: [{ t: '10:00', name: '大通公園', lat: 43.06, lng: 141.35, move: { type: 'car', text: '自駕' } }] }] });
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=另存成新旅程'); await p.waitForTimeout(300);

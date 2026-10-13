@@ -245,6 +245,14 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .att-add:focus-within{outline:3px dashed var(--ink);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
 .viewer{display:grid;gap:4px}
+.gal{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
+.gal::-webkit-scrollbar{display:none}
+.gal>.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;min-height:120px}
+.gal-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px}
+.gal-bar .btn{min-width:44px}
+.gal-dots{display:flex;gap:6px;justify-content:center;margin-top:4px}
+.gal-dots i{width:7px;height:7px;border-radius:50%;background:var(--line,#ccc);border:1.5px solid var(--ink)}
+.gal-dots i.on{background:var(--ink)}
 .viewer-img{display:block;width:100%;max-height:68vh;object-fit:contain;background:#fff;border:2.5px solid var(--ink);border-radius:12px;margin-top:8px}
 .ticket b{font-weight:400;font-size:16px}
 
@@ -414,7 +422,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.8 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.9 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -1874,33 +1882,61 @@ async function fileBlob(meta){
     await FileDB.put(full); return full;
   } catch(e){ return null; }
 }
-function thumb(meta, big, onChange){
+function thumb(meta, big, onChange, list){
   const isPdf = /pdf/.test(meta.type);
   const btn = h("button",{type:"button",class:"att-th" + (big ? " big" : "") + (isPdf ? " pdf" : ""),"aria-label":"打開附件 " + meta.name}, isPdf ? h("span",null,"PDF") : h("span",{class:"small"},"⏳"));
   fileBlob(meta).then(rec => {
     if (!rec){ if (!isPdf) btn.firstChild.textContent = "☁️"; btn.title = "還沒下載（有網路時會自動抓）"; return; }
     if (!isPdf){ btn.textContent = ""; btn.append(h("img",{src:blobUrl(rec),alt:""})); }
-    btn.onclick = () => openViewer(rec, onChange);
+    btn.onclick = () => { const l = list && list.length ? list : [meta]; openViewer(l, Math.max(0, l.findIndex(m => m.id === meta.id)), onChange); };
   });
   return btn;
 }
-function openViewer(rec, onChange){
-  let armed = false;
+/* 看附件：同一張卡片有好幾張時可以左右滑（也可以按 ‹ ›、鍵盤左右鍵） */
+function openViewer(list, start, onChange){
+  let cur = start || 0, armed = false;
   openModal(b => {
-    const isPdf = /pdf/.test(rec.type);
-    b.append(h("div",{class:"viewer"},
-      h("div",{class:"small",style:"display:flex;justify-content:space-between;gap:8px"}, h("span",null, rec.label), h("span",null, rec.by + "・" + new Date(rec.added).toLocaleDateString("zh-TW"))),
-      isPdf ? h("a",{class:"btn b",href:blobUrl(rec),target:"_blank",rel:"noopener",style:"margin:16px 0"},"📄 打開 PDF：" + rec.name)
-            : h("img",{src:blobUrl(rec),alt:rec.name,class:"viewer-img"}),
-      isPdf ? null : h("p",{class:"small",style:"margin:6px 0 0;text-align:center"},"要給人掃 QR code 時，記得把螢幕亮度調到最亮"),
-      h("div",{class:"acts",style:"margin-top:12px"},
-        h("button",{class:"btn y",type:"button","data-close":""},"關閉"),
-        h("button",{class:"btn c",type:"button",style:"margin-left:auto",onclick:async e=>{
-          if (!armed){ armed = true; e.currentTarget.textContent = "確定刪除？"; return; }
-          const d = DB.get("file", rec.id);
-          if (DB.put("file", rec.id, d ? d.data : {}, {deleted: true}) !== false){ await FileDB.del(rec.id).catch(() => {}); logChange("刪除附件「" + rec.name + "」"); }
-          $("#modal").hidden = true; onChange && onChange();
-        }},"刪除"))));
+    const head = h("div",{class:"small",style:"display:flex;justify-content:space-between;gap:8px"});
+    const gal = h("div",{class:"gal"});
+    const count = h("span",{class:"small"});
+    const dots = h("div",{class:"gal-dots","aria-hidden":"true"});
+    const del = h("button",{class:"btn c",type:"button",style:"margin-left:auto"},"刪除");
+    list.forEach(meta => {
+      const slide = h("div",{class:"slide"}, h("span",{class:"small"},"⏳ 讀取中…"));
+      gal.append(slide);
+      fileBlob(meta).then(rec => {
+        slide.textContent = "";
+        if (!rec){ slide.append(h("span",{class:"small"},"☁️ 還沒下載（有網路時會自動抓）")); return; }
+        slide.append(/pdf/.test(rec.type) ? h("a",{class:"btn b",href:blobUrl(rec),target:"_blank",rel:"noopener",style:"margin:16px 0"},"📄 打開 PDF：" + rec.name)
+                                          : h("img",{src:blobUrl(rec),alt:rec.name,class:"viewer-img",draggable:"false"}));
+      });
+    });
+    const paint = () => {
+      const m = list[cur] || {};
+      head.textContent = ""; head.append(h("span",null, m.label || ""), h("span",null, (m.by || "") + (m.added ? "・" + new Date(m.added).toLocaleDateString("zh-TW") : "")));
+      count.textContent = list.length > 1 ? (cur + 1) + " / " + list.length : "";
+      dots.textContent = ""; if (list.length > 1 && list.length <= 12) list.forEach((_, i) => dots.append(h("i",{class: i === cur ? "on" : ""})));
+      armed = false; del.textContent = "刪除";
+    };
+    const go = i => { cur = Math.max(0, Math.min(list.length - 1, i)); gal.scrollTo({left: cur * gal.clientWidth, behavior: "smooth"}); paint(); };
+    gal.addEventListener("scroll", () => { const i = Math.round(gal.scrollLeft / Math.max(1, gal.clientWidth)); if (i !== cur){ cur = i; paint(); } }, {passive: true});
+    const onKey = e => { if ($("#modal").hidden){ removeEventListener("keydown", onKey); return; } if (e.key === "ArrowLeft") go(cur - 1); if (e.key === "ArrowRight") go(cur + 1); };
+    addEventListener("keydown", onKey);
+    del.onclick = async () => {
+      if (!armed){ armed = true; del.textContent = "確定刪除？"; return; }
+      const m = list[cur], d = DB.get("file", m.id);
+      if (DB.put("file", m.id, d ? d.data : {}, {deleted: true}) !== false){ await FileDB.del(m.id).catch(() => {}); logChange("刪除附件「" + m.name + "」"); }
+      $("#modal").hidden = true; onChange && onChange();
+    };
+    b.append(h("div",{class:"viewer"}, head, gal,
+      list.length > 1 ? h("div",{class:"gal-bar"},
+        h("button",{class:"btn tiny",type:"button","aria-label":"上一張",onclick:()=>go(cur - 1)},"‹"), count,
+        h("button",{class:"btn tiny",type:"button","aria-label":"下一張",onclick:()=>go(cur + 1)},"›")) : null,
+      dots,
+      h("p",{class:"small",style:"margin:6px 0 0;text-align:center"}, (list.length > 1 ? "左右滑動看其他張・" : "") + "給人掃 QR code 時把螢幕調到最亮"),
+      h("div",{class:"acts",style:"margin-top:12px"}, h("button",{class:"btn y",type:"button","data-close":""},"關閉"), del)));
+    requestAnimationFrame(() => { gal.scrollLeft = cur * gal.clientWidth; paint(); });
+    paint();
   });
 }
 /* 把檔案存成某張卡片的附件（縮圖、存手機、排進同步）；回傳成功幾個 */
@@ -1924,7 +1960,7 @@ function attachRow(type, item, label){
   const fill = () => {
     row.textContent = "";
     const recs = fileDocs(key);
-    recs.forEach(meta => row.append(thumb(meta, false, () => { fill(); renderTickets(); })));
+    recs.forEach(meta => row.append(thumb(meta, false, () => { fill(); renderTickets(); }, recs)));
     const inp = h("input",{type:"file",accept:"image/*,application/pdf",multiple:true,class:"sr",onchange:async e=>{
       const room = ATT_MAX - recs.length;
       if (e.target.files.length > room) toast("每張卡片最多 " + ATT_MAX + " 個附件，這次只加前 " + room + " 個");
@@ -1946,7 +1982,7 @@ function renderTickets(){
   recs.forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
   const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); renderFood(); };
   Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"}, h("b",null, lb),
-    h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again))))));
+    h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again, groups[lb]))))));
 }
 
 /* ===== 航班、住宿：可新增／編輯／刪除（正式版存後端，全家同步） ===== */
