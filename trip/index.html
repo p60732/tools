@@ -414,7 +414,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.7 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.8 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -1903,6 +1903,21 @@ function openViewer(rec, onChange){
         }},"刪除"))));
   });
 }
+/* 把檔案存成某張卡片的附件（縮圖、存手機、排進同步）；回傳成功幾個 */
+async function addFiles(key, label, files){
+  let n = 0;
+  for (const f of files){
+    if (f.size > 15e6){ toast("「" + f.name + "」太大了（上限 15MB）"); continue; }
+    const blob = await shrinkImage(f);
+    const meta = {owner: key, label, name: f.name || "截圖", type: blob.type || f.type, added: Date.now() + n, by: me()};
+    const id = rid("f");
+    if (DB.put("file", id, meta) === false) break;
+    await FileDB.put(Object.assign({id, blob}, meta)); n++;
+  }
+  return n;
+}
+/* 卡片改名後，附件在票券夾的分組名稱也跟著改 */
+function relabelFiles(key, label){ fileDocs(key).forEach(m => { const d = DB.get("file", m.id); if (d && d.data.label !== label) DB.put("file", m.id, Object.assign({}, d.data, {label})); }); }
 function attachRow(type, item, label){
   const key = ownerKey(type, item);
   const row = h("div",{class:"att"});
@@ -1913,16 +1928,7 @@ function attachRow(type, item, label){
     const inp = h("input",{type:"file",accept:"image/*,application/pdf",multiple:true,class:"sr",onchange:async e=>{
       const room = ATT_MAX - recs.length;
       if (e.target.files.length > room) toast("每張卡片最多 " + ATT_MAX + " 個附件，這次只加前 " + room + " 個");
-      const files = [...e.target.files].slice(0, Math.max(0, room));
-      let n = 0;
-      for (const f of files){
-        if (f.size > 15e6){ toast("「" + f.name + "」太大了（上限 15MB）"); continue; }
-        const blob = await shrinkImage(f);
-        const meta = {owner: key, label, name: f.name || "截圖", type: blob.type || f.type, added: Date.now() + n, by: me()};
-        const id = rid("f");
-        if (DB.put("file", id, meta) === false) break;
-        await FileDB.put(Object.assign({id, blob}, meta)); n++;
-      }
+      const n = await addFiles(key, label, [...e.target.files].slice(0, Math.max(0, room)));
       if (n){ logChange("在「" + label + "」加了 " + n + " 個附件"); fill(); renderTickets(); }
     }});
     if (recs.length >= ATT_MAX) row.append(h("span",{class:"small"},"已滿 " + ATT_MAX + " 個（刪掉一個才能再加）"));
@@ -2205,7 +2211,8 @@ function couponForm(idx){
   ], c0, v => {
     v.uid = idx == null ? "cp" + Date.now().toString(36) : list[idx].uid;
     if (idx == null) list.push(v); else list[idx] = v;
-    store.set("coupons", list); logChange((idx == null ? "新增" : "更新") + "優惠券・門票：" + v.title); renderCoupons();
+    store.set("coupons", list); relabelFiles(ownerKey("coupon", v), "券 " + v.title);
+    logChange((idx == null ? "新增" : "更新") + "優惠券・門票：" + v.title); renderCoupons(); renderTickets();
   }, idx == null ? null : () => { const gone = list.splice(idx,1)[0]; store.set("coupons", list); logChange("刪除優惠券・門票：" + gone.title); renderCoupons(); });
 }
 function renderCoupons(){
@@ -2226,13 +2233,28 @@ function renderCoupons(){
         c.date ? h("div",null,h("span",null,"預計使用"), md(c.date) + "（" + WEEK[wd(c.date)] + "）") : null,
         c.until ? h("div",null,h("span",null,"有效期限"), md(c.until), expired ? h("span",{class:"chip warn-chip",style:"margin-left:4px"},"過期了") : null) : null,
         c.price ? h("div",null,h("span",null,"面額"), c.price) : null),
+      c.quick ? h("button",{class:"hint",type:"button",style:"text-align:left;cursor:pointer;margin:6px 0 0",onclick:()=>couponForm(i)},"📝 先存了圖，有空再按這裡補名稱、期限等資料") : null,
       c.code ? h("div",{class:"small",style:"margin-top:6px"}, "券號 ", h("span",{class:"code-ref"}, c.code)) : null,
       c.note ? h("p",{class:"note"}, "💡 " + c.note) : null,
       attachRow("coupon", c, "券 " + c.title),
       h("div",{class:"acts"}, h("button",{class:"btn " + (c.used ? "" : "g"),type:"button",onclick:toggle}, c.used ? "↩️ 改回還沒用" : "✓ 標成已使用"))));
   });
   if (!list.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有優惠券或門票"));
-  box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>couponForm(null)},"＋ 新增優惠券・門票"));
+  const quick = h("input",{type:"file",accept:"image/*,application/pdf",multiple:true,class:"sr",id:"cp-quick",onchange:async e=>{
+    const files = [...e.target.files].slice(0, 20); if (!files.length) return;
+    const now = new Date(), stamp = (now.getMonth()+1) + "/" + now.getDate();
+    const l = couponList().slice(); let made = 0;
+    for (const f of files){
+      const c = {uid: "cp" + Date.now().toString(36) + made, kind: "other", title: "票券 " + stamp + (files.length > 1 ? " #" + (made + 1) : ""), quick: "1"};
+      l.push(c); store.set("coupons", l);
+      if (await addFiles(ownerKey("coupon", c), "券 " + c.title, [f])) made++;
+    }
+    logChange("先存了 " + made + " 張票券圖"); toast("已存 " + made + " 張，之後再補資料就好"); renderCoupons(); renderTickets();
+  }});
+  box.append(h("div",{class:"acts",style:"margin:0"},
+    h("label",{class:"btn y",style:"flex:1;text-align:center;cursor:pointer"}, quick, "📷 直接存圖"),
+    h("button",{class:"btn g",type:"button",style:"flex:1",onclick:()=>couponForm(null)},"＋ 填資料新增")),
+    h("p",{class:"small",style:"margin:6px 0 0"},"「直接存圖」可以一次選好幾張，每張變成一張票券，名稱和期限之後再補。"));
 }
 
 /* ===== 吃什麼：行程裡的每一餐＋備案＋口袋名單 ===== */

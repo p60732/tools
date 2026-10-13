@@ -98,7 +98,7 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("恢復")').click().catch(() => {}); await p.click('text=完成').catch(() => {});
   // 優惠券・門票：新增、存圖、標成已使用
   t('範例有一張優惠券', await p.locator('#coupons article').count() === 1);
-  await p.click('text=＋ 新增優惠券・門票');
+  await p.click('text=＋ 填資料新增');
   await p.selectOption('#fm-kind', 'ticket'); await p.fill('#fm-title', 'ARTE MUSEUM 門票'); await p.fill('#fm-code', 'AM-777');
   await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
   const tk = p.locator('#coupons article:has-text("ARTE MUSEUM 門票")');
@@ -108,6 +108,14 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.reload(); await p.waitForTimeout(600);
   t('重新整理後門票、截圖、已使用都在', await p.locator('#coupons article.used:has-text("ARTE MUSEUM 門票") .att-th img').count() === 1);
   t('票券夾也收到', (await p.textContent('#tickets')).includes('券 ARTE MUSEUM 門票'));
+  // 直接存圖：一次兩張 → 兩張票券，之後補資料，票券夾分組名稱跟著改
+  await p.locator('#cp-quick').setInputFiles([__dirname + '/qr.png', __dirname + '/qr.png']); await p.waitForTimeout(1200);
+  const quickCards = p.locator('#coupons article:has-text("先存了圖")');
+  t('直接存圖產生兩張待補資料的票券', await quickCards.count() === 2 && await p.locator('#coupons article:has-text("先存了圖") .att-th img').count() === 2);
+  await quickCards.first().locator('button:has-text("先存了圖")').click();
+  await p.fill('#fm-title', '海雲台膠囊列車'); await p.fill('#fm-until', '2026-12-31'); await p.click('#modal button[type=submit]'); await p.waitForTimeout(300);
+  t('補完資料提示消失', await p.locator('#coupons article:has-text("海雲台膠囊列車")').count() === 1 && await p.locator('#coupons article:has-text("海雲台膠囊列車"):has-text("先存了圖")').count() === 0 && await p.locator('#coupons article:has-text("海雲台膠囊列車") .att-th img').count() === 1);
+  t('票券夾的名稱也更新', (await p.textContent('#tickets')).includes('券 海雲台膠囊列車'));
   // 匯入新行程
   const json = JSON.stringify({ title: '北海道冬天', days: [{ date: '2027-02-10', title: '札幌', stops: [{ t: '10:00', name: '大通公園', lat: 43.06, lng: 141.35, move: { type: 'car', text: '自駕' } }] }] });
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=另存成新旅程'); await p.waitForTimeout(300);
