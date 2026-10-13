@@ -17,7 +17,7 @@ var CFG = {
 };
 
 /** 每種資料一張工作表（資料地圖 docs/資料地圖.md） */
-var COLLS = { trip: '旅程', stop: '景點', flight: '航班', transfer: '接送', hotel: '住宿', todo: '清單', file: '附件', sim: '通訊', bag: '行李' };
+var COLLS = { trip: '旅程', stop: '景點', flight: '航班', transfer: '接送', hotel: '住宿', todo: '清單', file: '附件', sim: '通訊', bag: '行李', coupon: '票券' };
 var HEAD = ['tripId', 'key', 'data', 'rev', 'seq', 'updatedBy', 'updatedAt', 'deleted'];
 var LOG_SHEET = '紀錄';
 var LOG_HEAD = ['time', 'who', 'tripId', 'coll', 'key', 'action', 'summary'];
