@@ -10,9 +10,9 @@
 <style>
 /* Layout: one screen — header (stage chips, stars, music) / fixed-ratio scene (platform or train car) / one huge action button. Deliberately single bright theme. */
 :root{
-  --ink:#16161D; --sky:#8ED8F8; --wall:#FFF3D6; --wall-tile:#F5E2B4;
+  --ink:#4A4552; --sky:#C9E1EA; --wall:#F6F0E4; --wall-tile:#F5E2B4;
   --track:#5B4A40; --rail:#AEB6C0; --plat:#DCE1E8; --plat-dark:#C3CAD4;
-  --yellow:#FFC400; --red:#E8202A; --blue:#1F55E0; --green:#14A84B; --orange:#FF7A00; --white:#FFFFFF;
+  --yellow:#E9C46A; --red:#D8796E; --blue:#6E91C7; --green:#7FB08A; --orange:#E3A06B; --white:#FFFFFF;
   --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   color-scheme:light;
 }
@@ -47,9 +47,9 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .sleepers{left:0;top:calc(var(--u)*176);width:100%;height:calc(var(--u)*26);background:repeating-linear-gradient(90deg,transparent 0 calc(var(--u)*16),#3B2F29 calc(var(--u)*16) calc(var(--u)*28))}
 .edge{left:0;top:calc(var(--u)*202);width:100%;height:calc(var(--u)*10);background:var(--white);border-block:calc(var(--u)*2) solid var(--ink)}
 .danger{left:0;top:calc(var(--u)*212);width:100%;height:calc(var(--u)*28);background:var(--plat);transition:background .3s}
-.danger.alert{background:#FFB3B3;animation:blink .7s steps(2) infinite}
-@keyframes blink{50%{background:#FF7C7C}}
-.yline{left:0;top:calc(var(--u)*240);width:100%;height:calc(var(--u)*16);background:radial-gradient(circle,#D19E00 22%,transparent 26%) 0 0/calc(var(--u)*10) calc(var(--u)*8),var(--yellow);border-block:calc(var(--u)*2) solid var(--ink)}
+.danger.alert{background:#F1D1CD;animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{background:#E8B5AE}}
+.yline{left:0;top:calc(var(--u)*240);width:100%;height:calc(var(--u)*16);background:radial-gradient(circle,#C9A75A 22%,transparent 26%) 0 0/calc(var(--u)*10) calc(var(--u)*8),var(--yellow);border-block:calc(var(--u)*2) solid var(--ink)}
 .floor{left:0;top:calc(var(--u)*256);width:100%;height:calc(var(--u)*244);background:repeating-linear-gradient(90deg,var(--plat) 0 calc(var(--u)*48),var(--plat-dark) calc(var(--u)*48) calc(var(--u)*50))}
 .train{top:calc(var(--u)*98);width:calc(var(--u)*520);height:calc(var(--u)*108);z-index:5;left:calc(var(--u)*-600)}
 .train svg{width:100%;height:100%;display:block}
@@ -68,10 +68,10 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .say{position:absolute;left:50%;bottom:105%;transform:translateX(-50%);background:var(--white);border:calc(var(--u)*3) solid var(--ink);border-radius:calc(var(--u)*10);padding:calc(var(--u)*2) calc(var(--u)*7);font-weight:900;font-size:calc(var(--u)*14);white-space:nowrap}
 
 /* train car */
-.car{background:#EAF2FF}
-.cwall{left:0;top:0;width:100%;height:calc(var(--u)*150);background:#D6E4FA;border-bottom:calc(var(--u)*4) solid var(--ink)}
+.car{background:#EEF2F7}
+.cwall{left:0;top:0;width:100%;height:calc(var(--u)*150);background:#DEE6F2;border-bottom:calc(var(--u)*4) solid var(--ink)}
 .win{top:calc(var(--u)*30);width:calc(var(--u)*86);height:calc(var(--u)*76);border:calc(var(--u)*4) solid var(--ink);border-radius:calc(var(--u)*12);
-  background:radial-gradient(ellipse 60% 40% at 30% 100%,#3DBB61 98%,transparent) 0 0/calc(var(--u)*120) 100% repeat-x,radial-gradient(ellipse 50% 30% at 70% 100%,#2E9C50 98%,transparent) 0 0/calc(var(--u)*90) 100% repeat-x,linear-gradient(var(--sky),#C8EEFF);
+  background:radial-gradient(ellipse 60% 40% at 30% 100%,#8EBE96 98%,transparent) 0 0/calc(var(--u)*120) 100% repeat-x,radial-gradient(ellipse 50% 30% at 70% 100%,#7AAD83 98%,transparent) 0 0/calc(var(--u)*90) 100% repeat-x,linear-gradient(var(--sky),#DCEBF1);
   animation:scroll 2.4s linear infinite}
 @keyframes scroll{to{background-position:calc(var(--u)*-120) 0,calc(var(--u)*-90) 0,0 0}}
 .rail2{left:calc(var(--u)*10);top:calc(var(--u)*120);width:calc(var(--u)*380);height:calc(var(--u)*6);background:var(--rail);border:calc(var(--u)*2) solid var(--ink);border-radius:9px}
@@ -145,8 +145,8 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
     <h1>小小站長</h1>
     <div class="steps"><span class="step" id="s1">① 黃線</span><span class="step" id="s2">② 上車</span><span class="step" id="s3">③ 驗票</span></div>
     <div class="tools">
-      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
-      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#16161D" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#E8202A" stroke="#16161D" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#1F55E0" stroke="#16161D" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#16161D" stroke-width="3" stroke-linecap="round"/></svg></button>
+      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
+      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#4A4552" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#D8796E" stroke="#4A4552" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#6E91C7" stroke="#4A4552" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/></svg></button>
     </div>
   </header>
   <div class="banner" id="banner" aria-live="polite"></div>
@@ -158,7 +158,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 /* ================= 音效(即時合成) ================= */
 let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
 try{musicOn=localStorage.getItem('stationMusic')!=='off'}catch(e){}
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.1;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.065;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function env(g,t,v,d,a=.012){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+d)}
 function note(f,t,d,{type='sine',v=.25,to=null,bus=null,vib=0}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
@@ -189,7 +189,7 @@ function sched(){while(nextT<ctx.currentTime+.15){const i=stepN%32,m=MEL[i];
   if(i%2===0&&BASS[i/2])note(hz(BASS[i/2]),nextT,.26,{v:.45,bus:musicGain});
   if(i%4===2)noise(nextT,.05,{v:.05,f:4000,q:1,bus:musicGain});
   nextT+=EI;stepN++}}
-function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.1,ctx.currentTime);bgm=setInterval(sched,25)}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.065,ctx.currentTime);bgm=setInterval(sched,25)}
 function stopMusic(){clearInterval(bgm);bgm=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05)}
 const musicBtn=document.getElementById('music');
 function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
@@ -205,9 +205,9 @@ addEventListener('resize',fit);fit();
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 function el(cls,css={},html=''){const d=document.createElement('div');d.className=cls;Object.assign(d.style,css);d.innerHTML=html;return d}
-const INK='#16161D';
-const SHIRTS=['#E8202A','#1F55E0','#14A84B','#8B3FD9','#FF7A00','#00A6B8','#FF4FA3','#FFC400'];
-const HAIR=['#16161D','#6B3E1F','#D9D9D9','#C46A1B'];
+const INK='#4A4552';
+const SHIRTS=['#D8796E','#6E91C7','#7FB08A','#A08CC8','#E3A06B','#6FB3B8','#E2A0B8','#E9C46A'];
+const HAIR=['#4A4552','#6B3E1F','#D9D9D9','#C46A1B'];
 function personSVG(i,sleep=false){const shirt=SHIRTS[i%SHIRTS.length],hair=HAIR[(i*3)%HAIR.length],kind=i%4;
   const eyes=sleep?`<path d="M16 22q3 3 6 0M26 22q3 3 6 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`:`<circle cx="19" cy="22" r="2.6" fill="${INK}"/><circle cx="29" cy="22" r="2.6" fill="${INK}"/>`;
   const mouth=sleep?`<circle cx="24" cy="30" r="2" fill="${INK}"/>`:`<path d="M19 29q5 5 10 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
@@ -215,8 +215,8 @@ function personSVG(i,sleep=false){const shirt=SHIRTS[i%SHIRTS.length],hair=HAIR[
     :kind===1?`<circle cx="24" cy="5" r="6" fill="${hair}" stroke="${INK}" stroke-width="3"/><path d="M10 20q0-14 14-14t14 14q-6-5-14-5t-14 5z" fill="${hair}" stroke="${INK}" stroke-width="3"/>`
     :kind===2?`<path d="M10 22q-2-16 14-17t14 17q-4-8-14-9t-14 9z" fill="${hair}" stroke="${INK}" stroke-width="3"/><circle cx="8" cy="22" r="5" fill="${hair}" stroke="${INK}" stroke-width="3"/><circle cx="40" cy="22" r="5" fill="${hair}" stroke="${INK}" stroke-width="3"/>`
     :`<path d="M10 18q2-13 14-13t14 13q-8-4-14-4t-14 4z" fill="${hair}" stroke="${INK}" stroke-width="3"/>`;
-  const bag=kind===3?`<rect x="36" y="38" width="10" height="16" rx="3" fill="#FFC400" stroke="${INK}" stroke-width="3"/>`:'';
-  return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/>${bag}<path d="M8 64v-16q0-12 16-12t16 12v16z" fill="${shirt}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><circle cx="24" cy="22" r="14" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/>${top}${eyes}${mouth}<circle cx="15" cy="28" r="2.5" fill="#FF9AA8"/><circle cx="33" cy="28" r="2.5" fill="#FF9AA8"/></svg>`}
+  const bag=kind===3?`<rect x="36" y="38" width="10" height="16" rx="3" fill="#E9C46A" stroke="${INK}" stroke-width="3"/>`:'';
+  return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/>${bag}<path d="M8 64v-16q0-12 16-12t16 12v16z" fill="${shirt}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><circle cx="24" cy="22" r="14" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/>${top}${eyes}${mouth}<circle cx="15" cy="28" r="2.5" fill="#EDB9BF"/><circle cx="33" cy="28" r="2.5" fill="#EDB9BF"/></svg>`}
 const ICONS={
   whistle:`<svg viewBox="0 0 48 48"><path d="M6 20a12 12 0 1 0 24 6h12v-12H18" fill="#C9CED6" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><circle cx="18" cy="26" r="4" fill="${INK}"/><path d="M40 6l-4 6M46 12l-6 3" stroke="${INK}" stroke-width="4" stroke-linecap="round"/></svg>`,
   board:`<svg viewBox="0 0 48 48"><rect x="8" y="6" width="32" height="38" rx="5" fill="#fff" stroke="${INK}" stroke-width="4"/><path d="M24 6v38" stroke="${INK}" stroke-width="4"/><path d="M14 26h6m0 0l-3-3m3 3l-3 3M34 26h-6m0 0l3-3m-3 3l3 3" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></svg>`,
@@ -225,11 +225,11 @@ const ICONS={
   hourglass:`<svg viewBox="0 0 48 48"><path d="M12 6h24M12 42h24M14 6q0 14 10 18q10-4 10-18M14 42q0-14 10-18q10 4 10 18" fill="none" stroke="#6B6B78" stroke-width="4" stroke-linecap="round"/></svg>`
 };
 const clockSVG=`<svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#fff" stroke="${INK}" stroke-width="4"/><path d="M27 27V12M27 27l10 6" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="27" cy="27" r="3" fill="${INK}"/></svg>`;
-function trainSVG(){const doors=[110,260,410].map(c=>`<g><rect x="${c-23}" y="20" width="46" height="74" fill="#3A3F4A"/><g class="leaf leafL"><rect x="${c-23}" y="20" width="23" height="74" fill="#E3EAF8" stroke="${INK}" stroke-width="3"/><rect x="${c-18}" y="28" width="13" height="22" rx="3" fill="#BFE6FF" stroke="${INK}" stroke-width="2"/></g><g class="leaf leafR"><rect x="${c}" y="20" width="23" height="74" fill="#E3EAF8" stroke="${INK}" stroke-width="3"/><rect x="${c+5}" y="28" width="13" height="22" rx="3" fill="#BFE6FF" stroke="${INK}" stroke-width="2"/></g></g>`).join('');
-  const wins=[[16,62],[150,86],[300,86],[450,40]].map(([x,w])=>`<rect x="${x}" y="26" width="${w}" height="28" rx="6" fill="#BFE6FF" stroke="${INK}" stroke-width="3"/>`).join('');
+function trainSVG(){const doors=[110,260,410].map(c=>`<g><rect x="${c-23}" y="20" width="46" height="74" fill="#3A3F4A"/><g class="leaf leafL"><rect x="${c-23}" y="20" width="23" height="74" fill="#E3EAF8" stroke="${INK}" stroke-width="3"/><rect x="${c-18}" y="28" width="13" height="22" rx="3" fill="#D7E7EF" stroke="${INK}" stroke-width="2"/></g><g class="leaf leafR"><rect x="${c}" y="20" width="23" height="74" fill="#E3EAF8" stroke="${INK}" stroke-width="3"/><rect x="${c+5}" y="28" width="13" height="22" rx="3" fill="#D7E7EF" stroke="${INK}" stroke-width="2"/></g></g>`).join('');
+  const wins=[[16,62],[150,86],[300,86],[450,40]].map(([x,w])=>`<rect x="${x}" y="26" width="${w}" height="28" rx="6" fill="#D7E7EF" stroke="${INK}" stroke-width="3"/>`).join('');
   const wheels=[40,80,180,220,320,360,460,490].map(x=>`<circle cx="${x}" cy="98" r="8" fill="#3A3F4A" stroke="${INK}" stroke-width="3"/>`).join('');
-  return `<svg viewBox="0 0 520 108">${wheels}<path d="M4 18q0-12 12-12h470q30 0 30 40v48H4z" fill="#1F55E0" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><rect x="4" y="66" width="512" height="10" fill="#FFC400"/>${wins}${doors}<circle cx="506" cy="70" r="6" fill="#FFF7A0" stroke="${INK}" stroke-width="3"/></svg>`}
-function ticketSVG(from,to){return `<svg viewBox="0 0 92 56"><path d="M4 4h84v18a6 6 0 0 0 0 12v18H4V34a6 6 0 0 0 0-12z" fill="#FFE27A" stroke="${INK}" stroke-width="3"/><text x="46" y="22" text-anchor="middle" font-size="12" font-weight="900" fill="${INK}" font-family="Noto Sans TC,sans-serif">${from}</text><text x="46" y="38" text-anchor="middle" font-size="12" font-weight="900" fill="${INK}" font-family="Noto Sans TC,sans-serif">▼ ${to}</text><circle class="hole" cx="78" cy="12" r="0" fill="${INK}"/></svg>`}
+  return `<svg viewBox="0 0 520 108">${wheels}<path d="M4 18q0-12 12-12h470q30 0 30 40v48H4z" fill="#6E91C7" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><rect x="4" y="66" width="512" height="10" fill="#E9C46A"/>${wins}${doors}<circle cx="506" cy="70" r="6" fill="#F3EAC6" stroke="${INK}" stroke-width="3"/></svg>`}
+function ticketSVG(from,to){return `<svg viewBox="0 0 92 56"><path d="M4 4h84v18a6 6 0 0 0 0 12v18H4V34a6 6 0 0 0 0-12z" fill="#F1DCA2" stroke="${INK}" stroke-width="3"/><text x="46" y="22" text-anchor="middle" font-size="12" font-weight="900" fill="${INK}" font-family="Noto Sans TC,sans-serif">${from}</text><text x="46" y="38" text-anchor="middle" font-size="12" font-weight="900" fill="${INK}" font-family="Noto Sans TC,sans-serif">▼ ${to}</text><circle class="hole" cx="78" cy="12" r="0" fill="${INK}"/></svg>`}
 
 /* 人物物件 */
 function makePerson(i,x,y,sleep=false){const d=el('p');d.innerHTML=personSVG(i,sleep);const P={el:d,i,x,y,state:'safe'};place(P,x,y,0);return P}
@@ -243,7 +243,7 @@ let round=0,stars=0,mode='idle',people=[],busy=false,timers=[];
 const starsEl=document.getElementById('stars'),btn=document.getElementById('action'),aIcon=document.getElementById('aIcon'),aLbl=document.getElementById('aLbl');
 function addStar(n=1,P){stars+=n;starsEl.textContent=stars;if(P){const r=P.el.getBoundingClientRect();burst(r.left+r.width/2,r.top)}}
 function burst(x,y){for(let i=0;i<6;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('burst');
-  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2"/>';
+  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2"/>';
   const a=Math.PI*2*i/6;s.style.left=x-13+'px';s.style.top=y-13+'px';s.style.setProperty('--dx',Math.cos(a)*70+'px');s.style.setProperty('--dy',Math.sin(a)*70-30+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),850)}}
 function setButton(kind,label,icon){btn.className='action '+kind;aLbl.textContent=label;aIcon.innerHTML=ICONS[icon];btn.disabled=false}
 function setSteps(n){[1,2,3].forEach(k=>document.getElementById('s'+k).classList.toggle('on',k===n))}
@@ -317,7 +317,7 @@ async function doDepart(){busy=true;mode='leaving';S.chime();train.classList.rem
 /* ================= 第三關:車廂驗票 ================= */
 const SEATS=[[80,212],[200,212],[320,212],[80,428],[200,428],[320,428]];
 let seated=[],master,ticketIdx;
-function masterSVG(){return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/><path d="M8 64v-16q0-12 16-12t16 12v16z" fill="#1E2A5A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M24 37v27" stroke="#FFC400" stroke-width="2.5" stroke-dasharray="3 5"/><path d="M18 37l6 7 6-7" fill="#fff" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="23" r="13" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/><path d="M7 15q0-12 17-12t17 12z" fill="#1E2A5A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="7" y="12" width="34" height="5" fill="#E8202A" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="8" r="3" fill="#FFC400" stroke="${INK}" stroke-width="1.5"/><path d="M5 17h38" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="19" cy="24" r="2.4" fill="${INK}"/><circle cx="29" cy="24" r="2.4" fill="${INK}"/><path d="M19 30q5 4 10 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="14" cy="29" r="2.4" fill="#FF9AA8"/><circle cx="34" cy="29" r="2.4" fill="#FF9AA8"/></svg>`}
+function masterSVG(){return `<svg viewBox="0 0 48 66"><ellipse cx="24" cy="64" rx="15" ry="3" fill="rgba(0,0,0,.18)"/><path d="M8 64v-16q0-12 16-12t16 12v16z" fill="#4F5B7E" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M24 37v27" stroke="#E9C46A" stroke-width="2.5" stroke-dasharray="3 5"/><path d="M18 37l6 7 6-7" fill="#fff" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="23" r="13" fill="#FFD8B0" stroke="${INK}" stroke-width="3"/><path d="M7 15q0-12 17-12t17 12z" fill="#4F5B7E" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="7" y="12" width="34" height="5" fill="#D8796E" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="8" r="3" fill="#E9C46A" stroke="${INK}" stroke-width="1.5"/><path d="M5 17h38" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><circle cx="19" cy="24" r="2.4" fill="${INK}"/><circle cx="29" cy="24" r="2.4" fill="${INK}"/><path d="M19 30q5 4 10 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="14" cy="29" r="2.4" fill="#EDB9BF"/><circle cx="34" cy="29" r="2.4" fill="#EDB9BF"/></svg>`}
 // 站長走到旅客面前(上排旅客站在他下面的走道,下排站在上面的走道)
 async function goTo(P){const ty=P.y<300?292:368;if(Math.abs(master.x-P.x)<2&&master.y===ty)return;
   const steps=setInterval(()=>note(900,T(),.05,{type:'triangle',v:.08}),180);

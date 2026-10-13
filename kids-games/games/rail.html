@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>鐵路接接看</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: header / instruction strip / board (stations left & right of a track grid) / tool bar. Low-stimulation palette: muted, soft charcoal outlines. */
+:root{
+  --ink:#4A4552; --bg:#DCE8E0; --paper:#FAF6EE; --white:#FFFFFF;
+  --grass:#D3E4C9; --grass2:#C8DCBD; --tie:#A98467; --rail:#8E8A94; --glow:#F2E2A6;
+  --red:#D8796E; --blue:#6E91C7; --yellow:#E9C46A; --green:#7FB08A; --orange:#E3A06B; --rock:#B9B4AE;
+  --shadow:rgba(74,69,82,.35);
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.app{height:100%;display:flex;flex-direction:column;gap:8px;padding:8px 16px 12px;box-sizing:border-box;max-width:900px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px}
+h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:2px 2px 0 var(--shadow);white-space:nowrap}
+.tools{display:flex;gap:8px;align-items:center;margin-left:auto}
+.chip{font-weight:900;font-size:clamp(14px,3.6vw,18px);background:var(--white);border:3px solid var(--ink);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.count{display:flex;align-items:center;gap:4px;background:var(--white);border:3px solid var(--ink);border-radius:999px;padding:2px 10px;font-weight:900;font-size:clamp(16px,4vw,22px);font-variant-numeric:tabular-nums}
+.count svg{width:1.1em;height:1.1em}
+.ibtn{flex:none;width:42px;height:42px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--shadow);padding:6px;cursor:pointer;display:grid;place-items:center}
+.ibtn svg{width:100%;height:100%}
+.ibtn.white{background:var(--white)}
+#music .x{display:none}#music.off{background:var(--white)}#music.off .x{display:inline}
+.ibtn:focus-visible,.big:focus-visible,.mode:focus-visible,.lvl:focus-visible,.tool:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.banner{flex:none;display:flex;align-items:center;justify-content:center;min-height:2.6em;box-sizing:border-box;text-align:center;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:4px 10px;font-weight:900;font-size:clamp(16px,4.2vw,22px);line-height:1.3;box-shadow:3px 3px 0 var(--shadow);text-wrap:balance}
+.main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+
+/* ---- 選單 ---- */
+.menu{width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;align-items:center;padding:4px 2px 8px;box-sizing:border-box;touch-action:pan-y}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px;width:100%}
+.mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border:4px solid var(--ink);border-radius:22px;box-shadow:4px 4px 0 var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.mode .pic{aspect-ratio:2/1;max-width:100%;display:grid;place-items:center;border-bottom:4px solid var(--ink)}
+.mode .pic svg{width:80%;height:80%}
+.mode .t{padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.mode b{font-size:clamp(22px,5.5vw,28px)}
+.mode small{font-size:15px;font-weight:700;color:#6E6876}
+.mode:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow)}
+.m1 .pic{background:#E5EEDC}.m2 .pic{background:#F2E6D3}.m3 .pic{background:#DDE7F0}
+.levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:min(100%,520px)}
+.lvl{all:unset;box-sizing:border-box;cursor:pointer;aspect-ratio:1;max-width:100%;background:var(--white);border:4px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:clamp(24px,6vw,34px);font-variant-numeric:tabular-nums;position:relative}
+.lvl.done{background:#F4EBCB}
+.lvl .st{position:absolute;top:4px;right:6px;width:28%;height:28%}
+.lvl small{font-size:12px;font-weight:700;color:#6E6876}
+.lvl:active{transform:translate(2px,2px)}
+.back{all:unset;cursor:pointer;font-weight:900;font-size:18px;padding:6px 16px;border:3px solid var(--ink);border-radius:999px;background:var(--white);box-shadow:2px 2px 0 var(--shadow)}
+
+/* ---- 盤面 ---- */
+.board{position:relative;width:calc(var(--cs)*var(--cols));height:calc(var(--cs)*var(--rows))}
+.cell{position:absolute;width:var(--cs);height:var(--cs);box-sizing:border-box;cursor:pointer;touch-action:none}
+.cell.g{background:var(--grass);border:1px solid #BFD3B4}
+.cell.g:nth-child(odd){background:var(--grass2)}
+.cell.drop{box-shadow:inset 0 0 0 calc(var(--cs)*.06) var(--yellow)}
+.cell svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.cell .trk{transition:transform .25s ease}
+.glow{opacity:0;transition:opacity .3s}
+.cell.lit .glow{opacity:1}
+.cell.fixed::after{content:"";position:absolute;right:6%;top:6%;width:14%;height:14%;border-radius:50%;background:var(--ink);opacity:.35}
+.cell.pop .trk{animation:pop .3s ease}
+@keyframes pop{50%{scale:1.12}}
+.st-lab{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);font-weight:900;font-size:calc(var(--cs)*.2);background:var(--white);border:2px solid var(--ink);border-radius:999px;padding:0 .5em;white-space:nowrap}
+.train{position:absolute;left:0;top:0;width:calc(var(--cs)*.7);height:calc(var(--cs)*.44);margin:calc(var(--cs)*-.22) 0 0 calc(var(--cs)*-.35);z-index:20;pointer-events:none}
+.train svg{width:100%;height:100%;display:block;overflow:visible}
+.puff{position:absolute;width:calc(var(--cs)*.22);height:calc(var(--cs)*.22);margin:calc(var(--cs)*-.11);border-radius:50%;background:#F4F1EC;border:2px solid #D9D3CC;z-index:19;pointer-events:none;animation:puff 1.2s ease-out forwards}
+@keyframes puff{to{transform:translateY(-120%) scale(1.8);opacity:0}}
+
+/* ---- 工具列 ---- */
+.controls{flex:none;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.tool{all:unset;box-sizing:border-box;cursor:pointer;touch-action:none;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--white);border:4px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--shadow);padding:6px 10px;min-width:84px;font-weight:900;font-size:16px}
+.tool svg{width:52px;height:52px}
+.tool.on{background:#F4EBCB;transform:translateY(-3px)}
+.tool[disabled]{opacity:.45;cursor:default}
+.tool .n{position:absolute;top:-12px;right:-10px;min-width:30px;height:30px;border-radius:999px;background:var(--orange);color:var(--white);border:3px solid var(--ink);display:grid;place-items:center;font-size:16px;font-variant-numeric:tabular-nums;box-sizing:border-box;padding:0 4px}
+.big{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;font-weight:900;font-size:clamp(20px,5vw,26px);padding:8px 20px;border:4px solid var(--ink);border-radius:999px;background:var(--green);color:var(--white);text-shadow:1px 1px 0 var(--shadow);box-shadow:3px 3px 0 var(--shadow)}
+.big.w{background:var(--white);color:var(--ink);text-shadow:none}
+.big svg{width:1.3em;height:1.3em}
+.big:active,.tool:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.ghost{position:fixed;z-index:500;width:70px;height:70px;margin:-35px 0 0 -35px;pointer-events:none;opacity:.85}
+.ghost svg{width:100%;height:100%}
+
+.done{position:absolute;inset:0;z-index:100;background:rgba(250,246,238,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:0 16px;border-radius:18px}
+.done h2{margin:0;font-size:clamp(32px,8vw,46px);font-weight:900;color:var(--yellow);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--shadow);text-wrap:balance}
+.done p{margin:0;font-size:clamp(17px,4.4vw,22px);font-weight:700}
+.done .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+@media (max-width:560px){.app.ingame h1{display:none}.app.ingame .tools{margin-left:0;width:100%;justify-content:flex-end}.chip{margin-right:auto}}
+@media (min-width:700px) and (min-height:600px){
+  h1{font-size:36px}.count{font-size:26px}.ibtn{width:54px;height:54px}.chip{font-size:20px}
+  .banner{font-size:26px;padding:8px 16px}
+  .tool{min-width:110px;font-size:20px;padding:8px 14px}.tool svg{width:70px;height:70px}
+  .big{font-size:30px;padding:12px 26px}
+}
+@media (orientation:landscape) and (min-width:900px) and (min-height:600px){
+  .app{max-width:1500px;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,32%);grid-template-rows:auto 1fr auto auto 1fr;column-gap:24px;row-gap:18px}
+  .app>header{grid-column:1/-1;grid-row:1}
+  .app>.main{grid-column:1;grid-row:2/-1}
+  .app>.banner{grid-column:2;grid-row:3;min-height:5.5em}
+  .app>.controls{grid-column:2;grid-row:4}
+  .app.menu-on{display:flex}
+  .app.menu-on>.banner{min-height:2.6em}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>鐵路接接看</h1>
+    <div class="tools">
+      <span class="chip" id="chip" hidden></span>
+      <div class="count"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
+      <button class="ibtn white" id="homeBtn" type="button" aria-label="選關" hidden><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="14" y="3" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="3" y="14" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="14" y="14" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/></svg></button>
+      <button class="ibtn" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#4A4552" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#D8796E" stroke="#4A4552" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#6E91C7" stroke="#4A4552" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/></svg></button>
+    </div>
+  </header>
+  <div class="banner" id="banner" aria-live="polite"></div>
+  <div class="main" id="main"></div>
+  <div class="controls" id="controls"></div>
+</div>
+<script>
+/* ================= 聲音(柔和、小聲) ================= */
+let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
+try{musicOn=localStorage.getItem('railMusic')!=='off'}catch(e){}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.055;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.7;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function note(f,t,d,{type='sine',v=.2,to=null,bus=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(bus||sfx);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(t,d,{v=.15,f=1000,q=1,type='bandpass'}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(sfx);s.start(t)}catch(e){}}
+const T=()=>ac().currentTime;
+const S={
+  turn(){const t=T();noise(t,.06,{v:.2,f:1800,q:2});note(520,t,.08,{type:'triangle',v:.1})},
+  place(){const t=T();note(220,t,.14,{to:140,v:.22});noise(t,.05,{v:.15,f:900})},
+  erase(){note(600,T(),.18,{to:250,v:.1,type:'triangle'})},
+  nope(){note(300,T(),.2,{type:'triangle',to:220,v:.12})},
+  link(){note(hz(79),T(),.25,{type:'triangle',v:.12})},
+  whistle(){const t=T();note(880,t,.35,{type:'triangle',v:.1});note(1046,t+.32,.45,{type:'triangle',v:.1})},
+  chug(){noise(T(),.09,{v:.07,f:500,q:1})},
+  win(){const t=T();[72,76,79,84].forEach((m,i)=>note(hz(m),t+i*.14,.45,{type:'triangle',v:.13}))}
+};
+const MEL=[72,0,74,0,76,0,79,0, 77,0,76,0,74,0,0,0, 72,0,74,0,76,0,72,0, 74,0,71,0,72,0,0,0];
+const BASS=[48,0,55,0, 53,0,55,0, 48,0,57,0, 55,0,48,0];
+const EI=60/104/2;
+function sched(){while(nextT<ctx.currentTime+.15){const i=stepN%32,m=MEL[i];if(m)note(hz(m),nextT,.5,{type:'sine',v:.45,bus:musicGain});
+  if(BASS[i>>1]&&i%2===0)note(hz(BASS[i>>1]),nextT,.5,{v:.35,bus:musicGain});nextT+=EI;stepN++}}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.055,ctx.currentTime);bgm=setInterval(sched,25)}
+function stopMusic(){clearInterval(bgm);bgm=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05)}
+const musicBtn=document.getElementById('music');
+function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
+musicBtn.onclick=e=>{e.stopPropagation();musicOn=!musicOn;try{localStorage.setItem('railMusic',musicOn?'on':'off')}catch(err){}paintMusic();musicOn?startMusic():stopMusic()};
+paintMusic();addEventListener('pointerdown',()=>{ac();startMusic()});
+
+/* ================= 共用 ================= */
+const INK='#4A4552';
+const app=document.getElementById('app'),main=document.getElementById('main'),controls=document.getElementById('controls'),bannerEl=document.getElementById('banner'),chip=document.getElementById('chip'),homeBtn=document.getElementById('homeBtn'),starsEl=document.getElementById('stars');
+const banner=t=>bannerEl.textContent=t;
+function el(tag,cls,html=''){const d=document.createElement(tag);if(cls)d.className=cls;d.innerHTML=html;return d}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+let stars=0;
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const shuffleR=(a,r)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+// 進度存在這台裝置的瀏覽器裡
+let progress={rotate:{},place:{}};
+try{const p=JSON.parse(localStorage.getItem('railProgress')||'null');if(p&&p.rotate&&p.place)progress=p}catch(e){}
+function saveProgress(){try{localStorage.setItem('railProgress',JSON.stringify(progress))}catch(e){}}
+
+/* ================= 鐵軌規則 =================
+   方向用位元:北 1、東 2、南 4、西 8。直線 = 北+南;彎道 = 北+東,再用轉的得到其他方向。 */
+const N=1,E=2,Sd=4,W=8,DIRS=[N,E,Sd,W],DR={1:-1,2:0,4:1,8:0},DC={1:0,2:1,4:0,8:-1};
+const opp=d=>d<=2?d*4:d/4;
+const rotMask=(m,k)=>{for(let i=0;i<((k%4)+4)%4;i++)m=((m<<1)|(m>>3))&15;return m};
+const BASE={straight:5,curve:3};
+const maskOf=p=>rotMask(BASE[p.type],p.rot);
+function pieceFor(mask){for(const type of ['straight','curve'])for(let k=0;k<4;k++)if(rotMask(BASE[type],k)===mask)return{type,rot:k};return null}
+
+/* ================= 圖案 ================= */
+function trackSVG(type){
+  if(type==='straight')return `<svg viewBox="0 0 100 100"><path class="glow" d="M50 0V100" stroke="var(--glow)" stroke-width="58" fill="none"/>${[10,30,50,70,90].map(y=>`<rect x="20" y="${y-5}" width="60" height="10" rx="3" fill="var(--tie)"/>`).join('')}<path d="M34 0V100M66 0V100" stroke="var(--rail)" stroke-width="7" stroke-linecap="butt"/></svg>`;
+  const ties=[99,117,135,153,171].map(a=>{const r=a*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return `<line x1="${(100+20*c).toFixed(1)}" y1="${(20*s).toFixed(1)}" x2="${(100+80*c).toFixed(1)}" y2="${(80*s).toFixed(1)}" stroke="var(--tie)" stroke-width="10" stroke-linecap="round"/>`}).join('');
+  return `<svg viewBox="0 0 100 100"><path class="glow" d="M50 0A50 50 0 0 0 100 50" stroke="var(--glow)" stroke-width="58" fill="none"/>${ties}<path d="M66 0A34 34 0 0 0 100 34M34 0A66 66 0 0 0 100 66" stroke="var(--rail)" stroke-width="7" fill="none"/></svg>`}
+const rockSVG=`<svg viewBox="0 0 100 100"><path d="M18 72Q14 46 34 38Q44 22 62 30Q84 32 84 56Q90 74 70 80H30Q18 80 18 72Z" fill="var(--rock)" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><path d="M40 48q8-6 16 0" stroke="#9C968F" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+const treeSVG=`<svg viewBox="0 0 100 100"><rect x="44" y="58" width="12" height="26" rx="3" fill="#A98467" stroke="${INK}" stroke-width="3.5"/><circle cx="50" cy="44" r="27" fill="#8FBF93" stroke="${INK}" stroke-width="4"/><circle cx="40" cy="38" r="6" fill="#A9CFA8"/></svg>`;
+const flowerSVG=s=>`<svg viewBox="0 0 100 100">${[[24,28],[70,66],[72,22]].slice(0,1+s%3).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="4" fill="${['#EDB9BF','#F1DCA2','#FFFFFF'][(s+i)%3]}" stroke="#B9AFA0" stroke-width="1"/>`).join('')}</svg>`;
+const stationSVG=end=>`<svg viewBox="0 0 100 100"><rect x="14" y="40" width="72" height="44" rx="5" fill="${end?'#F2E6D3':'#E5EEDC'}" stroke="${INK}" stroke-width="4"/><path d="M8 44L50 16L92 44Z" fill="${end?'var(--red)':'var(--blue)'}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><rect x="40" y="56" width="20" height="28" rx="3" fill="#A98467" stroke="${INK}" stroke-width="3"/><rect x="20" y="52" width="14" height="12" rx="2" fill="#D7E7EF" stroke="${INK}" stroke-width="3"/><rect x="66" y="52" width="14" height="12" rx="2" fill="#D7E7EF" stroke="${INK}" stroke-width="3"/>${end?'<path d="M50 16V2l14 5-14 5" fill="var(--yellow)" stroke="'+INK+'" stroke-width="3" stroke-linejoin="round"/>':''}</svg>`;
+const trainSVG=`<svg viewBox="0 0 70 44"><rect x="4" y="8" width="44" height="28" rx="6" fill="var(--red)" stroke="${INK}" stroke-width="3.5"/><rect x="40" y="4" width="22" height="36" rx="6" fill="var(--red)" stroke="${INK}" stroke-width="3.5"/><rect x="45" y="10" width="12" height="10" rx="2" fill="#D7E7EF" stroke="${INK}" stroke-width="2.5"/><rect x="12" y="2" width="9" height="10" rx="2" fill="#6E6876" stroke="${INK}" stroke-width="2.5"/><circle cx="64" cy="22" r="3.5" fill="#F3EAC6" stroke="${INK}" stroke-width="2"/><path d="M8 22h30" stroke="#F4EBCB" stroke-width="4" stroke-linecap="round"/></svg>`;
+const carSVG=`<svg viewBox="0 0 70 44"><rect x="8" y="8" width="54" height="28" rx="6" fill="var(--blue)" stroke="${INK}" stroke-width="3.5"/><rect x="16" y="14" width="12" height="10" rx="2" fill="#D7E7EF" stroke="${INK}" stroke-width="2.5"/><rect x="40" y="14" width="12" height="10" rx="2" fill="#D7E7EF" stroke="${INK}" stroke-width="2.5"/></svg>`;
+const eraserSVG=`<svg viewBox="0 0 100 100"><path d="M22 70L56 24q6-6 12 0l14 14q6 6 0 12L50 80H30z" fill="#EDB9BF" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M40 52l22 22" stroke="${INK}" stroke-width="5"/><path d="M14 86h70" stroke="${INK}" stroke-width="5" stroke-linecap="round"/></svg>`;
+const goSVG=`<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#fff" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+const starSVG=f=>`<svg class="st" viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="${f?'#E9C46A':'none'}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+
+/* ================= 關卡產生 ================= */
+const LEVELS=12;
+const SIZES=[[3,3],[3,3],[3,4],[3,4],[4,4],[4,4],[4,5],[4,5],[5,5],[5,5],[5,5],[5,5]];
+function makePath(R,C,rnd,minLen){
+  for(let tries=0;tries<200;tries++){
+    const rs=Math.floor(rnd()*R),re=Math.floor(rnd()*R);let best=null,steps=0;
+    const seen=new Set(),path=[];
+    const dfs=(r,c)=>{if(++steps>6000||best)return;seen.add(r*C+c);path.push([r,c]);
+      if(r===re&&c===C-1&&path.length>=minLen){best=path.slice();return}
+      for(const d of shuffleR(DIRS.slice(),rnd)){const nr=r+DR[d],nc=c+DC[d];if(nr<0||nr>=R||nc<0||nc>=C||seen.has(nr*C+nc))continue;dfs(nr,nc);if(best)return}
+      seen.delete(r*C+c);path.pop()};
+    dfs(rs,0);if(best)return{rs,re,path:best};
+    if(tries%20===19)minLen=Math.max(C,minLen-1)}
+  return null}
+function dirBetween(a,b){for(const d of DIRS)if(a[0]+DR[d]===b[0]&&a[1]+DC[d]===b[1])return d}
+function buildLevel(mode,n){
+  const rnd=mulberry((mode==='rotate'?1000:2000)+n*7919);
+  const [R,C]=SIZES[n-1],minLen=Math.min(Math.floor(R*C*.7),C+Math.floor((n-1)/2)+1);
+  const g=makePath(R,C,rnd,minLen);
+  const cells=[];for(let r=0;r<R;r++){cells.push([]);for(let c=0;c<C;c++)cells[r].push({r,c,piece:null,fixed:false,block:null,deco:Math.floor(rnd()*6)})}
+  const sol=g.path.map((p,i)=>{const inS=i===0?W:opp(dirBetween(g.path[i-1],p)),outS=i===g.path.length-1?E:dirBetween(p,g.path[i+1]);return{r:p[0],c:p[1],...pieceFor(inS|outS)}});
+  const onPath=new Set(sol.map(s=>s.r*C+s.c));
+  const free=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(!onPath.has(r*C+c))free.push(cells[r][c]);
+  const L={mode,n,R,C,rs:g.rs,re:g.re,cells,counts:null,sol};
+  if(mode==='rotate'){
+    const scramble=new Set(shuffleR(sol.map((_,i)=>i),rnd).slice(0,Math.min(sol.length,2+n)));
+    sol.forEach((s,i)=>{let rot=s.rot;if(scramble.has(i)){rot=s.type==='straight'?s.rot+1:s.rot+1+Math.floor(rnd()*3)}cells[s.r][s.c].piece={type:s.type,rot:rot%4,vis:(rot%4)*90}});
+    const dens=n<=2?0:n<=6?.4:.8;
+    free.forEach(c=>{if(rnd()<dens){const t=rnd()<.5?'straight':'curve',k=Math.floor(rnd()*4);c.piece={type:t,rot:k,vis:k*90}}else if(rnd()<.35)c.block='tree'});
+  }else{
+    const keep=n<=3?.5:n<=6?.3:n<=9?.15:0;
+    L.counts={straight:0,curve:0};
+    shuffleR(sol.slice(),rnd).forEach((s,i)=>{if(i<Math.round(sol.length*keep)){cells[s.r][s.c].piece={type:s.type,rot:s.rot,vis:s.rot*90};cells[s.r][s.c].fixed=true}else L.counts[s.type]++});
+    const obs=n<=2?.3:.5;
+    free.forEach(c=>{if(rnd()<obs)c.block=rnd()<.5?'rock':'tree'});
+  }
+  return L}
+function buildFree(){const R=5,C=6,cells=[];for(let r=0;r<R;r++){cells.push([]);for(let c=0;c<C;c++)cells[r].push({r,c,piece:null,fixed:false,block:null,deco:(r*7+c*3)%6})}
+  return{mode:'free',n:0,R,C,rs:1,re:3,cells,counts:null}}
+
+/* ================= 狀態與畫面 ================= */
+let L=null,tool='straight',locked=false,boardEl=null,cs=60,trainEls=[];
+function setHeader(inGame){homeBtn.hidden=!inGame;chip.hidden=!inGame;app.classList.toggle('menu-on',!inGame);app.classList.toggle('ingame',inGame)}
+homeBtn.onclick=()=>{S.erase();showMenu(L&&L.mode!=='free'?L.mode:null)};
+
+function showMenu(mode){L=null;locked=false;setHeader(false);controls.innerHTML='';main.innerHTML='';
+  const m=el('div','menu');main.appendChild(m);
+  if(!mode){
+    banner('選一個玩法');
+    const modes=el('div','modes');m.appendChild(modes);
+    [['rotate','m1','轉轉看','點鐵軌轉方向,接到終點'],['place','m2','放放看','把鐵軌放進格子裡'],['free','m3','隨意玩','自己蓋鐵路,讓火車出發']].forEach(([k,cls,name,desc])=>{
+      const b=el('button','mode '+cls,`<span class="pic">${modePic(k)}</span><span class="t"><b>${name}</b><small>${desc}</small></span>`);b.type='button';
+      b.onclick=()=>{S.turn();k==='free'?startLevel('free',0):showMenu(k)};modes.appendChild(b)});
+  }else{
+    banner(mode==='rotate'?'轉轉看:選一關':'放放看:選一關');
+    const lv=el('div','levels');m.appendChild(lv);
+    for(let i=1;i<=LEVELS;i++){const d=!!progress[mode][i];const [R,C]=SIZES[i-1];
+      const b=el('button','lvl'+(d?' done':''),`${i}<small>${R}×${C}</small>${starSVG(d)}`);b.type='button';b.setAttribute('aria-label','第 '+i+' 關');b.onclick=()=>{S.turn();startLevel(mode,i)};lv.appendChild(b)}
+    const back=el('button','back','◀ 換玩法');back.type='button';back.onclick=()=>showMenu(null);m.appendChild(back);
+  }}
+function modePic(k){
+  if(k==='rotate')return `<svg viewBox="0 0 160 100"><g transform="translate(10 10)"><svg width="80" height="80" viewBox="0 0 100 100">${trackSVG('curve').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg></g><g transform="translate(76 10)"><svg width="80" height="80" viewBox="0 0 100 100"><g transform="rotate(90 50 50)">${trackSVG('straight').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g></svg></g><path d="M60 92q20 10 40 0" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="M96 86l6 6-8 3" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if(k==='place')return `<svg viewBox="0 0 160 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="var(--grass)" stroke="${INK}" stroke-width="3" stroke-dasharray="8 6"/><g transform="translate(78 4) rotate(12 40 40)"><svg width="80" height="80" viewBox="0 0 100 100">${trackSVG('straight').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg></g></svg>`;
+  return `<svg viewBox="0 0 160 100"><g transform="translate(4 10)"><svg width="80" height="80" viewBox="0 0 100 100"><g transform="rotate(90 50 50)">${trackSVG('straight').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g></svg></g><g transform="translate(76 10)"><svg width="80" height="80" viewBox="0 0 100 100"><g transform="rotate(90 50 50)">${trackSVG('straight').replace(/^<svg[^>]*>|<\/svg>$/g,'')}</g></svg></g><g transform="translate(46 32)"><svg width="62" height="40" viewBox="0 0 70 44">${trainSVG.replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg></g></svg>`}
+
+function startLevel(mode,n){L=mode==='free'?buildFree():buildLevel(mode,n);locked=false;tool=mode==='free'?'straight':(L.counts&&L.counts.straight?'straight':'curve');
+  setHeader(true);chip.textContent=mode==='free'?'隨意玩':(mode==='rotate'?'轉轉看 ':'放放看 ')+'第 '+n+' 關';
+  main.innerHTML='';boardEl=el('div','board');main.appendChild(boardEl);
+  boardEl.style.setProperty('--cols',L.C+2);boardEl.style.setProperty('--rows',L.R);
+  for(let r=0;r<L.R;r++){
+    if(r===L.rs){const s=el('div','cell st',stationSVG(false)+'<span class="st-lab">起點</span>');pos(s,r,-1);boardEl.appendChild(s)}
+    if(r===L.re){const s=el('div','cell st',stationSVG(true)+'<span class="st-lab">終點</span>');pos(s,r,L.C);boardEl.appendChild(s)}
+    for(let c=0;c<L.C;c++){const cell=L.cells[r][c];cell.el=el('div','cell g');pos(cell.el,r,c);boardEl.appendChild(cell.el);paintCell(cell);bindCell(cell)}}
+  buildControls();sizeBoard();requestAnimationFrame(sizeBoard);lastLit=0;refresh(false);
+  banner(mode==='rotate'?'點一下鐵軌就會轉,把起點接到終點':mode==='place'?'把下面的鐵軌放進格子,點一下可以轉方向':'自己蓋鐵路!蓋好按「出發」');
+}
+function pos(e,r,c){e.style.left=`calc(var(--cs)*${c+1})`;e.style.top=`calc(var(--cs)*${r})`}
+function paintCell(cell){const e=cell.el;e.innerHTML='';e.classList.toggle('fixed',!!cell.fixed);
+  if(cell.block){e.innerHTML=cell.block==='rock'?rockSVG:treeSVG;return}
+  if(!cell.piece){e.innerHTML=flowerSVG(cell.deco);return}
+  const w=el('div','trk',trackSVG(cell.piece.type));w.style.position='absolute';w.style.inset='0';w.style.transform=`rotate(${cell.piece.vis}deg)`;e.appendChild(w)}
+function sizeBoard(){if(!boardEl||!L)return;const w=main.clientWidth,h=main.clientHeight;cs=Math.max(36,Math.floor(Math.min(w/(L.C+2),h/L.R,140)));document.documentElement.style.setProperty('--cs',cs+'px')}
+addEventListener('resize',()=>{sizeBoard()});
+
+/* ================= 工具列 ================= */
+function buildControls(){controls.innerHTML='';
+  if(L.mode==='rotate'){const b=el('button','big w','重新開始');b.type='button';b.onclick=()=>startLevel(L.mode,L.n);controls.appendChild(b);return}
+  const mk=(k,label,svg)=>{const b=el('button','tool',`${svg}<span>${label}</span>${L.counts&&k!=='erase'?`<span class="n">${L.counts[k]}</span>`:''}`);b.type='button';b.dataset.k=k;controls.appendChild(b);bindTool(b,k);return b};
+  mk('straight','直線',trackSVG('straight'));mk('curve','彎道',trackSVG('curve'));mk('erase','收回',eraserSVG);
+  if(L.mode==='free'){const go=el('button','big',goSVG+'出發');go.type='button';go.onclick=()=>runFree();controls.appendChild(go);
+    const clr=el('button','big w','全部清掉');clr.type='button';clr.onclick=()=>{S.erase();startLevel('free',0)};controls.appendChild(clr)}
+  paintTools()}
+function paintTools(){controls.querySelectorAll('.tool').forEach(b=>{const k=b.dataset.k;b.classList.toggle('on',k===tool);
+  if(L.counts&&k!=='erase'){b.querySelector('.n').textContent=L.counts[k];b.disabled=L.counts[k]<=0&&tool!==k}})}
+
+/* 從工具列拖到格子;或先點工具再點格子 */
+let drag=null;
+function bindTool(b,k){b.addEventListener('pointerdown',e=>{if(locked||drag)return;e.preventDefault();drag={k,id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,ghost:null,over:null}});}
+addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;
+  if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>10&&drag.k!=='erase'){drag.moved=true;drag.ghost=el('div','ghost',trackSVG(drag.k));document.body.appendChild(drag.ghost)}
+  if(drag.moved){drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';const c=cellAt(e.clientX,e.clientY);if(c!==drag.over){drag.over&&drag.over.el.classList.remove('drop');drag.over=c;c&&c.el.classList.add('drop')}}});
+const endDrag=e=>{if(!drag||e.pointerId!==drag.id)return;const d=drag;drag=null;d.ghost&&d.ghost.remove();d.over&&d.over.el.classList.remove('drop');
+  if(!d.moved){tool=d.k;S.turn();paintTools();banner(d.k==='erase'?'點一下鐵軌就可以收回':'點一個空格子放'+(d.k==='straight'?'直線':'彎道'));return}
+  if(d.over){tool=d.k;paintTools();tapCell(d.over,true)}};
+addEventListener('pointerup',endDrag);addEventListener('pointercancel',endDrag);
+function cellAt(x,y){const r=boardEl.getBoundingClientRect();const c=Math.floor((x-r.left)/cs)-1,rr=Math.floor((y-r.top)/cs);if(rr<0||rr>=L.R||c<0||c>=L.C)return null;return L.cells[rr][c]}
+
+/* ================= 點格子 ================= */
+function bindCell(cell){cell.el.addEventListener('click',()=>tapCell(cell,false))}
+function tapCell(cell,fromDrag){if(locked||!L)return;
+  if(cell.block||cell.fixed){S.nope();if(cell.fixed)banner('有小圓點的鐵軌不能動喔');return}
+  if(L.mode==='rotate'){if(!cell.piece)return;rotate(cell);return}
+  if(cell.piece){
+    if(tool==='erase'||fromDrag&&tool!==cell.piece.type){if(fromDrag)return;remove(cell);return}
+    rotate(cell);return}
+  if(tool==='erase'){S.nope();return}
+  if(L.counts&&L.counts[tool]<=0){S.nope();banner((tool==='straight'?'直線':'彎道')+'用完了,換另一種試試');return}
+  place(cell,tool)}
+function rotate(cell){cell.piece.rot=(cell.piece.rot+1)%4;cell.piece.vis+=90;cell.el.querySelector('.trk').style.transform=`rotate(${cell.piece.vis}deg)`;S.turn();refresh(true)}
+function remove(cell){if(L.counts)L.counts[cell.piece.type]++;cell.piece=null;S.erase();paintCell(cell);paintTools();refresh(true)}
+function place(cell,type){const rot=smartRot(cell,type);cell.piece={type,rot,vis:rot*90};if(L.counts)L.counts[type]--;S.place();paintCell(cell);
+  cell.el.classList.remove('pop');void cell.el.offsetWidth;cell.el.classList.add('pop');
+  if(L.counts&&L.counts[tool]<=0){const other=tool==='straight'?'curve':'straight';if(L.counts[other]>0)tool=other}
+  paintTools();refresh(true)}
+// 放下去時自動挑一個最可能接得上的方向
+function linksTo(r,c,side){const nr=r+DR[side],nc=c+DC[side];
+  if(nc<0)return nr===L.rs?2:-1; if(nc>=L.C)return nr===L.re?2:-1; if(nr<0||nr>=L.R)return -1;
+  const n=L.cells[nr][nc];if(n.block)return -1;if(n.piece)return(maskOf(n.piece)&opp(side))?2:-.5;return 0}
+function smartRot(cell,type){let best=0,bs=-1e9;const ks=type==='straight'?[0,1]:[0,1,2,3];
+  for(const k of ks){const m=rotMask(BASE[type],k);let s=0;for(const d of DIRS)if(m&d)s+=linksTo(cell.r,cell.c,d);if(s>bs){bs=s;best=k}}return best}
+
+/* ================= 檢查有沒有接通 ================= */
+function trace(){const out=[];let r=L.rs,c=0,inS=W;const seen=new Set();
+  while(true){if(r<0||r>=L.R||c<0||c>=L.C)return{ok:false,cells:out};
+    const cell=L.cells[r][c];if(!cell.piece||seen.has(r*L.C+c))return{ok:false,cells:out};const m=maskOf(cell.piece);if(!(m&inS))return{ok:false,cells:out};
+    seen.add(r*L.C+c);const outS=m&~inS;out.push({r,c,inS,outS});
+    if(c===L.C-1&&outS===E&&r===L.re)return{ok:true,cells:out};
+    r+=DR[outS];c+=DC[outS];inS=opp(outS)}}
+let lastLit=0;
+function refresh(user){const t=trace();
+  L.cells.flat().forEach(c=>c.el.classList.remove('lit'));t.cells.forEach(x=>L.cells[x.r][x.c].el.classList.add('lit'));
+  if(user&&t.cells.length>lastLit&&!t.ok)S.link();lastLit=t.cells.length;
+  if(t.ok&&L.mode!=='free'){locked=true;banner('接通了!火車出發囉');setTimeout(()=>runTrain(t,true),350)}}
+
+/* ================= 火車 ================= */
+function sideMid(r,c,s){const x=(c+1)*cs,y=r*cs;return s===N?[x+cs/2,y]:s===E?[x+cs,y+cs/2]:s===Sd?[x+cs/2,y+cs]:[x,y+cs/2]}
+function cellPts(x){const a=sideMid(x.r,x.c,x.inS),b=sideMid(x.r,x.c,x.outS);
+  if(x.inS===opp(x.outS))return[a,b];
+  const X=(x.c+1)*cs,Y=x.r*cs,m=x.inS|x.outS;const cx=(m&E)?X+cs:X,cy=(m&Sd)?Y+cs:Y;
+  let a0=Math.atan2(a[1]-cy,a[0]-cx),a1=Math.atan2(b[1]-cy,b[0]-cx);let d=a1-a0;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
+  const pts=[];for(let i=0;i<=8;i++){const t=a0+d*i/8;pts.push([cx+cs/2*Math.cos(t),cy+cs/2*Math.sin(t)])}return pts}
+function buildRoute(t,full){const pts=[[cs*.5,L.rs*cs+cs/2]];t.cells.forEach(x=>cellPts(x).forEach(p=>pts.push(p)));
+  if(full)pts.push([(L.C+1.5)*cs,L.re*cs+cs/2]);
+  const acc=[0];for(let i=1;i<pts.length;i++)acc.push(acc[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));return{pts,acc,len:acc[acc.length-1]}}
+function at(R,s){s=Math.max(0,Math.min(R.len,s));let i=1;while(i<R.acc.length-1&&R.acc[i]<s)i++;const p=R.pts[i-1],q=R.pts[i],seg=R.acc[i]-R.acc[i-1]||1,k=(s-R.acc[i-1])/seg;
+  return{x:p[0]+(q[0]-p[0])*k,y:p[1]+(q[1]-p[1])*k,a:Math.atan2(q[1]-p[1],q[0]-p[0])}}
+function clearTrain(){trainEls.forEach(e=>e.remove());trainEls=[]}
+function runTrain(t,full){clearTrain();sizeBoard();const R=buildRoute(t,full);
+  const eng=el('div','train',trainSVG),car=el('div','train',carSVG);boardEl.append(car,eng);trainEls=[eng,car];
+  S.whistle();const speed=Math.max(cs*2.4,R.len/6),gap=cs*.72,t0=performance.now();let lastChug=0;
+  return new Promise(res=>{const step=now=>{const s=(now-t0)/1000*speed;
+    const p=at(R,s),q=at(R,s-gap);eng.style.transform=`translate(${p.x}px,${p.y}px) rotate(${p.a}rad)`;car.style.transform=`translate(${q.x}px,${q.y}px) rotate(${q.a}rad)`;car.style.opacity=s<gap?'0':'1';
+    if(now-lastChug>300){lastChug=now;S.chug();if(Math.random()<.4){const pf=el('div','puff');pf.style.left=p.x+'px';pf.style.top=(p.y-cs*.2)+'px';boardEl.appendChild(pf);setTimeout(()=>pf.remove(),1300)}}
+    if(s<R.len+(full?0:0))requestAnimationFrame(step);else{res();full?arrived():stopped()}};requestAnimationFrame(step)})}
+function arrived(){S.win();stars++;starsEl.textContent=stars;
+  if(L.mode==='free'){banner('火車到站了!你蓋的鐵路好棒');setTimeout(()=>{clearTrain();locked=false},1600);return}
+  progress[L.mode][L.n]=1;saveProgress();
+  const last=L.n>=LEVELS;
+  const d=el('div','done',`<h2>到站囉!</h2><p>${L.mode==='rotate'?'轉轉看':'放放看'} 第 ${L.n} 關完成</p>`);const row=el('div','row');d.appendChild(row);
+  if(!last){const nx=el('button','big',goSVG+'下一關');nx.type='button';nx.onclick=()=>startLevel(L.mode,L.n+1);row.appendChild(nx)}
+  const mn=el('button','big w','選關');mn.type='button';mn.onclick=()=>showMenu(L.mode);row.appendChild(mn);
+  if(last)d.querySelector('p').textContent='全部 12 關都完成了,你是鐵路高手!';
+  main.appendChild(d)}
+function stopped(){banner('叭叭!鐵軌還沒接到終點,再蓋蓋看');S.nope();setTimeout(()=>{clearTrain();locked=false},1300)}
+function runFree(){if(locked)return;const t=trace();locked=true;if(t.ok){banner('出發!');runTrain(t,true)}else{if(!t.cells.length){banner('起點旁邊還沒有鐵軌喔');locked=false;S.nope();return}banner('出發!');runTrain(t,false)}}
+
+showMenu(null);
+</script>
+</body>
+</html>

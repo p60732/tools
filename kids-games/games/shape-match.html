@@ -9,8 +9,8 @@
 <style>
 /* Layout: header / instruction strip / fixed-ratio play board (targets on top, tray below). Deliberately single bright theme, matching the other games. */
 :root{
-  --ink:#16161D; --bg:#9BE0C0; --wood:#E3A35B; --wood-dark:#C27F3A; --tray:#FFF7E0; --white:#FFFFFF;
-  --red:#E8202A; --blue:#1F55E0; --yellow:#FFC400; --green:#14A84B;
+  --ink:#4A4552; --bg:#CFE5D8; --wood:#D8B48C; --wood-dark:#B89770; --tray:#FAF5EA; --white:#FFFFFF;
+  --red:#D8796E; --blue:#6E91C7; --yellow:#E9C46A; --green:#7FB08A;
   --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   color-scheme:light;
 }
@@ -30,15 +30,15 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .banner{flex:none;display:flex;align-items:center;justify-content:center;min-height:2.7em;box-sizing:border-box;text-align:center;background:var(--white);border:4px solid var(--ink);border-radius:14px;padding:4px 10px;font-weight:900;font-size:clamp(16px,4.2vw,22px);line-height:1.3;box-shadow:4px 4px 0 var(--ink);text-wrap:balance}
 .main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
 .stage{position:relative;width:calc(var(--u)*400);height:calc(var(--u)*500);border:5px solid var(--ink);border-radius:20px;overflow:hidden;box-shadow:5px 5px 0 var(--ink);background:var(--tray)}
-.board{position:absolute;left:0;top:0;width:100%;height:calc(var(--u)*270);background:repeating-linear-gradient(176deg,#E3A35B 0 calc(var(--u)*14),#D9944B calc(var(--u)*14) calc(var(--u)*17),#E3A35B calc(var(--u)*17) calc(var(--u)*30));border-bottom:calc(var(--u)*5) solid var(--ink)}
+.board{position:absolute;left:0;top:0;width:100%;height:calc(var(--u)*270);background:repeating-linear-gradient(176deg,#D8B48C 0 calc(var(--u)*14),#CFA97F calc(var(--u)*14) calc(var(--u)*17),#D8B48C calc(var(--u)*17) calc(var(--u)*30));border-bottom:calc(var(--u)*5) solid var(--ink)}
 .trayline{position:absolute;left:4%;right:4%;top:calc(var(--u)*284);text-align:center;font-weight:900;font-size:calc(var(--u)*15);color:#8A7A5A;letter-spacing:.1em}
 .slot,.piece{position:absolute}
 .slot svg,.piece svg{width:100%;height:100%;display:block;overflow:visible}
 .slot{z-index:2;transition:transform .2s}
 .slot.hover{transform:scale(1.08)}
 .slot .tag{position:absolute;left:50%;bottom:calc(var(--u)*-26);transform:translateX(-50%);font-weight:900;font-size:calc(var(--u)*15);background:var(--white);border:calc(var(--u)*3) solid var(--ink);border-radius:999px;padding:0 calc(var(--u)*8);white-space:nowrap;animation:pop .35s cubic-bezier(.3,1.7,.5,1)}
-.piece{z-index:10;cursor:grab;touch-action:none;filter:drop-shadow(calc(var(--u)*3) calc(var(--u)*4) 0 rgba(22,22,29,.3));transition:left .35s cubic-bezier(.3,1.5,.5,1),top .35s cubic-bezier(.3,1.5,.5,1),transform .2s}
-.piece.drag{z-index:50;cursor:grabbing;transition:none;transform:scale(1.12) rotate(0deg)!important;filter:drop-shadow(calc(var(--u)*6) calc(var(--u)*8) 0 rgba(22,22,29,.3))}
+.piece{z-index:10;cursor:grab;touch-action:none;filter:drop-shadow(calc(var(--u)*3) calc(var(--u)*4) 0 rgba(74,69,82,.3));transition:left .35s cubic-bezier(.3,1.5,.5,1),top .35s cubic-bezier(.3,1.5,.5,1),transform .2s}
+.piece.drag{z-index:50;cursor:grabbing;transition:none;transform:scale(1.12) rotate(0deg)!important;filter:drop-shadow(calc(var(--u)*6) calc(var(--u)*8) 0 rgba(74,69,82,.3))}
 .piece.placed{z-index:5;cursor:default;filter:none;transform:none!important}
 .piece.shake{animation:shake .4s}
 @keyframes shake{25%{translate:calc(var(--u)*-8) 0}75%{translate:calc(var(--u)*8) 0}}
@@ -87,8 +87,8 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
     <h1>形狀配對</h1>
     <div class="tools">
       <span class="lv" id="lv">第 1 關</span>
-      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
-      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#16161D" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#E8202A" stroke="#16161D" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#1F55E0" stroke="#16161D" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#16161D" stroke-width="3" stroke-linecap="round"/></svg></button>
+      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
+      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#4A4552" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#D8796E" stroke="#4A4552" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#6E91C7" stroke="#4A4552" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/></svg></button>
     </div>
   </header>
   <div class="banner" id="banner" aria-live="polite"></div>
@@ -99,7 +99,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
 const KEY='shapeMusic';
 try{musicOn=localStorage.getItem(KEY)!=='off'}catch(e){}
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.1;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.065;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function note(f,t,d,{type='sine',v=.25,to=null,bus=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(bus||sfx);o.start(t);o.stop(t+d+.03)}catch(e){}}
@@ -118,7 +118,7 @@ function sched(){while(nextT<ctx.currentTime+.15){const i=stepN%32,m=MEL[i];
   if(m){note(hz(m),nextT,.3,{type:'triangle',v:.5,bus:musicGain});note(hz(m+12),nextT,.16,{v:.1,bus:musicGain})}
   if(i%2===0&&BASS[i/2])note(hz(BASS[i/2]),nextT,.26,{v:.45,bus:musicGain});
   nextT+=EI;stepN++}}
-function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.1,ctx.currentTime);bgm=setInterval(sched,25)}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.065,ctx.currentTime);bgm=setInterval(sched,25)}
 function stopMusic(){clearInterval(bgm);bgm=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05)}
 const musicBtn=document.getElementById('music');
 function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
@@ -127,7 +127,7 @@ paintMusic();
 addEventListener('pointerdown',()=>{ac();startMusic()});
 
 /* ================= 共用 ================= */
-const INK='#16161D';
+const INK='#4A4552';
 const stage=document.getElementById('stage'),main=document.getElementById('main'),bannerEl=document.getElementById('banner'),starsEl=document.getElementById('stars'),lvEl=document.getElementById('lv');
 const U=v=>`calc(var(--u)*${v})`;
 function fit(){const u=Math.max(.5,Math.min(main.clientWidth/410,main.clientHeight/510));document.documentElement.style.setProperty('--u',u+'px')}
@@ -141,7 +141,7 @@ let stars=0,level=0;
 function toStage(e){const r=stage.getBoundingClientRect(),k=stage.clientWidth/400;return{x:(e.clientX-r.left-stage.clientLeft)/k,y:(e.clientY-r.top-stage.clientTop)/k}}
 function burst(cx,cy){const r=stage.getBoundingClientRect(),k=stage.clientWidth/400,x=r.left+stage.clientLeft+cx*k,y=r.top+stage.clientTop+cy*k;
   for(let i=0;i<7;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('burst');
-  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2"/>';
+  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2"/>';
   const a=Math.PI*2*i/7;s.style.left=x-13+'px';s.style.top=y-13+'px';s.style.setProperty('--dx',Math.cos(a)*75+'px');s.style.setProperty('--dy',Math.sin(a)*75-30+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),850)}}
 
 /* ================= 拖放引擎 =================
@@ -173,7 +173,7 @@ function start(){busy=false;drag=null;slots=[];pieces=[];stage.innerHTML='';lvEl
   stage.appendChild(el('board'));stage.appendChild(el('trayline',GAME.trayLabel));GAME.build(level)}
 
 /* ================= 遊戲內容 ================= */
-const COLORS=['#E8202A','#1F55E0','#FFC400','#14A84B','#FF7A00','#8B3FD9','#00A6B8','#FF4FA3'];
+const COLORS=['#D8796E','#6E91C7','#E9C46A','#7FB08A','#E3A06B','#A08CC8','#6FB3B8','#E2A0B8'];
 function starPath(){let d='';for(let i=0;i<10;i++){const r=i%2?20:46,a=-Math.PI/2+i*Math.PI/5;d+=(i?'L':'M')+(50+r*Math.cos(a)).toFixed(1)+' '+(52+r*Math.sin(a)).toFixed(1)}return d+'Z'}
 function hexPath(){let d='';for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;d+=(i?'L':'M')+(50+46*Math.cos(a)).toFixed(1)+' '+(50+46*Math.sin(a)).toFixed(1)}return d+'Z'}
 const SHAPES=[

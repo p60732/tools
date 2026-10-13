@@ -9,8 +9,8 @@
 <style>
 /* Layout: header / instruction strip / mode tabs (配對・寫寫看) / fixed-ratio stage. Single bright theme like the other games. */
 :root{
-  --ink:#16161D; --bg:#B9D8FF; --tray:#FFF7E0; --white:#FFFFFF; --paper:#FFFDF5; --guide:#CFC6B0;
-  --red:#E8202A; --blue:#1F55E0; --yellow:#FFC400; --green:#14A84B; --accent:#1F55E0;
+  --ink:#4A4552; --bg:#D4E1F0; --tray:#FAF5EA; --white:#FFFFFF; --paper:#FFFDF5; --guide:#CFC6B0;
+  --red:#D8796E; --blue:#6E91C7; --yellow:#E9C46A; --green:#7FB08A; --accent:#6E91C7;
   --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   --glyph:"Andika","Noto Sans TC",sans-serif;
   color-scheme:light;
@@ -33,7 +33,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .tab:focus-visible,.music:focus-visible,.btn:focus-visible,.nav:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
 .stage{position:relative;width:calc(var(--u)*400);height:calc(var(--u)*500);border:5px solid var(--ink);border-radius:20px;overflow:hidden;box-shadow:5px 5px 0 var(--ink);background:var(--tray)}
-.board{position:absolute;left:0;top:0;width:100%;height:calc(var(--u)*270);background:linear-gradient(#EAF3FF,#D6E8FF);border-bottom:calc(var(--u)*5) solid var(--ink)}
+.board{position:absolute;left:0;top:0;width:100%;height:calc(var(--u)*270);background:linear-gradient(#EEF2F7,#DFE7F1);border-bottom:calc(var(--u)*5) solid var(--ink)}
 .trayline{position:absolute;left:4%;right:4%;top:calc(var(--u)*284);text-align:center;font-weight:900;font-size:calc(var(--u)*15);color:#8A7A5A;letter-spacing:.08em}
 .slot,.piece{position:absolute;box-sizing:border-box}
 /* 配對卡片 */
@@ -44,11 +44,11 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .card .word{font-weight:900;font-size:calc(var(--u)*18);line-height:1.2}
 .card .pocket{width:78%;aspect-ratio:1;max-width:100%;margin-bottom:calc(var(--u)*8);border:calc(var(--u)*3) dashed #A9A090;border-radius:calc(var(--u)*12);background:#F4EFE2;box-sizing:border-box}
 .slot.hover{transform:scale(1.07)}
-.slot.hover .pocket{background:#FFF3B0;border-color:var(--ink)}
+.slot.hover .pocket{background:#F4ECCB;border-color:var(--ink)}
 .slot .tag{position:absolute;left:50%;bottom:calc(var(--u)*-30);transform:translateX(-50%);font-weight:900;font-size:calc(var(--u)*15);background:var(--yellow);border:calc(var(--u)*3) solid var(--ink);border-radius:999px;padding:0 calc(var(--u)*8);white-space:nowrap;animation:pop .35s cubic-bezier(.3,1.7,.5,1);z-index:6}
 .slot{overflow:visible}
 .tile{background:var(--accent);border:calc(var(--u)*4) solid var(--ink);border-radius:calc(var(--u)*14);display:grid;place-items:center;font-family:var(--glyph);font-weight:700;font-size:calc(var(--u)*52);line-height:1;color:var(--white);-webkit-text-stroke:calc(var(--u)*1.5) var(--ink);paint-order:stroke fill}
-.piece{z-index:10;cursor:grab;touch-action:none;filter:drop-shadow(calc(var(--u)*3) calc(var(--u)*4) 0 rgba(22,22,29,.3));transition:left .35s cubic-bezier(.3,1.5,.5,1),top .35s cubic-bezier(.3,1.5,.5,1),transform .2s}
+.piece{z-index:10;cursor:grab;touch-action:none;filter:drop-shadow(calc(var(--u)*3) calc(var(--u)*4) 0 rgba(74,69,82,.3));transition:left .35s cubic-bezier(.3,1.5,.5,1),top .35s cubic-bezier(.3,1.5,.5,1),transform .2s}
 .piece.drag{z-index:50;cursor:grabbing;transition:none;transform:scale(1.12) rotate(0deg)!important}
 .piece.placed{z-index:5;cursor:default;filter:none;transform:none!important}
 .piece.shake{animation:shake .4s}
@@ -111,8 +111,8 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
   <header>
     <h1>ABC 大小寫</h1>
     <div class="tools">
-      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
-      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#16161D" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#E8202A" stroke="#16161D" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#1F55E0" stroke="#16161D" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#16161D" stroke-width="3" stroke-linecap="round"/></svg></button>
+      <div class="count" aria-live="polite"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
+      <button class="music" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#4A4552" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#D8796E" stroke="#4A4552" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#6E91C7" stroke="#4A4552" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/></svg></button>
     </div>
   </header>
   <div class="banner" id="banner" aria-live="polite"></div>
@@ -127,7 +127,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
 const KEY='abcMusic';
 try{musicOn=localStorage.getItem(KEY)!=='off'}catch(e){}
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.09;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.058;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function note(f,t,d,{type='sine',v=.25,to=null,bus=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(bus||sfx);o.start(t);o.stop(t+d+.03)}catch(e){}}
@@ -145,7 +145,7 @@ const MEL=[72,72,79,79,81,81,79,0, 77,77,76,76,74,74,72,0, 79,79,77,77,76,76,74,
 function sched(){while(nextT<ctx.currentTime+.15){const i=stepN%32,m=MEL[i];
   if(m){note(hz(m),nextT,.3,{type:'triangle',v:.5,bus:musicGain});note(hz(m+12),nextT,.16,{v:.1,bus:musicGain})}
   if(i%2===0&&BASS[i/2])note(hz(BASS[i/2]),nextT,.26,{v:.45,bus:musicGain});nextT+=EI;stepN++}}
-function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.09,ctx.currentTime);bgm=setInterval(sched,25)}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;stepN=0;musicGain.gain.setValueAtTime(.058,ctx.currentTime);bgm=setInterval(sched,25)}
 function stopMusic(){clearInterval(bgm);bgm=null;if(musicGain)musicGain.gain.setTargetAtTime(.0001,ctx.currentTime,.05)}
 const musicBtn=document.getElementById('music');
 function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
@@ -153,7 +153,7 @@ musicBtn.addEventListener('click',e=>{e.stopPropagation();musicOn=!musicOn;try{l
 paintMusic();addEventListener('pointerdown',()=>{ac();startMusic()});
 
 /* ================= 共用 ================= */
-const INK='#16161D';
+const INK='#4A4552';
 const stage=document.getElementById('stage'),main=document.getElementById('main'),bannerEl=document.getElementById('banner'),starsEl=document.getElementById('stars');
 const U=v=>`calc(var(--u)*${v})`;
 function fit(){const u=Math.max(.5,Math.min(main.clientWidth/410,main.clientHeight/510));document.documentElement.style.setProperty('--u',u+'px');return u}
@@ -164,7 +164,7 @@ const banner=t=>bannerEl.textContent=t;
 let stars=0;const addStar=()=>{stars++;starsEl.textContent=stars};
 function toStage(e){const r=stage.getBoundingClientRect(),k=stage.clientWidth/400;return{x:(e.clientX-r.left-stage.clientLeft)/k,y:(e.clientY-r.top-stage.clientTop)/k}}
 function burstAt(x,y){for(let i=0;i<7;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('burst');
-  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#FFC400" stroke="#16161D" stroke-width="2"/>';
+  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2"/>';
   const a=Math.PI*2*i/7;s.style.left=x-13+'px';s.style.top=y-13+'px';s.style.setProperty('--dx',Math.cos(a)*75+'px');s.style.setProperty('--dy',Math.sin(a)*75-30+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),850)}}
 function burst(cx,cy){const r=stage.getBoundingClientRect(),k=stage.clientWidth/400;burstAt(r.left+stage.clientLeft+cx*k,r.top+stage.clientTop+cy*k)}
 
@@ -187,8 +187,8 @@ const FONT_SCALE=.74,BRUSH=.115;
 function LAYOUT(it,m,w,h,fs,meas){const capH=meas.measureText('H').actualBoundingBoxAscent,xH=meas.measureText('x').actualBoundingBoxAscent;
   const base=h*.70;return{x:w/2-(m.actualBoundingBoxRight-m.actualBoundingBoxLeft)/2,y:base,top:base-capH,mid:base-xH,base,desc:Math.min(h*.95,base+capH*.42)}}
 function GUIDES(g,w,h,l){g.fillStyle='#FFFDF5';g.fillRect(0,0,w,h);g.lineWidth=Math.max(2,w*.006);
-  g.strokeStyle='#8FB0FF';[l.top,l.base].forEach(y=>{g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()});
-  g.strokeStyle='#E8202A';g.setLineDash([w*.025,w*.02]);g.beginPath();g.moveTo(0,l.mid);g.lineTo(w,l.mid);g.stroke();
+  g.strokeStyle='#A9BEE0';[l.top,l.base].forEach(y=>{g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()});
+  g.strokeStyle='#D8796E';g.setLineDash([w*.025,w*.02]);g.beginPath();g.moveTo(0,l.mid);g.lineTo(w,l.mid);g.stroke();
   g.strokeStyle='#C9D6F2';g.beginPath();g.moveTo(0,l.desc);g.lineTo(w,l.desc);g.stroke();g.setLineDash([])}
 
 const STEM={ch:'l',axis:'w'};
@@ -266,7 +266,7 @@ function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;r
 async function setupGlyph(){const cv=W.canvas,r=cv.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
   const w=Math.max(50,Math.round(r.width*dpr)),h=Math.max(50,Math.round(r.height*dpr));cv.width=w;cv.height=h;W.k=w/r.width;
   const it=WRITE_LIST[W.idx];document.getElementById('curG').textContent=it.g;document.getElementById('curT').textContent=it.sub;
-  W.done=false;W.id=null;W.color=['#E8202A','#1F55E0','#14A84B','#FF7A00','#8B3FD9'][W.idx%5];W.meter.style.width='0';
+  W.done=false;W.id=null;W.color=['#D8796E','#6E91C7','#7FB08A','#E3A06B','#A08CC8'][W.idx%5];W.meter.style.width='0';
   try{await document.fonts.load(`700 100px ${GLYPH_FAMILY}`,it.g)}catch(e){}
   const fs=Math.round(w*FONT_SCALE);const font=`700 ${fs}px ${GLYPH_FAMILY}`;
   // 字的位置
