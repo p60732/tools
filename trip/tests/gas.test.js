@@ -113,15 +113,15 @@ t('錯誤訊息不含試算表 ID', !JSON.stringify(g.call({ action: 'pull', tok
   const tk = h.call({ action: 'login', password: 'family123', who: '媽媽' }).data.token;
   h.call({ action: 'push', token: tk, ops: [{ coll: 'stop', tripId: 'q1', key: 'a', data: { n: 1 }, baseRev: 0 }] });
   const ss = h.__sheets[h.__props.SHEET_ID];
-  ss.sheets = ss.sheets.filter(x => x.name !== '通訊' && x.name !== '行李' && x.name !== '票券');
+  ss.sheets = ss.sheets.filter(x => x.name !== '通訊' && x.name !== '行李' && x.name !== '票券' && x.name !== '美食');
   t('缺表時讀取會報錯（不自動建）', /找不到工作表/.test(h.call({ action: 'pull', token: tk, tripId: 'q1', since: 0 }).error) && !ss.sheets.find(x => x.name === '通訊'));
   const before = JSON.stringify(ss.sheets.find(x => x.name === '景點').rows);
   h.fresh(); h.ADD_MISSING_SHEETS();
-  t('補上通訊、行李、票券表', ['通訊', '行李', '票券'].every(n => ss.sheets.some(x => x.name === n)));
+  t('補上通訊、行李、票券表', ['通訊', '行李', '票券', '美食'].every(n => ss.sheets.some(x => x.name === n)));
   t('已有的表沒被動到', JSON.stringify(ss.sheets.find(x => x.name === '景點').rows) === before);
-  const r = h.call({ action: 'push', token: tk, ops: [{ coll: 'sim', tripId: 'q1', key: 'sim1', data: { kind: 'esim', who: '媽媽' }, baseRev: 0 }, { coll: 'bag', tripId: 'q1', key: 'bag1', data: { to: '飯店' }, baseRev: 0 }, { coll: 'coupon', tripId: 'q1', key: 'c1', data: { title: '樂天免稅店 9 折' }, baseRev: 0 }] });
+  const r = h.call({ action: 'push', token: tk, ops: [{ coll: 'sim', tripId: 'q1', key: 'sim1', data: { kind: 'esim', who: '媽媽' }, baseRev: 0 }, { coll: 'bag', tripId: 'q1', key: 'bag1', data: { to: '飯店' }, baseRev: 0 }, { coll: 'coupon', tripId: 'q1', key: 'c1', data: { title: '樂天免稅店 9 折' }, baseRev: 0 }, { coll: 'food', tripId: 'q1', key: 'f1', data: { name: '豬肉湯飯' }, baseRev: 0 }] });
   t('新的資料類型可以存', r.success && r.data.results.every(x => x.status === 'ok'));
-  t('新的資料類型可以讀', h.call({ action: 'pull', token: tk, tripId: 'q1', since: 0 }).data.docs.filter(d => ['sim', 'bag', 'coupon'].includes(d.coll)).length === 3);
+  t('新的資料類型可以讀', h.call({ action: 'pull', token: tk, tripId: 'q1', since: 0 }).data.docs.filter(d => ['sim', 'bag', 'coupon', 'food'].includes(d.coll)).length === 4);
 }
 console.log(`後端測試：${pass} 通過，${fail} 失敗`);
 process.exit(fail ? 1 : 0);
