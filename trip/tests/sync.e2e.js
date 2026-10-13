@@ -112,7 +112,7 @@ const names = u => u.p.$$eval('#dayview .tl .nm b', a => a.map(x => x.textConten
   await mom.p.click('text=＋ 填資料新增'); await mom.p.fill('#fm-title', '樂天免稅 9 折'); await mom.p.click('#modal button[type=submit]'); await sleep(200);
   await sync(mom); await sync(dad);
   t('爸爸看到優惠券', (await dad.p.textContent('#coupons')).includes('樂天免稅 9 折'));
-  await mom.p.click('text=＋ 加到口袋名單'); await mom.p.fill('#fm-name', '明洞餃子'); await mom.p.fill('#fm-dish', '刀削麵'); await mom.p.click('#modal button[type=submit]'); await sleep(200);
+  await mom.p.click('text=＋ 加到口袋清單'); await mom.p.fill('#fm-name', '明洞餃子'); await mom.p.fill('#fm-dish', '刀削麵'); await mom.p.click('#modal button[type=submit]'); await sleep(200);
   await sync(mom); await sync(dad);
   t('爸爸看到口袋名單', (await dad.p.textContent('#food-pocket')).includes('明洞餃子'));
   t('存在票券表', (await (await fetch(API + '__admin/dump')).json())['票券'] === 1);

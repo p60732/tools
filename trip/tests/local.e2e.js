@@ -84,25 +84,34 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   t('有備案可以展開', await p.locator('#food-list article:has-text("錦市場") details summary:has-text("備案 1 家")').count() === 1);
   await p.click('#food-days button:has-text("12/21")');
   t('切到某一天只看那天', !(await p.textContent('#food-list')).includes('錦市場吃點心') && (await p.textContent('#food-list')).includes('Day 2'));
-  await p.click('text=＋ 加到口袋名單');
+  await p.click('text=＋ 加到口袋清單');
   await p.fill('#fm-link', 'https://www.google.com/maps/place/Ippudo+Kyoto/@35.0037,135.7650,17z');
   t('貼地圖連結自動帶出店名', (await p.inputValue('#fm-name')) === 'Ippudo Kyoto');
   await p.fill('#fm-dish', '白丸拉麵'); await p.selectOption('#fm-day', '2026-12-21');
   await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
   t('口袋名單出現、也出現在那天', (await p.textContent('#food-pocket')).includes('Ippudo Kyoto') && (await p.textContent('#food-list')).includes('Ippudo Kyoto'));
-  t('口袋名單有導航', (await p.locator('#food-pocket article:has-text("Ippudo") a:has-text("導航")').getAttribute('href')).includes('35.0037'));
+  t('口袋卡片預設收起、點開才看到詳細', await p.locator('#food-pocket details:has-text("Ippudo")').getAttribute('open') === null);
+  await p.locator('#food-pocket details:has-text("Ippudo") summary').click();
+  t('點開後看得到必點', await p.locator('#food-pocket details:has-text("Ippudo") .pk-body').isVisible());
+  // 營業時間、公休判斷
+  const st = await p.evaluate(() => [openState({hours:'11:00–21:00'}, '2026-12-21', 10*60).text, openState({hours:'11:00-21:00'}, '2026-12-21', 12*60).text, openState({hours:'18:00–02:00'}, '2026-12-21', 60).text, openState({hours:'10:00–20:00 週一休'}, '2026-12-21', 12*60).text, openState({closed:[1]}, '2026-12-21').closed, openState({hours:'24 小時'}, '2026-12-21', 3*60).text]);
+  t('營業時間判斷正確', st[0] === '11:00 才開' && st[1].startsWith('營業中') && st[2].startsWith('營業中') && st[3] === '公休' && st[4] === true && st[5] === '24 小時');
+  t('口袋名單有導航', (await p.locator('#food-pocket details:has-text("Ippudo") a:has-text("導航")').getAttribute('href')).includes('35.0037'));
   // 跳過一餐，吃什麼也跟著拿掉
   await p.click('#plan .day:has-text("12/21")'); await p.click('text=臨時改行程');
   await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("跳過")').click(); await p.waitForTimeout(200);
   t('跳過的餐不再出現', !(await p.textContent('#food-list')).includes('稻荷壽司老店'));
   await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("恢復")').click().catch(() => {}); await p.click('text=完成').catch(() => {});
   // 行程裡的備案一鍵收進口袋名單（不重複）
-  const before3 = await p.locator('#food-pocket article').count();
+  const before3 = await p.locator('#food-pocket details').count();
   await p.click('button:has-text("家備案也收進口袋名單")'); await p.waitForTimeout(300);
-  const after3 = await p.locator('#food-pocket article').count();
-  t('備案收進口袋名單', after3 > before3 && (await p.textContent('#food-pocket')).includes('京都站拉麵小路') && (await p.textContent('#food-pocket')).includes('12/20 附近'));
+  const after3 = await p.locator('#food-pocket details').count();
+  t('備案收進口袋名單（正餐的備案在吃飯分頁）', after3 > before3 && (await p.textContent('#food-pocket')).includes('先斗町') && (await p.textContent('#food-pocket')).includes('12/20 附近'));
+  await p.click('#pocket-tabs button:has-text("點心")');
+  t('點心的備案在點心分頁', (await p.textContent('#food-pocket')).includes('京都站拉麵小路'));
+  await p.click('#pocket-tabs button:has-text("吃飯")');
   await p.click('button:has-text("家備案也收進口袋名單")'); await p.waitForTimeout(300);
-  t('再按一次不會重複', await p.locator('#food-pocket article').count() === after3);
+  t('再按一次不會重複', await p.locator('#food-pocket details').count() === after3);
   // 優惠券・門票：新增、存圖、標成已使用
   t('範例有一張優惠券', await p.locator('#coupons article').count() === 1);
   await p.click('text=＋ 填資料新增');
@@ -156,7 +165,10 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.fill('#tp-paste', json2); await p.click('text=檢查');
   t('有更新這一趟的選項', await p.locator('button:has-text("更新這一趟")').isVisible());
   await p.click('button:has-text("更新這一趟")'); await p.waitForTimeout(300);
-  t('AI 的口袋名單也加進來', (await p.textContent('#food-pocket')).includes('小樽壽司屋通') && (await p.textContent('#food-pocket')).includes('北菓樓'));
+  t('AI 的口袋名單也加進來（吃飯）', (await p.textContent('#food-pocket')).includes('小樽壽司屋通'));
+  await p.click('#pocket-tabs button:has-text("點心")');
+  t('甜點自動分到點心分頁', (await p.textContent('#food-pocket')).includes('北菓樓') && !(await p.textContent('#food-pocket')).includes('小樽壽司屋通'));
+  await p.click('#pocket-tabs button:has-text("吃飯")');
   t('名稱保留、行程換新', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#dayview')).includes('小樽運河') && !(await p.textContent('#dayview')).includes('大通公園'));
   t('自己加的網路卡還在', await p.locator('#sims article:has-text("爸爸")').count() === 1);
   t('沒有多一趟', await p.locator('.trip-row').count() === 2);

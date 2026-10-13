@@ -181,6 +181,17 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .meal .m-top b{font-weight:400;font-size:18px}
 .meal .m-top .tiny{margin-left:auto}
 .meal .m-time{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px}
+.pk{padding:0;overflow:hidden}
+.pk>summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;gap:4px}
+.pk>summary::-webkit-details-marker{display:none}
+.pk>summary .pk-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pk>summary .pk-top b{font-weight:400;font-size:17px;margin-right:auto}
+.pk>summary::after{content:"▾ 展開";font-size:12px;color:var(--ink2);justify-self:end}
+.pk[open]>summary::after{content:"▴ 收起"}
+.pk .pk-body{padding:0 14px 12px;display:grid;gap:6px}
+.pk.closed-day{opacity:.6}
+.oc{font-size:12px;padding:2px 8px;border-radius:999px;border:1.5px solid var(--ink);white-space:nowrap}
+.oc.ok{background:var(--green)}.oc.wait{background:var(--yellow)}.oc.no{background:var(--coral)}.oc.unk{background:var(--white)}
 .food-day{margin:14px 0 6px;font-size:16px}
 .alt-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px dashed var(--line, #ddd);padding-top:6px;margin-top:6px}
 .coupon.used{opacity:.55}
@@ -344,6 +355,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <a href="#tickets-sec">票券</a>
     <a href="#plan">行程</a>
     <a href="#food">吃什麼</a>
+    <a href="#pocket">口袋清單</a>
     <a href="#todo">清單</a>
     <a href="#stay">住宿</a>
     <a href="#money">匯率</a>
@@ -396,8 +408,12 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <p class="small" style="margin:-6px 0 10px">行程裡每一餐、備案、口袋名單都在這裡；公休會提醒，點一下就能導航或給司機看</p>
     <div class="days" id="food-days" role="tablist" aria-label="選擇哪一天"></div>
     <div id="food-list"></div>
-    <h3 class="subhead"><span class="dot" style="background:var(--coral)"></span>口袋名單</h3>
-    <p class="small" style="margin:-6px 0 10px">想吃但還沒排進行程的店；可以指定哪天在附近</p>
+  </section>
+
+  <section id="pocket">
+    <h2><span class="dot" style="background:var(--coral)"></span>口袋清單</h2>
+    <p class="small" style="margin:-6px 0 10px">想吃但還沒排進行程的店。點卡片展開看詳細；會依「上面選的日子」提醒公休和營業時間</p>
+    <div class="seg" id="pocket-tabs" role="tablist" aria-label="口袋清單分類" style="margin-bottom:10px"></div>
     <div class="flights" id="food-pocket"></div>
   </section>
 
@@ -422,7 +438,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.0 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.1 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -690,7 +706,7 @@ function mergeFoods(list){
 /* 行程裡每一餐的備案，一鍵收進口袋名單（記住是哪天的備案） */
 function altsToPocket(){
   const items = [];
-  TRIP.days.forEach((d, i) => dayStops(i).filter(st => !st.skipped && mealOf(st)).forEach(st => (st.alts || []).forEach(a => items.push(Object.assign({}, a, {day: d.date, cat: MEALS[mealOf(st)][0] + "備案", note: (a.why ? a.why + "；" : "") + "原本是「" + mealName(st.name) + "」的備案"})))));
+  TRIP.days.forEach((d, i) => dayStops(i).filter(st => !st.skipped && mealOf(st)).forEach(st => (st.alts || []).forEach(a => items.push(Object.assign({}, a, {day: d.date, type: SNACK_RE.test((a.name || "") + " " + (a.local || "")) || ["snack","drink"].includes(mealOf(st)) ? "snack" : "meal", cat: MEALS[mealOf(st)][0] + "備案", note: (a.why ? a.why + "；" : "") + "原本是「" + mealName(st.name) + "」的備案"})))));
   const n = mergeFoods(items);
   logChange("把行程裡的備案收進口袋名單（" + n + " 家）"); renderFood(); toast(n ? "已加入 " + n + " 家到口袋名單" : "備案都已經在口袋名單裡了");
 }
@@ -2338,7 +2354,13 @@ let foodDay = null;   // null = 自動（旅途中預設今天）
 function foodNav(p){ return h("div",{class:"acts"},
   h("a",{class:"btn b",href: p.link || gdir(null, p, "walk"),target:"_blank",rel:"noopener"},"導航"),
   h("button",{class:"btn y",type:"button",onclick:()=>driver({name: p.name, local: p.local || p.name, addr: p.addr || ""})},"給司機看")); }
-function closedWarn(p, date){ return date && Array.isArray(p.closed) && p.closed.includes(wd(date)) ? h("span",{class:"chip warn-chip"},"⚠️ 這天公休") : null; }
+function closedWarn(p, date, t){
+  if (date && closedDays(p).includes(wd(date))) return h("span",{class:"chip warn-chip"},"⚠️ 這天公休");
+  const at = toMin(t), hr = parseHours(p.hours);
+  if (at == null || !hr || hr.allDay) return null;
+  const s = openState(p, date, at);
+  return s.cls === "wait" ? h("span",{class:"chip warn-chip"},"⚠️ 排 " + t + "，但 " + s.text) : s.cls === "no" ? h("span",{class:"chip warn-chip"},"⚠️ 排 " + t + "，那時" + s.text) : null;
+}
 function renderFood(){
   const tabs = $("#food-days"), list = $("#food-list"); if (!tabs || !list) return;
   const today = new Date().toLocaleDateString("sv-SE");
@@ -2362,14 +2384,14 @@ function renderFood(){
           h("span",{class:"chip",style:"background:" + m[2]}, m[1] + " " + m[0]),
           h("span",{class:"m-time"}, st.t && st.t !== "--:--" ? st.t : ""),
           b ? h("span",{class:"chip",style:"background:" + (BOOK[b.s] || {}).c}, (BOOK[b.s] || {}).i + " " + (BOOK[b.s] || {}).l + (b.ref ? " " + b.ref : "")) : null,
-          closedWarn(st, d.date)),
+          closedWarn(st, d.date, st.t)),
         h("b",{style:"font-weight:400;font-size:18px"}, mealName(st.name) + (st.swappedFrom ? "（換成備案）" : "")),
         st.local && st.local !== st.name ? h("div",{class:"small",lang:TRIP.lang}, st.local) : null,
         st.hours ? h("div",{class:"small"}, "🕘 " + st.hours) : null,
         st.note ? h("p",{class:"note"}, "💡 " + st.note) : null,
         alts.length ? h("details",{class:"small",style:"margin-top:4px"}, h("summary",null, "備案 " + alts.length + " 家（客滿、排隊、公休時用）"),
           alts.map(a => h("div",{class:"alt-row"},
-            h("div",{style:"flex:1;min-width:160px"}, h("b",{style:"font-weight:400"}, a.name), a.why ? h("div",null, a.why) : null, a.hours ? h("div",null, "🕘 " + a.hours) : null, closedWarn(a, d.date)),
+            h("div",{style:"flex:1;min-width:160px"}, h("b",{style:"font-weight:400"}, a.name), a.why ? h("div",null, a.why) : null, a.hours ? h("div",null, "🕘 " + a.hours) : null, closedWarn(a, d.date, st.t)),
             h("a",{class:"btn tiny b",href:gdir(null, a, "walk"),target:"_blank",rel:"noopener"},"導航"),
             h("button",{class:"btn tiny",type:"button",onclick:()=>driver(a)},"給司機看")))) : null,
         h("div",{class:"acts"},
@@ -2377,36 +2399,92 @@ function renderFood(){
           h("button",{class:"btn y",type:"button",onclick:()=>driver(st)},"給司機看"),
           h("a",{class:"btn",href:gnear(st, "restaurants"),target:"_blank",rel:"noopener"},"附近找吃的"))));
     });
-    near.forEach(f => list.append(pocketCard(f, true)));
+    near.forEach(f => list.append(pocketCard(f, d.date)));
   });
-  const pb = $("#food-pocket"); pb.textContent = "";
-  pockets.forEach(f => pb.append(pocketCard(f)));
-  if (!pockets.length) pb.append(h("div",{class:"box small",style:"text-align:center"},"還沒有口袋名單"));
-  pb.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>foodForm(null)},"＋ 加到口袋名單"));
+  renderPocket();
+}
+/* ---- 營業時間、公休：從文字讀出來（「10:00–21:00」「24 小時」「週一休」…） ---- */
+const WD_CH = {"日":0,"天":0,"一":1,"二":2,"三":3,"四":4,"五":5,"六":6};
+function closedDays(p){
+  const out = new Set(Array.isArray(p.closed) ? p.closed : []);
+  const txt = (p.hours || "") + " " + (p.note || "");
+  for (const m of txt.matchAll(/(?:每)?(?:週|周|星期|禮拜)([日天一二三四五六])(?:[、,，及和]?(?:週|周|星期)?([日天一二三四五六]))?\s*(?:公休|店休|定休|休息|休)/g)){ out.add(WD_CH[m[1]]); if (m[2]) out.add(WD_CH[m[2]]); }
+  return [...out];
+}
+function parseHours(str){
+  const t = String(str || "");
+  if (/24\s*(小時|h|hr|시간)/i.test(t)) return {allDay: true};
+  const m = t.match(/(\d{1,2})[:：](\d{2})\s*[-–—~〜至到]\s*(?:翌|隔天)?(\d{1,2})[:：](\d{2})/);
+  if (!m) return null;
+  const o = +m[1] * 60 + +m[2]; let c = +m[3] * 60 + +m[4]; if (c <= o) c += 24 * 60;
+  return {open: o, close: c};
+}
+const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const toMin = t => { const m = String(t || "").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
+/* 某天（＋某個時間）這家店的狀態：{cls, text} */
+function openState(p, date, atMin){
+  if (date && closedDays(p).includes(wd(date))) return {cls: "no", text: "公休", closed: true};
+  const hr = parseHours(p.hours);
+  if (!hr) return p.hours ? {cls: "unk", text: "🕘 " + p.hours} : {cls: "unk", text: "營業時間未知"};
+  if (hr.allDay) return {cls: "ok", text: "24 小時"};
+  if (atMin == null) return {cls: "unk", text: "🕘 " + hhmm(hr.open) + "–" + hhmm(hr.close)};
+  const t = atMin < hr.open && atMin + 1440 < hr.close ? atMin + 1440 : atMin;
+  if (t < hr.open) return {cls: "wait", text: hhmm(hr.open) + " 才開"};
+  if (t >= hr.close) return {cls: "no", text: "已打烊（" + hhmm(hr.close) + "）"};
+  return {cls: "ok", text: "營業中・到 " + hhmm(hr.close)};
+}
+/* 現在看的是哪天、什麼時間：旅途中＝今天＋現在；選了某天＝那天（不看時間） */
+function foodCtx(){
+  const today = new Date().toLocaleDateString("sv-SE"), now = new Date();
+  const sel = foodDay >= 0 && TRIP.days[foodDay] ? TRIP.days[foodDay].date : null;
+  if (sel) return {date: sel, at: sel === today ? now.getHours() * 60 + now.getMinutes() : null};
+  return TRIP.days.some(d => d.date === today) ? {date: today, at: now.getHours() * 60 + now.getMinutes()} : {date: null, at: null};
+}
+/* 吃飯 or 點心・飲料 */
+const SNACK_RE = /點心|甜點|甜品|下午茶|咖啡|cafe|café|coffee|카페|飲料|手搖|奶茶|茶屋|麵包|bakery|베이커리|冰|雪花|鬆餅|蛋糕|甜甜圈|布丁|優格|yogurt|霜淇淋|冰淇淋|糖|餅|伴手/i;
+const foodKind = f => f.type === "snack" || f.type === "meal" ? f.type : (SNACK_RE.test((f.cat || "") + " " + (f.name || "") + " " + (f.local || "")) ? "snack" : "meal");
+let pocketTab = "meal";
+function pocketCard(f, inDay){
+  const ctx = foodCtx(), date = inDay ? inDay : (f.day || ctx.date), st = openState(f, date, date === ctx.date ? ctx.at : null);
+  const kind = foodKind(f);
+  return h("details",{class:"box meal pk" + (st.closed ? " closed-day" : "")},
+    h("summary",null,
+      h("div",{class:"pk-top"},
+        h("span",null, kind === "snack" ? "🍡" : "🍚"), h("b",null, f.name),
+        h("span",{class:"oc " + st.cls}, st.closed ? "⚠️ " + (date ? date.slice(5).replace("-","/") + " " : "") + "公休" : st.text)),
+      h("div",{class:"small",style:"color:var(--ink2)"}, [f.cat, f.area, f.day && !inDay ? f.day.slice(5).replace("-","/") + " 附近" : "", f.dish ? "必點 " + f.dish : ""].filter(Boolean).join("・"))),
+    h("div",{class:"pk-body"},
+      f.local ? h("div",{class:"small",lang:TRIP.lang}, f.local) : null,
+      h("div",{class:"kv"},
+        f.hours ? h("div",null,h("span",null,"營業"), f.hours) : null,
+        closedDays(f).length ? h("div",null,h("span",null,"公休"), closedDays(f).sort().map(d => "週" + WEEK[d]).join("、")) : null,
+        f.price ? h("div",null,h("span",null,"價位"), f.price) : null),
+      f.note ? h("p",{class:"note"}, "💡 " + f.note) : null,
+      inDay ? null : attachRow("food", f, "美食 " + f.name),
+      h("div",{class:"acts",style:"margin-top:0"},
+        h("a",{class:"btn b",href: f.link || gdir(null, f, "walk"),target:"_blank",rel:"noopener"},"導航"),
+        h("button",{class:"btn y",type:"button",onclick:()=>driver({name: f.name, local: f.local || f.name, addr: f.addr || ""})},"給司機看"),
+        h("button",{class:"btn tiny",type:"button",style:"margin-left:auto",onclick:()=>foodForm(f.uid)},"✏️ 編輯"))));
+}
+function renderPocket(){
+  const pb = $("#food-pocket"), tabs = $("#pocket-tabs"); if (!pb) return;
+  const all = foodList(), ctx = foodCtx();
+  const groups = {meal: all.filter(f => foodKind(f) === "meal"), snack: all.filter(f => foodKind(f) === "snack")};
+  tabs.textContent = "";
+  [["meal","🍚 吃飯"],["snack","🍡 點心・飲料"]].forEach(([k, l]) => tabs.append(h("button",{type:"button",role:"tab","aria-selected": pocketTab === k ? "true" : "false",class: pocketTab === k ? "on" : "",onclick:()=>{ pocketTab = k; renderPocket(); }}, l + "（" + groups[k].length + "）")));
+  pb.textContent = "";
+  if (ctx.date) pb.append(h("p",{class:"small",style:"margin:0 0 6px"}, "依 " + ctx.date.slice(5).replace("-","/") + "（週" + WEEK[wd(ctx.date)] + "）" + (ctx.at != null ? " 現在 " + hhmm(ctx.at) : "") + " 判斷營業狀態；公休的排在最後"));
+  const rank = f => { const d = f.day || ctx.date, s = openState(f, d, d === ctx.date ? ctx.at : null); return (s.closed ? 2 : s.cls === "no" ? 1 : 0); };
+  const list = groups[pocketTab].slice().sort((a, b) => rank(a) - rank(b) || String(a.day || "9").localeCompare(String(b.day || "9")) || String(a.name).localeCompare(String(b.name)));
+  list.forEach(f => pb.append(pocketCard(f)));
+  if (!list.length) pb.append(h("div",{class:"box small",style:"text-align:center"}, pocketTab === "meal" ? "還沒有吃飯的口袋名單" : "還沒有點心・飲料的口袋名單"));
+  pb.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>foodForm(null)},"＋ 加到口袋清單"));
   const altN = TRIP.days.reduce((n, d, i) => n + dayStops(i).filter(st => !st.skipped && mealOf(st)).reduce((m, st) => m + (st.alts || []).length, 0), 0);
   if (altN) pb.append(h("button",{class:"btn",type:"button",style:"width:100%;margin-top:8px",onclick:altsToPocket},"⭐ 把行程裡的 " + altN + " 家備案也收進口袋名單"));
 }
-function pocketCard(f, inDay){
-  return h("article",{class:"box meal"},
-    h("div",{class:"m-top"},
-      h("span",{class:"chip",style:"background:var(--white)"}, "⭐ " + (inDay ? "口袋名單" : (f.cat || "想吃"))),
-      f.day && !inDay ? h("span",{class:"m-time"}, f.day.slice(5).replace("-","/") + " 附近") : null,
-      h("button",{class:"btn tiny",type:"button",onclick:()=>foodForm(f.uid)},"✏️ 編輯")),
-    h("b",{style:"font-weight:400;font-size:18px"}, f.name),
-    f.local ? h("div",{class:"small",lang:TRIP.lang}, f.local) : null,
-    h("div",{class:"kv"},
-      f.area ? h("div",null,h("span",null,"在哪"), f.area) : null,
-      f.dish ? h("div",null,h("span",null,"必點"), f.dish) : null,
-      f.price ? h("div",null,h("span",null,"價位"), f.price) : null,
-      f.hours ? h("div",null,h("span",null,"營業"), f.hours) : null),
-    f.day ? closedWarn(f, f.day) : null,
-    f.note ? h("p",{class:"note"}, "💡 " + f.note) : null,
-    inDay ? null : attachRow("food", f, "美食 " + f.name),
-    foodNav(f));
-}
 function foodForm(uid){
   const list = foodList().slice(), idx = uid == null ? -1 : list.findIndex(x => x.uid === uid);
-  const f0 = idx < 0 ? {} : list[idx];
+  const f0 = idx < 0 ? {type: pocketTab} : Object.assign({}, list[idx], {type: foodKind(list[idx])});
   formDialog(idx < 0 ? "＋ 加到口袋名單" : "編輯口袋名單", [
     {k:"link",label:"Google 地圖連結（可省略）",max:600,ph:"https://maps.app.goo.gl/…",hintAfter:true,on:(v, ins, hint) => {
       const p = parseGmaps(v);
@@ -2418,12 +2496,13 @@ function foodForm(uid){
     }},
     {k:"name",label:"店名",req:true,max:60,ph:"例：廣安第一豬肉湯飯"},
     {k:"local",label:"當地語言店名（給司機看）",max:80,ph:"광안제일돼지국밥",half:true},
+    {k:"type",label:"分類",type:"select",options:[["meal","🍚 吃飯"],["snack","🍡 點心・飲料"]],half:true},
     {k:"cat",label:"種類",max:20,ph:"湯飯／烤肉／咖啡",half:true},
     {k:"area",label:"在哪一區",max:30,ph:"廣安里",half:true},
     {k:"day",label:"哪天在附近",type:"select",options:[["","不指定"]].concat(TRIP.days.map((d, i) => [d.date, "Day " + (i+1) + " " + d.date.slice(5).replace("-","/") + " " + (d.title || "")])),half:true},
     {k:"dish",label:"必點",max:40,ph:"豬肉湯飯、白切肉",half:true},
     {k:"price",label:"價位",max:20,ph:"₩10,000／人",half:true},
-    {k:"hours",label:"營業時間・公休",max:40,ph:"24 小時／週一休"},
+    {k:"hours",label:"營業時間・公休",max:40,ph:"10:00–21:00 週一休（寫這種格式會自動提醒）"},
     {k:"note",label:"備註",max:120,ph:"例：要排隊、有兒童椅、可以刷卡"}
   ], f0, v => {
     const p = parseGmaps(v.link);
@@ -2665,7 +2744,7 @@ function promptBody(){
       "alts":[ { "name":"","local":"","addr":"","lat":0,"lng":0,"hours":"","closed":[],"why":"為什麼適合當備案" } ] } ] } ],
   "hotels": [ { "name":"","local":"","addr":"","lat":0,"lng":0,"inDate":"YYYY-MM-DD","inTime":"HH:MM","outDate":"YYYY-MM-DD","outTime":"HH:MM","room":"" } ],
   "todos": [ { "g":"分類", "items":[ { "t":"項目", "tag":"carry | check | any", "why":"一句話原因（可省略）" } ] } ],
-  "foods": [ { "name":"中文店名","local":"當地語言店名","addr":"當地語言地址","lat":0,"lng":0,"cat":"種類，例：湯飯／烤肉／咖啡／甜點","area":"區域","day":"YYYY-MM-DD（哪天會在附近，不確定就空字串）","dish":"必點","price":"價位","hours":"營業時間","closed":[],"note":"小提醒" } ],
+  "foods": [ { "type":"meal（正餐）| snack（點心、甜點、咖啡、飲料）","name":"中文店名","local":"當地語言店名","addr":"當地語言地址","lat":0,"lng":0,"cat":"種類，例：湯飯／烤肉／咖啡／甜點","area":"區域","day":"YYYY-MM-DD（哪天會在附近，不確定就空字串）","dish":"必點","price":"價位","hours":"營業時間，格式 HH:MM–HH:MM","closed":[公休星期，0=週日…6=週六],"note":"小提醒" } ],
   "rulesCheckedAt": "你查詢的日期 YYYY-MM-DD",
   "rules": [ { "tag":"carry | check | ban | declare", "title":"短標題", "text":"一兩句說明", "src":"官方來源名稱" } ]
 }
@@ -2683,7 +2762,8 @@ function promptBody(){
    tag：carry＝只能隨身、check＝只能托運、ban＝禁止、declare＝要注意或申報。
 7. routeMap 是首頁的路線地圖：3–8 個主要城市／機場／港口，從台灣出發的那站加 "far": true，相距不到 5 公里的地點合併成一站。
 8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。
-9. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，全部放進來（不要漏）；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
+9. 所有餐廳和 foods 的 hours 一律寫成「HH:MM–HH:MM」，公休日放 closed（數字）；行程排的時間要在營業時間內。
+10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，全部放進來（不要漏）；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
 }
 /* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
@@ -2738,7 +2818,7 @@ function validateTrip(o){
       return nodes.length ? {nodes, legs} : null; })() : null,
     hotels: (Array.isArray(o.hotels) ? o.hotels : []).slice(0,10).map(x => Object.assign(cleanPlace(x), {inDate:isDate(x.inDate)?x.inDate:"", inTime:isTime(x.inTime)?x.inTime:"", outDate:isDate(x.outDate)?x.outDate:"", outTime:isTime(x.outTime)?x.outTime:"", in:clip(x.in,20), out:clip(x.out,20), room:clip(x.room,30)})),
     todos: (Array.isArray(o.todos) ? o.todos : []).slice(0,10).map(g => ({g:clip(g.g,20), items:(Array.isArray(g.items)?g.items:[]).slice(0,30).map(x => typeof x === "string" ? clip(x,60) : {t:clip(x.t,60), tag: ["carry","check","any"].includes(x.tag) ? x.tag : "any", why:clip(x.why,60)}).filter(x => typeof x === "string" ? x : x.t)})),
-    foods: (Array.isArray(o.foods) ? o.foods : []).slice(0, 80).filter(f => f && f.name).map(f => Object.assign(cleanPlace(f), {cat: clip(f.cat,20), area: clip(f.area,30), day: isDate(f.day) ? f.day : "", dish: clip(f.dish,40), price: clip(f.price,20), note: clip(f.note,120)})),
+    foods: (Array.isArray(o.foods) ? o.foods : []).slice(0, 80).filter(f => f && f.name).map(f => Object.assign(cleanPlace(f), {type: f.type === "snack" || f.type === "meal" ? f.type : "", cat: clip(f.cat,20), area: clip(f.area,30), day: isDate(f.day) ? f.day : "", dish: clip(f.dish,40), price: clip(f.price,20), note: clip(f.note,120)})),
     rulesCheckedAt: isDate(o.rulesCheckedAt) ? o.rulesCheckedAt : "",
     rules: (Array.isArray(o.rules) ? o.rules : []).slice(0,30).filter(r => r && TAG[r.tag] && r.title).map(r => ({tag:r.tag, title:clip(r.title,30), text:clip(r.text,200), src:clip(r.src,60)}))
   };
@@ -2874,7 +2954,7 @@ function net(){ const n = $("#net"); if (!n) return; const on = navigator.onLine
 addEventListener("online", () => { net(); Sync.kick(200); }); addEventListener("offline", () => { net(); syncPaint(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") Sync.kick(200); });
 function navSpy(){
-  const ids = ["top","flight","tickets-sec","plan","food","todo","stay","money","tools"]; let curId = "top";
+  const ids = ["top","flight","tickets-sec","plan","food","pocket","todo","stay","money","tools"]; let curId = "top";
   ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 120) curId = id; });
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + curId));
 }
