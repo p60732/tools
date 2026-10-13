@@ -176,6 +176,13 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .tf-when{font-size:14px;color:var(--ink2)}
 .tf-when b{font-weight:400;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
 .tf-top .tiny{margin-left:auto}
+.meal{display:grid;gap:4px}
+.meal .m-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.meal .m-top b{font-weight:400;font-size:18px}
+.meal .m-top .tiny{margin-left:auto}
+.meal .m-time{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px}
+.food-day{margin:14px 0 6px;font-size:16px}
+.alt-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px dashed var(--line, #ddd);padding-top:6px;margin-top:6px}
 .coupon.used{opacity:.55}
 .coupon.used .cp-title{text-decoration:line-through}
 .cp-title{font-size:18px}
@@ -328,6 +335,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <a href="#flight">航班接送</a>
     <a href="#tickets-sec">票券</a>
     <a href="#plan">行程</a>
+    <a href="#food">吃什麼</a>
     <a href="#todo">清單</a>
     <a href="#stay">住宿</a>
     <a href="#money">匯率</a>
@@ -375,6 +383,16 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div id="dayview"></div>
   </section>
 
+  <section id="food">
+    <h2><span class="dot" style="background:var(--yellow)"></span>吃什麼</h2>
+    <p class="small" style="margin:-6px 0 10px">行程裡每一餐、備案、口袋名單都在這裡；公休會提醒，點一下就能導航或給司機看</p>
+    <div class="days" id="food-days" role="tablist" aria-label="選擇哪一天"></div>
+    <div id="food-list"></div>
+    <h3 class="subhead"><span class="dot" style="background:var(--coral)"></span>口袋名單</h3>
+    <p class="small" style="margin:-6px 0 10px">想吃但還沒排進行程的店；可以指定哪天在附近</p>
+    <div class="flights" id="food-pocket"></div>
+  </section>
+
   <section id="todo">
     <h2><span class="dot" style="background:var(--green)"></span>待辦清單</h2>
     <div class="prog" aria-hidden="true"><i id="prog" style="width:0"></i></div>
@@ -396,7 +414,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.6 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.7 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -661,7 +679,7 @@ function tripSummary(id){
   const docs = id === DB.tripId ? DB.raw() : (gstore.get("db." + id, null) || null);
   if (!docs) return "";
   const n = {}; Object.values(docs).forEach(d => { if (!d.deleted) n[d.coll] = (n[d.coll] || 0) + 1; });
-  return [["stop","景點"],["flight","航班"],["hotel","住宿"],["transfer","接送"],["bag","行李"],["sim","網路"],["coupon","優惠券"],["file","附件"]].filter(([c]) => n[c]).map(([c, l]) => l + " " + n[c]).join("・");
+  return [["stop","景點"],["flight","航班"],["hotel","住宿"],["transfer","接送"],["bag","行李"],["sim","網路"],["coupon","優惠券"],["food","美食"],["file","附件"]].filter(([c]) => n[c]).map(([c, l]) => l + " " + n[c]).join("・");
 }
 
 /* ---- 改這趟的名稱、同行、出發日（出發日改了，每天的日期一起往前／往後移） ---- */
@@ -736,6 +754,7 @@ const SHARED = {
   transfers: listAdapter("transfer", x => x.date + x.time),
   sims: listAdapter("sim", x => (x.start || "") + (x.who || "")),
   bags: listAdapter("bag", x => (x.date || "") + (x.time || "")),
+  foods: listAdapter("food", x => (x.day || "9") + (x.name || "")),
   coupons: listAdapter("coupon", x => (x.used ? "1" : "0") + (x.date || x.until || "9") + (x.title || "")),
   done: {
     get(){ const o = {}; DB.live("todo").filter(d => d.key.startsWith("d_") && d.data.done).forEach(d => o[d.data.k] = d.data.done); return o; },
@@ -895,8 +914,8 @@ const Sync = {
 function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 function b64ToBlob(b64, type){ const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type}); }
 
-const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件", sim:"網路・電話", bag:"行李寄送", coupon:"優惠券・門票"};
-function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || (coll === "sim" ? [data.who, data.number || data.carrier].filter(Boolean).join(" ") : coll === "bag" ? [data.date, data.to].filter(Boolean).join(" ") : coll === "coupon" ? data.title || "" : "") || "") : ""; }
+const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件", sim:"網路・電話", bag:"行李寄送", coupon:"優惠券・門票", food:"口袋名單"};
+function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || (coll === "sim" ? [data.who, data.number || data.carrier].filter(Boolean).join(" ") : coll === "bag" ? [data.date, data.to].filter(Boolean).join(" ") : coll === "coupon" || coll === "food" ? data.title || data.name || "" : "") || "") : ""; }
 function resolveConflict(c){
   return new Promise(done => {
     const s = c.server, mine = c.mine;
@@ -1916,10 +1935,10 @@ function renderTickets(){
   const box = $("#tickets"); if (!box) return;
   const recs = fileDocs(null);
   box.textContent = "";
-  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿、接送、行李、網路或優惠券卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
+  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿、接送、行李、網路、優惠券或口袋名單卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
   const groups = {};
   recs.forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
-  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); };
+  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); renderFood(); };
   Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"}, h("b",null, lb),
     h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again))))));
 }
@@ -2216,6 +2235,119 @@ function renderCoupons(){
   box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>couponForm(null)},"＋ 新增優惠券・門票"));
 }
 
+/* ===== 吃什麼：行程裡的每一餐＋備案＋口袋名單 ===== */
+const MEALS = {breakfast:["早餐","🍳","var(--yellow)"], lunch:["午餐","🍱","var(--coral)"], dinner:["晚餐","🍲","var(--coral)"], night:["宵夜","🌙","var(--water)"], snack:["點心","🍡","var(--green)"], drink:["飲料","🧋","var(--water)"], eat:["吃飯","🍴","var(--yellow)"]};
+function mealOf(st){
+  if (st.meal && MEALS[st.meal]) return st.meal;
+  const n = (st.name || "") + " " + (st.local || "");
+  if (/早午餐|早餐|brunch|조식/i.test(n)) return "breakfast";
+  if (/午餐|lunch|점심/i.test(n)) return "lunch";
+  if (/晚餐|dinner|저녁/i.test(n)) return "dinner";
+  if (/宵夜|夜宵/.test(n)) return "night";
+  if (/飲料|咖啡|cafe|café|coffee|카페|奶茶|手搖/i.test(n)) return "drink";
+  if (/點心|甜點|下午茶|麵包|bakery|甜甜圈|鬆餅|冰淇淋|剉冰|yogurt|베이커리/i.test(n)) return "snack";
+  if (/吃|餐廳|食堂|拉麵|燒肉|烤肉|湯飯|壽司|炸雞|海鮮|小吃|市場美食|料理|맛집|식당/i.test(n)) return "eat";
+  return null;
+}
+const mealName = n => String(n || "").replace(/^(早餐|早午餐|午餐|晚餐|宵夜|點心|飲料|下午茶|甜點|咖啡)[：:\s]\s*/, "");
+const foodList = () => store.get("foods", null) || [];
+let foodDay = null;   // null = 自動（旅途中預設今天）
+function foodNav(p){ return h("div",{class:"acts"},
+  h("a",{class:"btn b",href: p.link || gdir(null, p, "walk"),target:"_blank",rel:"noopener"},"導航"),
+  h("button",{class:"btn y",type:"button",onclick:()=>driver({name: p.name, local: p.local || p.name, addr: p.addr || ""})},"給司機看")); }
+function closedWarn(p, date){ return date && Array.isArray(p.closed) && p.closed.includes(wd(date)) ? h("span",{class:"chip warn-chip"},"⚠️ 這天公休") : null; }
+function renderFood(){
+  const tabs = $("#food-days"), list = $("#food-list"); if (!tabs || !list) return;
+  const today = new Date().toLocaleDateString("sv-SE");
+  if (foodDay !== null && foodDay >= TRIP.days.length) foodDay = null;
+  if (foodDay === null){ const i = TRIP.days.findIndex(d => d.date === today); foodDay = i >= 0 ? i : -1; }
+  tabs.textContent = "";
+  [[-1, [h("small",null,"每一天"), h("b",null,"全部")]]].concat(TRIP.days.map((d, i) => [i, [h("small",null,"Day " + (i+1)), h("b",null, d.date.slice(5).replace("-","/")), h("small",null,"週" + WEEK[wd(d.date)])]])).forEach(([i, kids]) =>
+    tabs.append(h("button",{type:"button",role:"tab","aria-selected": foodDay === i ? "true" : "false",class:"day" + (foodDay === i ? " on" : ""),onclick:()=>{ foodDay = i; renderFood(); }}, kids)));
+  list.textContent = "";
+  const pockets = foodList();
+  TRIP.days.forEach((d, i) => {
+    if (foodDay !== -1 && foodDay !== i) return;
+    const meals = dayStops(i).filter(st => !st.skipped && mealOf(st));
+    const near = pockets.filter(f => f.day === d.date);
+    list.append(h("div",{class:"food-day"}, "Day " + (i+1) + "・" + d.date.slice(5).replace("-","/") + "（" + WEEK[wd(d.date)] + "）" + (d.title ? " " + d.title : "")));
+    if (!meals.length && !near.length) list.append(h("div",{class:"box small"},"這天行程沒有排吃的，可以從口袋名單挑，或用「附近找吃的」"));
+    meals.forEach(st => {
+      const m = MEALS[mealOf(st)], b = bookOf(st), alts = st.alts || [];
+      list.append(h("article",{class:"box meal"},
+        h("div",{class:"m-top"},
+          h("span",{class:"chip",style:"background:" + m[2]}, m[1] + " " + m[0]),
+          h("span",{class:"m-time"}, st.t && st.t !== "--:--" ? st.t : ""),
+          b ? h("span",{class:"chip",style:"background:" + (BOOK[b.s] || {}).c}, (BOOK[b.s] || {}).i + " " + (BOOK[b.s] || {}).l + (b.ref ? " " + b.ref : "")) : null,
+          closedWarn(st, d.date)),
+        h("b",{style:"font-weight:400;font-size:18px"}, mealName(st.name) + (st.swappedFrom ? "（換成備案）" : "")),
+        st.local && st.local !== st.name ? h("div",{class:"small",lang:TRIP.lang}, st.local) : null,
+        st.hours ? h("div",{class:"small"}, "🕘 " + st.hours) : null,
+        st.note ? h("p",{class:"note"}, "💡 " + st.note) : null,
+        alts.length ? h("details",{class:"small",style:"margin-top:4px"}, h("summary",null, "備案 " + alts.length + " 家（客滿、排隊、公休時用）"),
+          alts.map(a => h("div",{class:"alt-row"},
+            h("div",{style:"flex:1;min-width:160px"}, h("b",{style:"font-weight:400"}, a.name), a.why ? h("div",null, a.why) : null, a.hours ? h("div",null, "🕘 " + a.hours) : null, closedWarn(a, d.date)),
+            h("a",{class:"btn tiny b",href:gdir(null, a, "walk"),target:"_blank",rel:"noopener"},"導航"),
+            h("button",{class:"btn tiny",type:"button",onclick:()=>driver(a)},"給司機看")))) : null,
+        h("div",{class:"acts"},
+          h("a",{class:"btn b",href:gdir(null, st, "walk"),target:"_blank",rel:"noopener"},"導航"),
+          h("button",{class:"btn y",type:"button",onclick:()=>driver(st)},"給司機看"),
+          h("a",{class:"btn",href:gnear(st, "restaurants"),target:"_blank",rel:"noopener"},"附近找吃的"))));
+    });
+    near.forEach(f => list.append(pocketCard(f, true)));
+  });
+  const pb = $("#food-pocket"); pb.textContent = "";
+  pockets.forEach(f => pb.append(pocketCard(f)));
+  if (!pockets.length) pb.append(h("div",{class:"box small",style:"text-align:center"},"還沒有口袋名單"));
+  pb.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>foodForm(null)},"＋ 加到口袋名單"));
+}
+function pocketCard(f, inDay){
+  return h("article",{class:"box meal"},
+    h("div",{class:"m-top"},
+      h("span",{class:"chip",style:"background:var(--white)"}, "⭐ " + (inDay ? "口袋名單" : (f.cat || "想吃"))),
+      f.day && !inDay ? h("span",{class:"m-time"}, f.day.slice(5).replace("-","/") + " 附近") : null,
+      h("button",{class:"btn tiny",type:"button",onclick:()=>foodForm(f.uid)},"✏️ 編輯")),
+    h("b",{style:"font-weight:400;font-size:18px"}, f.name),
+    f.local ? h("div",{class:"small",lang:TRIP.lang}, f.local) : null,
+    h("div",{class:"kv"},
+      f.area ? h("div",null,h("span",null,"在哪"), f.area) : null,
+      f.dish ? h("div",null,h("span",null,"必點"), f.dish) : null,
+      f.price ? h("div",null,h("span",null,"價位"), f.price) : null,
+      f.hours ? h("div",null,h("span",null,"營業"), f.hours) : null),
+    f.note ? h("p",{class:"note"}, "💡 " + f.note) : null,
+    inDay ? null : attachRow("food", f, "美食 " + f.name),
+    foodNav(f));
+}
+function foodForm(uid){
+  const list = foodList().slice(), idx = uid == null ? -1 : list.findIndex(x => x.uid === uid);
+  const f0 = idx < 0 ? {} : list[idx];
+  formDialog(idx < 0 ? "＋ 加到口袋名單" : "編輯口袋名單", [
+    {k:"link",label:"Google 地圖連結（可省略）",max:600,ph:"https://maps.app.goo.gl/…",hintAfter:true,on:(v, ins, hint) => {
+      const p = parseGmaps(v);
+      if (!p){ hint.className = "hint"; hint.textContent = "貼上 Google 地圖連結，名稱和位置會自動帶出"; return; }
+      if (p.err){ hint.className = "hint"; hint.textContent = p.err; return; }
+      if (p.short){ hint.className = "hint"; expandShort(ins.link, hint); return; }
+      if (p.name && !ins.name.value) ins.name.value = p.name;
+      hint.className = "hint ok"; hint.textContent = "✓ 讀到了：" + (p.name || "（沒有店名，請手動填）") + (hasXY(p) ? "・已取得位置" : "");
+    }},
+    {k:"name",label:"店名",req:true,max:60,ph:"例：廣安第一豬肉湯飯"},
+    {k:"local",label:"當地語言店名（給司機看）",max:80,ph:"광안제일돼지국밥",half:true},
+    {k:"cat",label:"種類",max:20,ph:"湯飯／烤肉／咖啡",half:true},
+    {k:"area",label:"在哪一區",max:30,ph:"廣安里",half:true},
+    {k:"day",label:"哪天在附近",type:"select",options:[["","不指定"]].concat(TRIP.days.map((d, i) => [d.date, "Day " + (i+1) + " " + d.date.slice(5).replace("-","/") + " " + (d.title || "")])),half:true},
+    {k:"dish",label:"必點",max:40,ph:"豬肉湯飯、白切肉",half:true},
+    {k:"price",label:"價位",max:20,ph:"₩10,000／人",half:true},
+    {k:"hours",label:"營業時間・公休",max:40,ph:"24 小時／週一休"},
+    {k:"note",label:"備註",max:120,ph:"例：要排隊、有兒童椅、可以刷卡"}
+  ], f0, v => {
+    const p = parseGmaps(v.link);
+    if (p && hasXY(p)) Object.assign(v, {lat: p.lat, lng: p.lng}); else if (f0.lat != null && v.link === (f0.link || "")) Object.assign(v, {lat: f0.lat, lng: f0.lng});
+    v.uid = idx < 0 ? "fd" + Date.now().toString(36) : f0.uid;
+    if (idx < 0) list.push(v); else list[idx] = v;
+    store.set("foods", list); logChange((idx < 0 ? "加到口袋名單：" : "更新口袋名單：") + v.name); renderFood();
+  }, idx < 0 ? null : () => { list.splice(idx, 1); store.set("foods", list); logChange("從口袋名單移除：" + f0.name); renderFood(); });
+}
+
 /* ===== 當地網路・電話（eSIM／SIM 卡／當地門號） ===== */
 const simList = () => store.get("sims", null) || TRIP.sims || [];
 const SIM_KIND = [["esim","eSIM"],["sim","實體 SIM 卡"],["roam","國際漫遊"],["wifi","WiFi 分享器"]];
@@ -2392,7 +2524,7 @@ function currentPlanJSON(){
   const skipped = [];
   const days = TRIP.days.map((d, i) => ({date: d.date, title: d.title, stops: dayStops(i).filter(st => { if (st.skipped){ skipped.push(d.date + " " + st.name); return false; } return true; }).map(st => {
     const b = bookOf(st), base = st.swappedFrom ? Object.assign({}, st, {name: st.name}) : st;
-    return Object.assign(pick(base, ["t","name","local","addr","lat","lng","hours","closed","note"]), st.move ? {move: st.move} : {}, st.must ? {must: true} : {},
+    return Object.assign(pick(base, ["t","name","local","addr","lat","lng","hours","closed","note"]), mealOf(st) ? {meal: mealOf(st)} : {}, st.move ? {move: st.move} : {}, st.must ? {must: true} : {},
       b ? {book: b.s, bookRef: b.ref || undefined} : {}, st.alts && st.alts.length ? {alts: st.alts.map(a => pick(a, placeKs))} : {});
   })}));
   const plan = Object.assign(pick(TRIP, ["title","who","lang","askText","scene","routeMap"]), {
@@ -2400,6 +2532,7 @@ function currentPlanJSON(){
     days, hotels: (store.get("hotels", null) || TRIP.hotels || []).map(x => pick(x, ["name","local","addr","lat","lng","inDate","inTime","outDate","outTime","room"]))});
   const ctx = [].concat(
     transferList().map(t => "接送 " + t.date + " " + t.time + " " + (t.way || "") + "：" + t.from + " → " + t.to),
+    foodList().map(f => "口袋名單（想吃還沒排）：" + f.name + (f.area ? "（" + f.area + "）" : "") + (f.day ? "，想在 " + f.day + " 吃" : "")),
     bagList().map(b => "行李寄送 " + b.date + " " + (b.time || "") + "：" + b.from + " → " + b.to + (b.arrive ? "（預計送達 " + b.arrive + "）" : "")));
   return {json: JSON.stringify(plan), skipped, ctx};
 }
@@ -2417,7 +2550,7 @@ C. 新加的地點要補齊：時間 t、當地語言名稱 local、地址 addr�
 D. 新加的點要和前後景點的交通時間、營業時間對得上；排不下就調整前後時間並在 note 說明。
 E. 不確定的資料留空字串，不要猜。
 F. 格式和原本一樣，title、who、flights、hotels 也照原樣放回去。
-${c.skipped.length ? "\n【我們已經決定不去的】（不要再排回來）\n" + c.skipped.join("、") + "\n" : ""}${c.ctx.length ? "\n【其他已經安排好的交通】（排行程時請避開這些時間）\n" + c.ctx.join("\n") + "\n" : ""}
+${c.skipped.length ? "\n【我們已經決定不去的】（不要再排回來）\n" + c.skipped.join("、") + "\n" : ""}${c.ctx.length ? "\n【其他已經安排好的交通、口袋名單】（排行程時請避開這些時間；口袋名單可以優先排進去）\n" + c.ctx.join("\n") + "\n" : ""}
 【目前的行程 JSON】
 \`\`\`json
 ${c.json}
@@ -2439,6 +2572,7 @@ function promptBody(){
   "days": [ { "date":"YYYY-MM-DD", "title":"當天主題", "stops":[
     { "t":"HH:MM", "name":"中文名稱", "local":"當地語言名稱", "addr":"當地語言完整地址", "lat":0, "lng":0,
       "move": { "type":"train | walk | bus | taxi | car | plane | boat", "text":"例：JR 奈良線 5分" },
+      "meal":"breakfast | lunch | dinner | snack | drink | night（吃東西的點才填：早餐/午餐/晚餐/點心/飲料/宵夜）",
       "must": true, "book":"none | todo（需要事先預約或買票）", "hours":"營業時間", "closed":[公休星期，0=週日…6=週六], "note":"小提醒",
       "alts":[ { "name":"","local":"","addr":"","lat":0,"lng":0,"hours":"","closed":[],"why":"為什麼適合當備案" } ] } ] } ],
   "hotels": [ { "name":"","local":"","addr":"","lat":0,"lng":0,"inDate":"YYYY-MM-DD","inTime":"HH:MM","outDate":"YYYY-MM-DD","outTime":"HH:MM","room":"" } ],
@@ -2490,7 +2624,7 @@ function validateTrip(o){
     const stops = (Array.isArray(d.stops) ? d.stops : []).slice(0,20).map((x,si) => {
       const p = cleanPlace(x);
       if (p.lat == null) probs.push("Day " + (di+1) + "「" + p.name + "」沒有座標");
-      return Object.assign(p, {id:"d"+(di+1)+"s"+(si+1), t: isTime(x.t) ? x.t : "--:--", must: !!x.must, book: ["todo","done","wait","fail"].includes(x.book) ? x.book : "none", bookRef: clip(x.bookRef,30), note: clip(x.note,120),
+      return Object.assign(p, {id:"d"+(di+1)+"s"+(si+1), t: isTime(x.t) ? x.t : "--:--", must: !!x.must, meal: MEALS[x.meal] ? x.meal : undefined, book: ["todo","done","wait","fail"].includes(x.book) ? x.book : "none", bookRef: clip(x.bookRef,30), note: clip(x.note,120),
         move: x.move && MOVE[x.move.type] ? {type:x.move.type, text:clip(x.move.text,40)} : null,
         alts: (Array.isArray(x.alts) ? x.alts : []).slice(0,3).map(cleanPlace)});
     });
@@ -2649,7 +2783,7 @@ function net(){ const n = $("#net"); if (!n) return; const on = navigator.onLine
 addEventListener("online", () => { net(); Sync.kick(200); }); addEventListener("offline", () => { net(); syncPaint(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") Sync.kick(200); });
 function navSpy(){
-  const ids = ["top","flight","tickets-sec","plan","todo","stay","money","tools"]; let curId = "top";
+  const ids = ["top","flight","tickets-sec","plan","food","todo","stay","money","tools"]; let curId = "top";
   ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 120) curId = id; });
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + curId));
 }
@@ -2673,7 +2807,7 @@ function renderAll(pickDay){
     cur = ti >= 0 ? ti : Math.min(store.get("day", 0) || 0, Math.max(0, TRIP.days.length-1));
   }
   cur = Math.min(cur, Math.max(0, TRIP.days.length-1));
-  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
+  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); renderDays(); renderFood(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
 }
 function startRender(){ renderAll(true); }
 function modeNote(){ const n = $("#mode-note"); if (n) n.textContent = Sync.enabled ? "全家同步版" : "本機模式（資料只在這支手機）"; }
@@ -2709,6 +2843,7 @@ async function boot(){
     setInterval(syncPaint, 60000);
   });
 }
+{ const _renderDay = renderDay; renderDay = function(b){ _renderDay(b); renderFood(); }; }   // 跳過、換備案、改順序後「吃什麼」也跟著更新
 boot();
 </script>
 <script>

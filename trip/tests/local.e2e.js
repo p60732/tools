@@ -76,6 +76,26 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.reload(); await p.waitForTimeout(600);
   t('重新整理後網路和行李都在', await p.locator('#sims article').count() === 3 && await p.locator('#bags article').count() === 2 && await p.locator('#sims .att-th img').count() === 1);
   t('票券夾收到 eSIM', (await p.textContent('#tickets')).includes('網路 實體 SIM 卡 阿嬤'));
+  // 吃什麼：行程裡的餐自動整理、備案、口袋名單
+  await p.click('#food-days button:has-text("全部")');
+  const fl = await p.textContent('#food-list');
+  t('吃什麼列出行程裡的餐', fl.includes('鴨川旁湯豆腐') && fl.includes('稻荷壽司老店') && fl.includes('錦市場吃點心') && !fl.includes('八坂神社'));
+  t('名稱去掉「晚餐」前綴、有餐別標籤', (await p.textContent('#food-list article:has-text("鴨川旁湯豆腐") .m-top')).includes('晚餐') && !(await p.textContent('#food-list article:has-text("鴨川旁湯豆腐") b')).startsWith('晚餐'));
+  t('有備案可以展開', await p.locator('#food-list article:has-text("錦市場") details summary:has-text("備案 1 家")').count() === 1);
+  await p.click('#food-days button:has-text("12/21")');
+  t('切到某一天只看那天', !(await p.textContent('#food-list')).includes('錦市場吃點心') && (await p.textContent('#food-list')).includes('Day 2'));
+  await p.click('text=＋ 加到口袋名單');
+  await p.fill('#fm-link', 'https://www.google.com/maps/place/Ippudo+Kyoto/@35.0037,135.7650,17z');
+  t('貼地圖連結自動帶出店名', (await p.inputValue('#fm-name')) === 'Ippudo Kyoto');
+  await p.fill('#fm-dish', '白丸拉麵'); await p.selectOption('#fm-day', '2026-12-21');
+  await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
+  t('口袋名單出現、也出現在那天', (await p.textContent('#food-pocket')).includes('Ippudo Kyoto') && (await p.textContent('#food-list')).includes('Ippudo Kyoto'));
+  t('口袋名單有導航', (await p.locator('#food-pocket article:has-text("Ippudo") a:has-text("導航")').getAttribute('href')).includes('35.0037'));
+  // 跳過一餐，吃什麼也跟著拿掉
+  await p.click('#plan .day:has-text("12/21")'); await p.click('text=臨時改行程');
+  await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("跳過")').click(); await p.waitForTimeout(200);
+  t('跳過的餐不再出現', !(await p.textContent('#food-list')).includes('稻荷壽司老店'));
+  await p.locator('#dayview .st:has-text("稻荷壽司") button:has-text("恢復")').click().catch(() => {}); await p.click('text=完成').catch(() => {});
   // 優惠券・門票：新增、存圖、標成已使用
   t('範例有一張優惠券', await p.locator('#coupons article').count() === 1);
   await p.click('text=＋ 新增優惠券・門票');
