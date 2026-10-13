@@ -161,13 +161,16 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   t('日期跟著移動', await p.evaluate(() => TRIP.days[0].date) === '2027-02-12');
   // AI 改好的版本「更新這一趟」：行程換掉，自己加的網路卡保留，不會多一趟
   await p.click('text=＋ 新增 eSIM／SIM 卡／當地門號'); await p.fill('#fm-who', '爸爸'); await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
-  const json2 = JSON.stringify({ title: 'AI 取的新名字', foods: [{ name: '小樽壽司屋通', local: '小樽寿司屋通り', lat: 43.19, lng: 141.0, day: '2027-02-12', dish: '海鮮丼' }, { name: '北菓樓', cat: '甜點' }], days: [{ date: '2027-02-12', title: '小樽', stops: [{ t: '09:00', name: '小樽運河', lat: 43.2, lng: 141.0 }, { t: '12:00', name: '三角市場', lat: 43.19, lng: 140.99 }] }] });
+  const json2 = JSON.stringify({ title: 'AI 取的新名字', foods: [{ name: '小樽壽司屋通', local: '小樽寿司屋通り', lat: 43.19, lng: 141.0, day: '2027-02-12', dish: '海鮮丼' }, { name: '北菓樓', cat: '甜點' }, { name: '狸小路商店街', type: 'shop', dish: '藥妝' }], days: [{ date: '2027-02-12', title: '小樽', stops: [{ t: '09:00', name: '小樽運河', lat: 43.2, lng: 141.0 }, { t: '12:00', name: '三角市場', lat: 43.19, lng: 140.99 }] }] });
   await p.fill('#tp-paste', json2); await p.click('text=檢查');
   t('有更新這一趟的選項', await p.locator('button:has-text("更新這一趟")').isVisible());
   await p.click('button:has-text("更新這一趟")'); await p.waitForTimeout(300);
   t('AI 的口袋名單也加進來（吃飯）', (await p.textContent('#food-pocket')).includes('小樽壽司屋通'));
   await p.click('#pocket-tabs button:has-text("點心")');
   t('甜點自動分到點心分頁', (await p.textContent('#food-pocket')).includes('北菓樓') && !(await p.textContent('#food-pocket')).includes('小樽壽司屋通'));
+  await p.click('#pocket-tabs button:has-text("逛街")');
+  t('逛街點分到逛街分頁', (await p.textContent('#food-pocket')).includes('狸小路商店街') && (await p.textContent('#food-pocket')).includes('必買 藥妝') && !(await p.textContent('#food-pocket')).includes('北菓樓'));
+  t('逛街點不出現在吃什麼', !(await p.textContent('#food-list')).includes('狸小路'));
   await p.click('#pocket-tabs button:has-text("吃飯")');
   t('名稱保留、行程換新', (await p.textContent('#title')) === '北海道冬天（改）' && (await p.textContent('#dayview')).includes('小樽運河') && !(await p.textContent('#dayview')).includes('大通公園'));
   t('自己加的網路卡還在', await p.locator('#sims article:has-text("爸爸")').count() === 1);

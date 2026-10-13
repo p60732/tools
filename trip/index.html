@@ -412,7 +412,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 
   <section id="pocket">
     <h2><span class="dot" style="background:var(--coral)"></span>口袋清單</h2>
-    <p class="small" style="margin:-6px 0 10px">想吃但還沒排進行程的店。點卡片展開看詳細；會依「上面選的日子」提醒公休和營業時間</p>
+    <p class="small" style="margin:-6px 0 10px">想吃、想逛但還沒排進行程的店。點卡片展開看詳細；會依「上面選的日子」提醒公休和營業時間</p>
     <div class="seg" id="pocket-tabs" role="tablist" aria-label="口袋清單分類" style="margin-bottom:10px"></div>
     <div class="flights" id="food-pocket"></div>
   </section>
@@ -438,7 +438,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.1 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.2 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -2374,7 +2374,7 @@ function renderFood(){
   TRIP.days.forEach((d, i) => {
     if (foodDay !== -1 && foodDay !== i) return;
     const meals = dayStops(i).filter(st => !st.skipped && mealOf(st));
-    const near = pockets.filter(f => f.day === d.date);
+    const near = pockets.filter(f => f.day === d.date && foodKind(f) !== "shop");
     list.append(h("div",{class:"food-day"}, "Day " + (i+1) + "・" + d.date.slice(5).replace("-","/") + "（" + WEEK[wd(d.date)] + "）" + (d.title ? " " + d.title : "")));
     if (!meals.length && !near.length) list.append(h("div",{class:"box small"},"這天行程沒有排吃的，可以從口袋名單挑，或用「附近找吃的」"));
     meals.forEach(st => {
@@ -2442,7 +2442,9 @@ function foodCtx(){
 }
 /* 吃飯 or 點心・飲料 */
 const SNACK_RE = /點心|甜點|甜品|下午茶|咖啡|cafe|café|coffee|카페|飲料|手搖|奶茶|茶屋|麵包|bakery|베이커리|冰|雪花|鬆餅|蛋糕|甜甜圈|布丁|優格|yogurt|霜淇淋|冰淇淋|糖|餅|伴手/i;
-const foodKind = f => f.type === "snack" || f.type === "meal" ? f.type : (SNACK_RE.test((f.cat || "") + " " + (f.name || "") + " " + (f.local || "")) ? "snack" : "meal");
+const SHOP_RE = /逛街|購物|商場|百貨|outlet|免稅|藥妝|超市|商店街|地下街|市場(?!.*(吃|美食|午餐|晚餐))|olive\s?young|daiso|大創|樂天|lotte|新世界|現代百貨|伴手禮店|雜貨|書店|文具|玩具|二手|跳蚤|夜市|쇼핑|시장|백화점|아울렛|면세/i;
+const FOOD_KINDS = {meal: ["🍚", "吃飯"], snack: ["🍡", "點心・飲料"], shop: ["🛍️", "逛街"]};
+const foodKind = f => FOOD_KINDS[f.type] ? f.type : (() => { const t = (f.cat || "") + " " + (f.name || "") + " " + (f.local || ""); return SHOP_RE.test(t) ? "shop" : SNACK_RE.test(t) ? "snack" : "meal"; })();
 let pocketTab = "meal";
 function pocketCard(f, inDay){
   const ctx = foodCtx(), date = inDay ? inDay : (f.day || ctx.date), st = openState(f, date, date === ctx.date ? ctx.at : null);
@@ -2450,9 +2452,9 @@ function pocketCard(f, inDay){
   return h("details",{class:"box meal pk" + (st.closed ? " closed-day" : "")},
     h("summary",null,
       h("div",{class:"pk-top"},
-        h("span",null, kind === "snack" ? "🍡" : "🍚"), h("b",null, f.name),
+        h("span",null, FOOD_KINDS[kind][0]), h("b",null, f.name),
         h("span",{class:"oc " + st.cls}, st.closed ? "⚠️ " + (date ? date.slice(5).replace("-","/") + " " : "") + "公休" : st.text)),
-      h("div",{class:"small",style:"color:var(--ink2)"}, [f.cat, f.area, f.day && !inDay ? f.day.slice(5).replace("-","/") + " 附近" : "", f.dish ? "必點 " + f.dish : ""].filter(Boolean).join("・"))),
+      h("div",{class:"small",style:"color:var(--ink2)"}, [f.cat, f.area, f.day && !inDay ? f.day.slice(5).replace("-","/") + " 附近" : "", f.dish ? (kind === "shop" ? "必買 " : "必點 ") + f.dish : ""].filter(Boolean).join("・"))),
     h("div",{class:"pk-body"},
       f.local ? h("div",{class:"small",lang:TRIP.lang}, f.local) : null,
       h("div",{class:"kv"},
@@ -2469,15 +2471,15 @@ function pocketCard(f, inDay){
 function renderPocket(){
   const pb = $("#food-pocket"), tabs = $("#pocket-tabs"); if (!pb) return;
   const all = foodList(), ctx = foodCtx();
-  const groups = {meal: all.filter(f => foodKind(f) === "meal"), snack: all.filter(f => foodKind(f) === "snack")};
+  const groups = {meal: all.filter(f => foodKind(f) === "meal"), snack: all.filter(f => foodKind(f) === "snack"), shop: all.filter(f => foodKind(f) === "shop")};
   tabs.textContent = "";
-  [["meal","🍚 吃飯"],["snack","🍡 點心・飲料"]].forEach(([k, l]) => tabs.append(h("button",{type:"button",role:"tab","aria-selected": pocketTab === k ? "true" : "false",class: pocketTab === k ? "on" : "",onclick:()=>{ pocketTab = k; renderPocket(); }}, l + "（" + groups[k].length + "）")));
+  Object.keys(FOOD_KINDS).map(k => [k, FOOD_KINDS[k].join(" ")]).forEach(([k, l]) => tabs.append(h("button",{type:"button",role:"tab","aria-selected": pocketTab === k ? "true" : "false",class: pocketTab === k ? "on" : "",onclick:()=>{ pocketTab = k; renderPocket(); }}, l + "（" + groups[k].length + "）")));
   pb.textContent = "";
   if (ctx.date) pb.append(h("p",{class:"small",style:"margin:0 0 6px"}, "依 " + ctx.date.slice(5).replace("-","/") + "（週" + WEEK[wd(ctx.date)] + "）" + (ctx.at != null ? " 現在 " + hhmm(ctx.at) : "") + " 判斷營業狀態；公休的排在最後"));
   const rank = f => { const d = f.day || ctx.date, s = openState(f, d, d === ctx.date ? ctx.at : null); return (s.closed ? 2 : s.cls === "no" ? 1 : 0); };
   const list = groups[pocketTab].slice().sort((a, b) => rank(a) - rank(b) || String(a.day || "9").localeCompare(String(b.day || "9")) || String(a.name).localeCompare(String(b.name)));
   list.forEach(f => pb.append(pocketCard(f)));
-  if (!list.length) pb.append(h("div",{class:"box small",style:"text-align:center"}, pocketTab === "meal" ? "還沒有吃飯的口袋名單" : "還沒有點心・飲料的口袋名單"));
+  if (!list.length) pb.append(h("div",{class:"box small",style:"text-align:center"}, "還沒有「" + FOOD_KINDS[pocketTab][1] + "」的口袋清單"));
   pb.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>foodForm(null)},"＋ 加到口袋清單"));
   const altN = TRIP.days.reduce((n, d, i) => n + dayStops(i).filter(st => !st.skipped && mealOf(st)).reduce((m, st) => m + (st.alts || []).length, 0), 0);
   if (altN) pb.append(h("button",{class:"btn",type:"button",style:"width:100%;margin-top:8px",onclick:altsToPocket},"⭐ 把行程裡的 " + altN + " 家備案也收進口袋名單"));
@@ -2494,13 +2496,13 @@ function foodForm(uid){
       if (p.name && !ins.name.value) ins.name.value = p.name;
       hint.className = "hint ok"; hint.textContent = "✓ 讀到了：" + (p.name || "（沒有店名，請手動填）") + (hasXY(p) ? "・已取得位置" : "");
     }},
-    {k:"name",label:"店名",req:true,max:60,ph:"例：廣安第一豬肉湯飯"},
+    {k:"name",label:"店名・地點",req:true,max:60,ph:"例：廣安第一豬肉湯飯／樂天免稅店"},
     {k:"local",label:"當地語言店名（給司機看）",max:80,ph:"광안제일돼지국밥",half:true},
-    {k:"type",label:"分類",type:"select",options:[["meal","🍚 吃飯"],["snack","🍡 點心・飲料"]],half:true},
-    {k:"cat",label:"種類",max:20,ph:"湯飯／烤肉／咖啡",half:true},
+    {k:"type",label:"分類",type:"select",options:Object.keys(FOOD_KINDS).map(k => [k, FOOD_KINDS[k].join(" ")]),half:true},
+    {k:"cat",label:"種類",max:20,ph:"湯飯／咖啡／藥妝／市場",half:true},
     {k:"area",label:"在哪一區",max:30,ph:"廣安里",half:true},
     {k:"day",label:"哪天在附近",type:"select",options:[["","不指定"]].concat(TRIP.days.map((d, i) => [d.date, "Day " + (i+1) + " " + d.date.slice(5).replace("-","/") + " " + (d.title || "")])),half:true},
-    {k:"dish",label:"必點",max:40,ph:"豬肉湯飯、白切肉",half:true},
+    {k:"dish",label:"必點・必買",max:40,ph:"豬肉湯飯／面膜、海苔",half:true},
     {k:"price",label:"價位",max:20,ph:"₩10,000／人",half:true},
     {k:"hours",label:"營業時間・公休",max:40,ph:"10:00–21:00 週一休（寫這種格式會自動提醒）"},
     {k:"note",label:"備註",max:120,ph:"例：要排隊、有兒童椅、可以刷卡"}
@@ -2679,7 +2681,7 @@ A. 景點、餐廳、時間、順序、交通方式都照原本的行程，不�
 B. 原本沒有的資料才由你補上：經緯度、當地語言名稱與地址、營業時間、公休日、餐廳備案 alts、路線地圖 routeMap、行李規定 rules。
 C. 補上的資料如果不確定，就留空字串，不要猜。
 D. 原本行程裡的航班、住宿、待辦事項也一起轉進對應欄位。
-D2. 原本計畫裡提到的「備選」餐廳、點心、小吃、咖啡（不管是寫成備案、口袋名單、有空可以吃、推薦清單），只要沒排進每天行程，全部放進 foods。
+D2. 原本計畫裡提到的「備選」餐廳、點心、小吃、咖啡，還有想逛的商場、市場、藥妝、伴手禮店（不管是寫成備案、口袋名單、有空可以去、推薦清單），只要沒排進每天行程，全部放進 foods，用 type 分 meal／snack／shop。
 ${f.who ? "同行：" + f.who + "\n" : ""}${f.flights ? "搭乘航班：" + f.flights + "\n" : ""}${f.paste ? "\n【行程內容（如果這個對話裡沒有，就以這段為準）】\n" + f.paste + "\n" : ""}
 ` + promptBody();
 }
@@ -2698,7 +2700,7 @@ function currentPlanJSON(){
     days, hotels: (store.get("hotels", null) || TRIP.hotels || []).map(x => pick(x, ["name","local","addr","lat","lng","inDate","inTime","outDate","outTime","room"]))});
   const ctx = [].concat(
     transferList().map(t => "接送 " + t.date + " " + t.time + " " + (t.way || "") + "：" + t.from + " → " + t.to),
-    foodList().map(f => "口袋名單（想吃還沒排）：" + f.name + (f.area ? "（" + f.area + "）" : "") + (f.day ? "，想在 " + f.day + " 吃" : "")),
+    foodList().map(f => "口袋名單（" + FOOD_KINDS[foodKind(f)][1] + "，還沒排）：" + f.name + (f.area ? "（" + f.area + "）" : "") + (f.day ? "，想在 " + f.day + " 吃" : "")),
     bagList().map(b => "行李寄送 " + b.date + " " + (b.time || "") + "：" + b.from + " → " + b.to + (b.arrive ? "（預計送達 " + b.arrive + "）" : "")));
   return {json: JSON.stringify(plan), skipped, ctx};
 }
@@ -2716,7 +2718,7 @@ C. 新加的地點要補齊：時間 t、當地語言名稱 local、地址 addr�
 D. 新加的點要和前後景點的交通時間、營業時間對得上；排不下就調整前後時間並在 note 說明。
 E. 不確定的資料留空字串，不要猜。
 F. 格式和原本一樣，title、who、flights、hotels 也照原樣放回去。
-G. 這次對話或原本計畫裡提到、但沒排進行程的備選餐廳、點心、小吃、咖啡，放進 foods（已經在口袋名單的不用重複）。
+G. 這次對話或原本計畫裡提到、但沒排進行程的備選餐廳、點心、小吃、咖啡、逛街點，放進 foods 並標 type（meal／snack／shop；已經在口袋名單的不用重複）。
 ${c.skipped.length ? "\n【我們已經決定不去的】（不要再排回來）\n" + c.skipped.join("、") + "\n" : ""}${c.ctx.length ? "\n【其他已經安排好的交通、口袋名單】（排行程時請避開這些時間；口袋名單可以優先排進去）\n" + c.ctx.join("\n") + "\n" : ""}
 【目前的行程 JSON】
 \`\`\`json
@@ -2744,7 +2746,7 @@ function promptBody(){
       "alts":[ { "name":"","local":"","addr":"","lat":0,"lng":0,"hours":"","closed":[],"why":"為什麼適合當備案" } ] } ] } ],
   "hotels": [ { "name":"","local":"","addr":"","lat":0,"lng":0,"inDate":"YYYY-MM-DD","inTime":"HH:MM","outDate":"YYYY-MM-DD","outTime":"HH:MM","room":"" } ],
   "todos": [ { "g":"分類", "items":[ { "t":"項目", "tag":"carry | check | any", "why":"一句話原因（可省略）" } ] } ],
-  "foods": [ { "type":"meal（正餐）| snack（點心、甜點、咖啡、飲料）","name":"中文店名","local":"當地語言店名","addr":"當地語言地址","lat":0,"lng":0,"cat":"種類，例：湯飯／烤肉／咖啡／甜點","area":"區域","day":"YYYY-MM-DD（哪天會在附近，不確定就空字串）","dish":"必點","price":"價位","hours":"營業時間，格式 HH:MM–HH:MM","closed":[公休星期，0=週日…6=週六],"note":"小提醒" } ],
+  "foods": [ { "type":"meal（正餐）| snack（點心、甜點、咖啡、飲料）| shop（逛街：商場、市場、藥妝、免稅店、伴手禮店、商店街）","name":"中文店名","local":"當地語言店名","addr":"當地語言地址","lat":0,"lng":0,"cat":"種類，例：湯飯／烤肉／咖啡／甜點","area":"區域","day":"YYYY-MM-DD（哪天會在附近，不確定就空字串）","dish":"必點（shop 填必買）","price":"價位","hours":"營業時間，格式 HH:MM–HH:MM","closed":[公休星期，0=週日…6=週六],"note":"小提醒" } ],
   "rulesCheckedAt": "你查詢的日期 YYYY-MM-DD",
   "rules": [ { "tag":"carry | check | ban | declare", "title":"短標題", "text":"一兩句說明", "src":"官方來源名稱" } ]
 }
@@ -2763,7 +2765,7 @@ function promptBody(){
 7. routeMap 是首頁的路線地圖：3–8 個主要城市／機場／港口，從台灣出發的那站加 "far": true，相距不到 5 公里的地點合併成一站。
 8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。
 9. 所有餐廳和 foods 的 hours 一律寫成「HH:MM–HH:MM」，公休日放 closed（數字）；行程排的時間要在營業時間內。
-10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，全部放進來（不要漏）；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
+10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，以及逛街購物點（商場、市場、藥妝、免稅店、伴手禮店、商店街），全部放進來（不要漏），用 type 分 meal／snack／shop；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
 }
 /* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
@@ -2818,7 +2820,7 @@ function validateTrip(o){
       return nodes.length ? {nodes, legs} : null; })() : null,
     hotels: (Array.isArray(o.hotels) ? o.hotels : []).slice(0,10).map(x => Object.assign(cleanPlace(x), {inDate:isDate(x.inDate)?x.inDate:"", inTime:isTime(x.inTime)?x.inTime:"", outDate:isDate(x.outDate)?x.outDate:"", outTime:isTime(x.outTime)?x.outTime:"", in:clip(x.in,20), out:clip(x.out,20), room:clip(x.room,30)})),
     todos: (Array.isArray(o.todos) ? o.todos : []).slice(0,10).map(g => ({g:clip(g.g,20), items:(Array.isArray(g.items)?g.items:[]).slice(0,30).map(x => typeof x === "string" ? clip(x,60) : {t:clip(x.t,60), tag: ["carry","check","any"].includes(x.tag) ? x.tag : "any", why:clip(x.why,60)}).filter(x => typeof x === "string" ? x : x.t)})),
-    foods: (Array.isArray(o.foods) ? o.foods : []).slice(0, 80).filter(f => f && f.name).map(f => Object.assign(cleanPlace(f), {type: f.type === "snack" || f.type === "meal" ? f.type : "", cat: clip(f.cat,20), area: clip(f.area,30), day: isDate(f.day) ? f.day : "", dish: clip(f.dish,40), price: clip(f.price,20), note: clip(f.note,120)})),
+    foods: (Array.isArray(o.foods) ? o.foods : []).slice(0, 120).filter(f => f && f.name).map(f => Object.assign(cleanPlace(f), {type: ["meal","snack","shop"].includes(f.type) ? f.type : "", cat: clip(f.cat,20), area: clip(f.area,30), day: isDate(f.day) ? f.day : "", dish: clip(f.dish,40), price: clip(f.price,20), note: clip(f.note,120)})),
     rulesCheckedAt: isDate(o.rulesCheckedAt) ? o.rulesCheckedAt : "",
     rules: (Array.isArray(o.rules) ? o.rules : []).slice(0,30).filter(r => r && TAG[r.tag] && r.title).map(r => ({tag:r.tag, title:clip(r.title,30), text:clip(r.text,200), src:clip(r.src,60)}))
   };
