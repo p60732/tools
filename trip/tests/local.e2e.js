@@ -76,6 +76,18 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.reload(); await p.waitForTimeout(600);
   t('重新整理後網路和行李都在', await p.locator('#sims article').count() === 3 && await p.locator('#bags article').count() === 2 && await p.locator('#sims .att-th img').count() === 1);
   t('票券夾收到 eSIM', (await p.textContent('#tickets')).includes('網路 實體 SIM 卡 阿嬤'));
+  // 優惠券・門票：新增、存圖、標成已使用
+  t('範例有一張優惠券', await p.locator('#coupons article').count() === 1);
+  await p.click('text=＋ 新增優惠券・門票');
+  await p.selectOption('#fm-kind', 'ticket'); await p.fill('#fm-title', 'ARTE MUSEUM 門票'); await p.fill('#fm-code', 'AM-777');
+  await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
+  const tk = p.locator('#coupons article:has-text("ARTE MUSEUM 門票")');
+  t('新增門票', await tk.count() === 1);
+  await tk.locator('.att input[type=file]').setInputFiles(__dirname + '/qr.png'); await p.waitForTimeout(800);
+  await tk.locator('button:has-text("標成已使用")').click(); await p.waitForTimeout(200);
+  await p.reload(); await p.waitForTimeout(600);
+  t('重新整理後門票、截圖、已使用都在', await p.locator('#coupons article.used:has-text("ARTE MUSEUM 門票") .att-th img').count() === 1);
+  t('票券夾也收到', (await p.textContent('#tickets')).includes('券 ARTE MUSEUM 門票'));
   // 匯入新行程
   const json = JSON.stringify({ title: '北海道冬天', days: [{ date: '2027-02-10', title: '札幌', stops: [{ t: '10:00', name: '大通公園', lat: 43.06, lng: 141.35, move: { type: 'car', text: '自駕' } }] }] });
   await p.fill('#tp-paste', '```json\n' + json + '\n```'); await p.click('text=檢查'); await p.click('text=另存成新旅程'); await p.waitForTimeout(300);

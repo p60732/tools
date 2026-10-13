@@ -176,6 +176,9 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .tf-when{font-size:14px;color:var(--ink2)}
 .tf-when b{font-weight:400;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
 .tf-top .tiny{margin-left:auto}
+.coupon.used{opacity:.55}
+.coupon.used .cp-title{text-decoration:line-through}
+.cp-title{font-size:18px}
 .sim-num{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
 .sim-num a{font-size:22px;color:var(--ink);text-decoration:none;font-variant-numeric:tabular-nums;letter-spacing:.5px}
 .btn.tiny{min-height:28px;padding:0 10px;font-size:12px;box-shadow:0 2px 0 var(--ink)}
@@ -358,6 +361,10 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 
   <section id="tickets-sec">
     <h2><span class="dot" style="background:var(--coral)"></span>票券夾</h2>
+    <h3 class="subhead"><span class="dot" style="background:var(--yellow)"></span>優惠券・門票</h3>
+    <p class="small" style="margin:-6px 0 10px">免稅店折扣券、景點門票、交通卡、會員卡…截圖或 PDF 存這裡，用過可以標記</p>
+    <div class="flights" id="coupons"></div>
+    <h3 class="subhead"><span class="dot" style="background:var(--water)"></span>全部的 QR／截圖</h3>
     <p class="small" style="margin:-6px 0 10px">所有 QR code、預約信截圖集中在這裡，沒網路也能打開</p>
     <div class="flights" id="tickets"></div>
   </section>
@@ -389,7 +396,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.5 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.3.6 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -471,6 +478,9 @@ const TRIP_SAMPLE = {
   sims:[
     {uid:"sim1",kind:"esim",who:"媽媽",carrier:"範例 eSIM",plan:"5 天・每天 2GB",number:"",start:"2026-12-20",end:"2026-12-24",ref:"ES-10293",note:"出國前在台灣先安裝好（要有網路），落地後再到設定打開這張卡和「數據漫遊」"},
     {uid:"sim2",kind:"sim",who:"爸爸",carrier:"範例電信",plan:"8 天吃到飽＋當地門號",number:"+81 90-0000-0000",start:"2026-12-20",end:"2026-12-27",ref:"",note:"機場領卡；台灣的卡收好別弄丟"}
+  ],
+  coupons:[
+    {uid:"cp1",kind:"coupon",title:"免稅店 9 折券（範例）",where:"關西機場免稅店",until:"2026-12-31",code:"DF-2026-0001",price:"",note:"結帳前出示 QR code＋護照",used:""}
   ],
   bags:[
     {uid:"bag1",date:"2026-12-20",time:"11:30",from:"關西機場 1F 行李配送櫃台",to:"京都站前飯店（範例）",arrive:"2026-12-20 18:00 前",count:"2 件大行李",company:"範例行李宅配",tel:"+81-72-000-0000",ref:"BG-55120",fee:"¥4,000",pay:"已付款",note:"出關後先寄大行李，隨身只帶推車"}
@@ -605,7 +615,7 @@ function importTrip(trip, opt = {}){
     seen.add(sid);
     DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}), sys);
   }));
-  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers], ["sim", trip.sims], ["bag", trip.bags]].forEach(([coll, list]) =>
+  [["flight", trip.flights], ["hotel", trip.hotels], ["transfer", trip.transfers], ["sim", trip.sims], ["bag", trip.bags], ["coupon", trip.coupons]].forEach(([coll, list]) =>
     (list || []).forEach(x => { const uid = x.uid || rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid}), sys); }));
   Trips.upsert(id, tripInfoFromMeta(id, meta, {local: id === SAMPLE_ID || !!opt.localOnly}));
   return id;
@@ -651,7 +661,7 @@ function tripSummary(id){
   const docs = id === DB.tripId ? DB.raw() : (gstore.get("db." + id, null) || null);
   if (!docs) return "";
   const n = {}; Object.values(docs).forEach(d => { if (!d.deleted) n[d.coll] = (n[d.coll] || 0) + 1; });
-  return [["stop","景點"],["flight","航班"],["hotel","住宿"],["transfer","接送"],["bag","行李"],["sim","網路"],["file","票券"]].filter(([c]) => n[c]).map(([c, l]) => l + " " + n[c]).join("・");
+  return [["stop","景點"],["flight","航班"],["hotel","住宿"],["transfer","接送"],["bag","行李"],["sim","網路"],["coupon","優惠券"],["file","附件"]].filter(([c]) => n[c]).map(([c, l]) => l + " " + n[c]).join("・");
 }
 
 /* ---- 改這趟的名稱、同行、出發日（出發日改了，每天的日期一起往前／往後移） ---- */
@@ -726,6 +736,7 @@ const SHARED = {
   transfers: listAdapter("transfer", x => x.date + x.time),
   sims: listAdapter("sim", x => (x.start || "") + (x.who || "")),
   bags: listAdapter("bag", x => (x.date || "") + (x.time || "")),
+  coupons: listAdapter("coupon", x => (x.used ? "1" : "0") + (x.date || x.until || "9") + (x.title || "")),
   done: {
     get(){ const o = {}; DB.live("todo").filter(d => d.key.startsWith("d_") && d.data.done).forEach(d => o[d.data.k] = d.data.done); return o; },
     set(map){
@@ -884,8 +895,8 @@ const Sync = {
 function blobToB64(blob){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 function b64ToBlob(b64, type){ const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type}); }
 
-const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件", sim:"網路・電話", bag:"行李寄送"};
-function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || (coll === "sim" ? [data.who, data.number || data.carrier].filter(Boolean).join(" ") : coll === "bag" ? [data.date, data.to].filter(Boolean).join(" ") : "") || "") : ""; }
+const COLL_NAME = {trip:"旅程設定", stop:"景點", flight:"航班", transfer:"接送", hotel:"住宿", todo:"清單", file:"附件", sim:"網路・電話", bag:"行李寄送", coupon:"優惠券・門票"};
+function docLabel(coll, data){ return data ? (data.name || data.no || data.title || (data.item && data.item.t) || data.k || (coll === "sim" ? [data.who, data.number || data.carrier].filter(Boolean).join(" ") : coll === "bag" ? [data.date, data.to].filter(Boolean).join(" ") : coll === "coupon" ? data.title || "" : "") || "") : ""; }
 function resolveConflict(c){
   return new Promise(done => {
     const s = c.server, mine = c.mine;
@@ -1905,10 +1916,10 @@ function renderTickets(){
   const box = $("#tickets"); if (!box) return;
   const recs = fileDocs(null);
   box.textContent = "";
-  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿、接送、行李或網路卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
+  if (!recs.length){ box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有票券。在景點、航班、住宿、接送、行李、網路或優惠券卡片按「📎 加 QR／截圖」，就會集中到這裡。")); return; }
   const groups = {};
   recs.forEach(r => (groups[r.label] = groups[r.label] || []).push(r));
-  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); };
+  const again = () => { renderTickets(); renderDay(false); renderFlights(); renderHotels(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); };
   Object.keys(groups).forEach(lb => box.append(h("div",{class:"box ticket"}, h("b",null, lb),
     h("div",{class:"att",style:"margin-top:8px"}, groups[lb].map(meta => thumb(meta, true, again))))));
 }
@@ -2153,6 +2164,56 @@ function renderBags(){
   });
   if (!box.children.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有行李寄送"));
   box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>bagForm(null)},"＋ 新增行李寄送"));
+}
+
+/* ===== 優惠券・門票（截圖存圖、用過可以標記） ===== */
+const couponList = () => store.get("coupons", null) || TRIP.coupons || [];
+const CP_KIND = [["coupon","🏷️ 優惠券"],["ticket","🎟️ 門票"],["pass","🚇 交通卡・通票"],["member","💳 會員卡"],["other","📄 其他"]];
+const CP_COLOR = {coupon:"var(--yellow)", ticket:"var(--coral)", pass:"var(--water)", member:"var(--green)", other:"var(--white)"};
+function couponForm(idx){
+  const list = couponList().slice();
+  const c0 = idx == null ? {kind:"coupon"} : list[idx];
+  formDialog(idx == null ? "＋ 新增優惠券・門票" : "編輯優惠券・門票", [
+    {k:"kind",label:"類型",type:"select",options:CP_KIND,half:true},
+    {k:"title",label:"名稱",req:true,max:40,ph:"樂天免稅店 9 折",half:true},
+    {k:"where",label:"在哪裡用",max:40,ph:"例：樂天免稅店 釜山店"},
+    {k:"date",label:"預計使用日",type:"date",half:true},
+    {k:"until",label:"有效期限",type:"date",half:true},
+    {k:"code",label:"券號・條碼號碼",max:40,half:true},
+    {k:"price",label:"面額・價格",max:20,ph:"₩10,000 折抵",half:true},
+    {k:"used",label:"狀態",type:"select",options:[["","還沒用"],["used","已使用"]],half:true},
+    {k:"note",label:"使用方式・備註",max:120,ph:"例：結帳前出示＋護照；滿 $100 才能用"}
+  ], c0, v => {
+    v.uid = idx == null ? "cp" + Date.now().toString(36) : list[idx].uid;
+    if (idx == null) list.push(v); else list[idx] = v;
+    store.set("coupons", list); logChange((idx == null ? "新增" : "更新") + "優惠券・門票：" + v.title); renderCoupons();
+  }, idx == null ? null : () => { const gone = list.splice(idx,1)[0]; store.set("coupons", list); logChange("刪除優惠券・門票：" + gone.title); renderCoupons(); });
+}
+function renderCoupons(){
+  const box = $("#coupons"); if (!box) return; box.textContent = "";
+  const today = new Date().toLocaleDateString("sv-SE"), md = d => d ? d.slice(5).replace("-","/") : "";
+  const list = couponList();
+  list.forEach((c, i) => {
+    const kind = CP_KIND.find(x => x[0] === c.kind) || CP_KIND[4];
+    const expired = c.until && c.until < today && !c.used;
+    const toggle = () => { const l = couponList().slice(); l[i] = Object.assign({}, l[i], {used: l[i].used ? "" : "used"}); store.set("coupons", l); logChange((l[i].used ? "用掉了：" : "改回沒用過：") + c.title); renderCoupons(); };
+    box.append(h("article",{class:"box transfer coupon" + (c.used ? " used" : "")},
+      h("div",{class:"tf-top"},
+        h("span",{class:"chip",style:"background:" + (CP_COLOR[c.kind] || "var(--white)")}, kind[1]),
+        h("b",{class:"cp-title",style:"font-weight:400"}, c.title),
+        h("button",{class:"btn tiny",type:"button",onclick:()=>couponForm(i)},"✏️ 編輯")),
+      h("div",{class:"kv",style:"margin-top:6px"},
+        c.where ? h("div",null,h("span",null,"在哪裡用"), c.where) : null,
+        c.date ? h("div",null,h("span",null,"預計使用"), md(c.date) + "（" + WEEK[wd(c.date)] + "）") : null,
+        c.until ? h("div",null,h("span",null,"有效期限"), md(c.until), expired ? h("span",{class:"chip warn-chip",style:"margin-left:4px"},"過期了") : null) : null,
+        c.price ? h("div",null,h("span",null,"面額"), c.price) : null),
+      c.code ? h("div",{class:"small",style:"margin-top:6px"}, "券號 ", h("span",{class:"code-ref"}, c.code)) : null,
+      c.note ? h("p",{class:"note"}, "💡 " + c.note) : null,
+      attachRow("coupon", c, "券 " + c.title),
+      h("div",{class:"acts"}, h("button",{class:"btn " + (c.used ? "" : "g"),type:"button",onclick:toggle}, c.used ? "↩️ 改回還沒用" : "✓ 標成已使用"))));
+  });
+  if (!list.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有優惠券或門票"));
+  box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>couponForm(null)},"＋ 新增優惠券・門票"));
 }
 
 /* ===== 當地網路・電話（eSIM／SIM 卡／當地門號） ===== */
@@ -2444,6 +2505,7 @@ function validateTrip(o){
     transfers: [],
     sims: [],
     bags: [],
+    coupons: [],
     routeMap: (o.routeMap && Array.isArray(o.routeMap.nodes)) ? (() => {
       const nodes = o.routeMap.nodes.slice(0,10).filter(n => typeof n.id === "string" && num(n.lat) != null && num(n.lng) != null)
         .map(n => ({id:clip(n.id,20), name:clip(n.name,8), lat:n.lat, lng:n.lng, kind: n.kind === "airport" ? "airport" : "city", far: !!n.far, pos: ["t","b","l","r"].includes(n.pos) ? n.pos : undefined}));
@@ -2611,7 +2673,7 @@ function renderAll(pickDay){
     cur = ti >= 0 ? ti : Math.min(store.get("day", 0) || 0, Math.max(0, TRIP.days.length-1));
   }
   cur = Math.min(cur, Math.max(0, TRIP.days.length-1));
-  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderBags(); renderSims(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
+  modeNote(); sampleNotice(); renderScene(); renderFlights(); renderTransfers(); renderBags(); renderSims(); renderCoupons(); renderDays(); renderDay(false); renderTodos(); renderHotels(); renderFx(); renderTools(); renderTickets(); net(); navSpy();
 }
 function startRender(){ renderAll(true); }
 function modeNote(){ const n = $("#mode-note"); if (n) n.textContent = Sync.enabled ? "全家同步版" : "本機模式（資料只在這支手機）"; }
