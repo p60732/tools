@@ -59,6 +59,9 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 
 /* 航班 */
 .flights{display:grid;gap:14px}
+.terms{display:grid;gap:4px;margin-top:8px;font-size:14px}
+.terms span{display:inline-block;min-width:60px;font-size:12px;opacity:.75}
+.tf-gate{margin-top:6px;padding:6px 10px;border:2px dashed var(--ink);border-radius:10px;background:var(--white);font-size:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pass{display:grid;grid-template-columns:1fr auto;border:var(--line);border-radius:var(--r);background:var(--white);overflow:hidden}
 .pass .main{padding:14px 16px;min-width:0}
 .pass .stub{border-left:3px dashed var(--ink);padding:14px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center;background:var(--yellow);min-width:84px}
@@ -438,7 +441,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.2 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.3 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -476,8 +479,8 @@ const TRIP_SAMPLE = {
   lang:"ja",
   askText:"ここへ行ってください。",
   flights:[
-    {uid:"fl1",dir:"去程",no:"KX 821",date:"2026-12-20",dep:"08:50",arr:"12:25",from:"TPE",fromName:"桃園 第2航廈",to:"KIX",toName:"關西 第1航廈",tz:"+08:00",ref:"Q7MZ2K",seat:"32A–C",bag:"23kg ×3"},
-    {uid:"fl2",dir:"回程",no:"KX 822",date:"2026-12-24",dep:"17:40",arr:"19:55",from:"KIX",fromName:"關西 第1航廈",to:"TPE",toName:"桃園 第2航廈",tz:"+09:00",ref:"Q7MZ2K",seat:"31A–C",bag:"23kg ×3"}
+    {uid:"fl1",dir:"去程",no:"KX 821",date:"2026-12-20",dep:"08:50",arr:"12:25",from:"TPE",fromName:"桃園",depTerm:"第2航廈",counter:"7–9 號櫃台",to:"KIX",toName:"關西",arrTerm:"第1航廈",tz:"+08:00",ref:"Q7MZ2K",seat:"32A–C",bag:"23kg ×3"},
+    {uid:"fl2",dir:"回程",no:"KX 822",date:"2026-12-24",dep:"17:40",arr:"19:55",from:"KIX",fromName:"關西",depTerm:"第1航廈",to:"TPE",toName:"桃園",arrTerm:"第2航廈",tz:"+09:00",ref:"Q7MZ2K",seat:"31A–C",bag:"23kg ×3"}
   ],
   days:[
     {date:"2026-12-20",title:"抵達・京都散步",stops:[
@@ -528,8 +531,8 @@ const TRIP_SAMPLE = {
     {uid:"bag1",date:"2026-12-20",time:"11:30",from:"關西機場 1F 行李配送櫃台",to:"京都站前飯店（範例）",arrive:"2026-12-20 18:00 前",count:"2 件大行李",company:"範例行李宅配",tel:"+81-72-000-0000",ref:"BG-55120",fee:"¥4,000",pay:"已付款",note:"出關後先寄大行李，隨身只帶推車"}
   ],
   transfers:[
-    {uid:"tf1",kind:"out",flight:"KX 821",date:"2026-12-20",time:"05:30",way:"預約接送車",pax:"3 人・3 件",from:"家門口",to:"桃園機場 第2航廈",company:"範例機場接送",tel:"0900-000-000",ref:"T20261220",car:"白色 7 人座",fee:"NT$1,800",pay:"已付款",note:"前一晚司機會傳 LINE 確認"},
-    {uid:"tf2",kind:"home",flight:"KX 822",date:"2026-12-24",time:"21:30",way:"親友接送",pax:"3 人・4 件",from:"桃園機場 第2航廈 入境大廳",to:"家",company:"阿公",tel:"0911-111-111",fee:"",pay:"",note:"出關後在 2 號門外面等"}
+    {uid:"tf1",kind:"out",flight:"KX 821",date:"2026-12-20",time:"05:30",way:"預約接送車",pax:"3 人・3 件",from:"家門口",to:"桃園機場",door:"出境大廳 3 樓",company:"範例機場接送",tel:"0900-000-000",ref:"T20261220",car:"白色 7 人座",fee:"NT$1,800",pay:"已付款",note:"前一晚司機會傳 LINE 確認"},
+    {uid:"tf2",kind:"home",flight:"KX 822",date:"2026-12-24",time:"21:30",way:"親友接送",pax:"3 人・4 件",from:"桃園機場",door:"1F 入境大廳 2 號門",to:"家",company:"阿公",tel:"0911-111-111",fee:"",pay:"",note:"出關後在 2 號門外面等"}
   ],
   hotels:[
     {uid:"ho1",name:"京都站前飯店（範例）",local:"京都駅前ホテル",addr:"京都府京都市下京区東塩小路町",lat:34.9858,lng:135.7588,inDate:"2026-12-20",inTime:"15:00",outDate:"2026-12-23",outTime:"10:00",room:"家庭房・3 人",ref:"HT-58213",tel:"+81-75-000-0000",color:"var(--water)"},
@@ -680,12 +683,23 @@ function replaceItinerary(id, trip){
     DB.put("stop", sid, Object.assign({}, st, {id: sid, day: i, origPos: j, pos: j, skipped: false, swap: null, bookSt: null, added: false}));
   }));
   mergeFoods(trip.foods);
+  fillFlights(trip.flights);
   [["flight", trip.flights], ["hotel", trip.hotels]].forEach(([coll, list]) => {
     if (DB.live(coll).length) return;
     (list || []).forEach(x => { const uid = rid("u"); DB.put(coll, uid, Object.assign({}, x, {uid})); });
   });
   Trips.upsert(id, tripInfoFromMeta(id, meta));
   return true;
+}
+/* ---- 航班補資料：已有的航班（同航班號）只補空的欄位，例如 AI 查到的航廈；自己填的不動 ---- */
+const flightNo = s => String(s || "").replace(/\s/g, "").toUpperCase();
+function fillFlights(list){
+  (Array.isArray(list) ? list : []).forEach(f => {
+    const hit = DB.live("flight").find(d => flightNo(d.data.no) === flightNo(f.no) && (!f.date || d.data.date === f.date));
+    if (!hit) return;
+    const fill = {}; ["fromName","depTerm","toName","arrTerm","counter"].forEach(k => { if (!hit.data[k] && f[k]) fill[k] = f[k]; });
+    if (Object.keys(fill).length) DB.put("flight", hit.key, Object.assign({}, hit.data, fill));
+  });
 }
 /* ---- 口袋名單合併：同名（或同當地店名）的不重複加，已有的保留你自己填的資料，只補空的欄位 ---- */
 const foodKey = s => String(s || "").replace(/\s|（.*?）|\(.*?\)/g, "").toLowerCase();
@@ -2090,8 +2104,11 @@ function flightForm(idx){
     {k:"arr",label:"抵達時間（當地）",type:"time",req:true,half:true},
     {k:"from",label:"出發機場代碼",req:true,max:4,ph:"TPE",half:true,check:v=>/^[A-Za-z]{3,4}$/.test(v)?null:"機場代碼是 3 個英文字母，例：TPE"},
     {k:"to",label:"抵達機場代碼",req:true,max:4,ph:"KIX",half:true,check:v=>/^[A-Za-z]{3,4}$/.test(v)?null:"機場代碼是 3 個英文字母，例：KIX"},
-    {k:"fromName",label:"出發航廈",max:30,ph:"桃園 第2航廈",half:true},
-    {k:"toName",label:"抵達航廈",max:30,ph:"關西 第1航廈",half:true},
+    {k:"fromName",label:"出發機場名稱",max:30,ph:"桃園",half:true},
+    {k:"toName",label:"抵達機場名稱",max:30,ph:"金海",half:true},
+    {k:"depTerm",label:"出境航廈（出發）",max:20,ph:"第2航廈／T2",half:true},
+    {k:"arrTerm",label:"入境航廈（抵達）",max:20,ph:"國際線航廈",half:true},
+    {k:"counter",label:"報到櫃台・登機門",max:30,ph:"7–9 號櫃台"},
     {k:"seat",label:"座位",max:20,ph:"32A–C",half:true},
     {k:"bag",label:"行李額度",max:20,ph:"23kg ×3",half:true},
     {k:"ref",label:"訂位代號",max:12,ph:"6 碼英數"}
@@ -2148,7 +2165,11 @@ function renderFlights(){
         h("button",{class:"btn",type:"button",style:"min-height:28px;padding:0 10px;font-size:12px;box-shadow:0 2px 0 var(--ink)",onclick:()=>flightForm(i)},"✏️ 編輯")),
       h("div",{class:"route"}, h("span",{class:"code"},f.from), h("span",{class:"mid"}, planeIcon()), h("span",{class:"code"},f.to)),
       h("div",{class:"kv"}, h("div",null,h("span",null,"起飛"),f.dep), h("div",null,h("span",null,"抵達"),f.arr), f.seat ? h("div",null,h("span",null,"座位"),f.seat) : null, f.bag ? h("div",null,h("span",null,"行李"),f.bag) : null),
+      (f.depTerm || f.arrTerm) ? h("div",{class:"terms"},
+        h("div",null,h("span",null,"🛫 出境"), (f.fromName||f.from) + " ", h("b",null,f.depTerm||"航廈未填")),
+        h("div",null,h("span",null,"🛬 入境"), (f.toName||f.to) + " ", h("b",null,f.arrTerm||"航廈未填"))) :
       (f.fromName || f.toName) ? h("div",{class:"small",style:"margin-top:6px"}, (f.fromName||f.from) + " → " + (f.toName||f.to)) : null,
+      f.counter ? h("div",{class:"small",style:"margin-top:4px"}, "報到 " + f.counter) : null,
       f.ref ? h("div",{class:"small",style:"margin-top:6px;display:flex;gap:6px;align-items:center"},"訂位代號 ", secret(f.ref)) : null,
       attachRow("flight", f, "航班 " + f.no + "（" + f.dir + "）")),
     h("div",{class:"stub"}, h("div",{class:"small"},"航班"), h("div",{style:"font-size:20px"},f.no)))));
@@ -2159,6 +2180,12 @@ function renderFlights(){
 /* ===== 機場接送 ===== */
 const transferList = () => store.get("transfers", null) || TRIP.transfers || [];
 const TF_KIND = [["out","去程送機・家→機場"],["arrive","抵達接機・機場→飯店"],["back","回程送機・飯店→機場"],["home","回國接機・機場→家"]];
+const tfAtArrival = k => k === "arrive" || k === "home";   // 接機＝在抵達機場等；送機＝到出發機場
+const tfTerm = tf => {   // 接送卡要顯示的航廈：自己填的優先，沒填就看對應航班
+  if (tf.term) return tf.term;
+  const f = tf.flight && flightList().find(x => x.no === tf.flight);
+  return f ? (tfAtArrival(tf.kind) ? f.arrTerm : f.depTerm) || "" : "";
+};
 const TF_COLOR = {out:"var(--yellow)", arrive:"var(--water)", back:"var(--coral)", home:"var(--green)"};
 const TF_WAY = [["預約接送車","預約接送車"],["計程車","計程車"],["親友接送","親友接送"],["機場巴士","機場巴士"],["自駕停車","自駕・機場停車"]];
 const TF_PAY = [["已付款","已付款"],["現場付","現場付"],["未付款","未付款"]];
@@ -2166,16 +2193,25 @@ function transferForm(idx){
   const list = transferList().slice();
   const t0 = idx == null ? {kind: list.length ? "home" : "out", way:"預約接送車", pay:"已付款"} : list[idx];
   const fl = flightList();
+  // 選了航班：接機帶入境航廈、送機帶出境航廈（已經自己填過的不覆蓋）
+  const fillTerm = ins => {
+    if (!ins.term || ins.term.value) return;
+    const f = fl.find(x => x.no === (ins.flight && ins.flight.value)); if (!f) return;
+    const t = tfAtArrival(ins.kind.value) ? f.arrTerm : f.depTerm;
+    if (t) ins.term.value = t;
+  };
   formDialog(idx == null ? "＋ 新增機場接送" : "編輯機場接送", [
-    {k:"kind",label:"接送類型",type:"select",options:TF_KIND},
+    {k:"kind",label:"接送類型",type:"select",options:TF_KIND,on:(v, ins) => fillTerm(ins)},
     {k:"flight",label:"對應航班",type:"select",options:[["","不指定"]].concat(fl.map(f => [f.no, f.dir + " " + f.no + "（" + f.date.slice(5).replace("-","/") + "）"])),
-      on:(v, ins) => { const f = fl.find(x => x.no === v); if (f && !ins.date.value) ins.date.value = f.date; }},
+      on:(v, ins) => { const f = fl.find(x => x.no === v); if (f && !ins.date.value) ins.date.value = f.date; fillTerm(ins); }},
     {k:"date",label:"日期",type:"date",req:true,half:true},
     {k:"time",label:"上車／會合時間",type:"time",req:true,half:true},
     {k:"way",label:"接送方式",type:"select",options:TF_WAY,half:true},
     {k:"pax",label:"人數・行李",max:20,ph:"3 人・3 件",half:true},
     {k:"from",label:"上車地點",req:true,max:60,ph:"例：家門口／關西機場 1F 南出口"},
-    {k:"to",label:"下車地點",req:true,max:60,ph:"例：桃園機場第 2 航廈"},
+    {k:"to",label:"下車地點",req:true,max:60,ph:"例：桃園機場"},
+    {k:"term",label:"機場航廈",max:20,ph:"第2航廈",half:true},
+    {k:"door",label:"出入口・會合點",max:40,ph:"1F 入境大廳 3 號出口",half:true},
     {k:"company",label:"接送公司／司機",max:30,ph:"例：○○機場接送",half:true},
     {k:"tel",label:"聯絡電話",type:"tel",max:24,ph:"0912-345-678",half:true},
     {k:"ref",label:"預約編號",max:20,half:true},
@@ -2194,13 +2230,17 @@ function renderTransfers(){
   const box = $("#transfers"); box.textContent = "";
   const kindLabel = k => (TF_KIND.find(x => x[0] === k) || ["","接送"])[1].split("・")[0];
   transferList().forEach((tf,i) => {
-    const payCls = tf.pay === "未付款" ? "warn-chip" : "";
+    const payCls = tf.pay === "未付款" ? "warn-chip" : "", term = tfTerm(tf);
+    const dest = tfAtArrival(tf.kind) ? tf.to : [tf.to, term, tf.door].filter(Boolean).join(" ");
     box.append(h("article",{class:"box transfer"},
       h("div",{class:"tf-top"},
         h("span",{class:"chip",style:"background:" + (TF_COLOR[tf.kind] || "var(--white)")}, kindLabel(tf.kind)),
         h("span",{class:"tf-when"}, tf.date.slice(5).replace("-","/") + "（" + WEEK[wd(tf.date)] + "） ", h("b",null, tf.time)),
         h("button",{class:"btn tiny",type:"button",onclick:()=>transferForm(i)},"✏️ 編輯")),
       h("div",{class:"tf-route"}, h("span",null, tf.from), h("span",{class:"tf-arrow","aria-hidden":"true"},"→"), h("span",null, tf.to)),
+      (term || tf.door) ? h("div",{class:"tf-gate"},
+        h("span",null, tfAtArrival(tf.kind) ? "🛬 接機處" : "🛫 下車處"),
+        term ? h("b",null, term) : null, tf.door ? h("span",null, (term ? "・" : "") + tf.door) : null) : null,
       h("div",{class:"kv",style:"margin-top:6px"},
         h("div",null,h("span",null,"方式"), tf.way || "—"),
         tf.flight ? h("div",null,h("span",null,"航班"), tf.flight) : null,
@@ -2213,7 +2253,7 @@ function renderTransfers(){
       attachRow("tf", tf, "接送 " + tf.date.slice(5).replace("-","/") + " " + tf.time),
       h("div",{class:"acts"},
         h("a",{class:"btn b",href:gdir(null, {name:tf.from}, "taxi"),target:"_blank",rel:"noopener"},"導航到上車點"),
-        h("button",{class:"btn y",type:"button",onclick:()=>driver({name:tf.to, local:tf.to, addr:""})},"給司機看目的地"))));
+        h("button",{class:"btn y",type:"button",onclick:()=>driver({name:tf.to, local:dest, addr:""})},"給司機看目的地"))));
   });
   if (!box.children.length) box.append(h("div",{class:"box small",style:"text-align:center"},"還沒有接送紀錄"));
   box.append(h("button",{class:"btn g",type:"button",style:"width:100%",onclick:()=>transferForm(null)},"＋ 新增機場接送"));
@@ -2696,10 +2736,10 @@ function currentPlanJSON(){
       b ? {book: b.s, bookRef: b.ref || undefined} : {}, st.alts && st.alts.length ? {alts: st.alts.map(a => pick(a, placeKs))} : {});
   })}));
   const plan = Object.assign(pick(TRIP, ["title","who","lang","askText","scene","routeMap"]), {
-    flights: flightList().map(f => pick(f, ["dir","no","date","dep","arr","from","fromName","to","toName","tz"])),
+    flights: flightList().map(f => pick(f, ["dir","no","date","dep","arr","from","fromName","depTerm","to","toName","arrTerm","counter","tz"])),
     days, hotels: (store.get("hotels", null) || TRIP.hotels || []).map(x => pick(x, ["name","local","addr","lat","lng","inDate","inTime","outDate","outTime","room"]))});
   const ctx = [].concat(
-    transferList().map(t => "接送 " + t.date + " " + t.time + " " + (t.way || "") + "：" + t.from + " → " + t.to),
+    transferList().map(t => "接送 " + t.date + " " + t.time + " " + (t.way || "") + "：" + t.from + " → " + t.to + (tfTerm(t) ? "（" + tfTerm(t) + (t.door ? " " + t.door : "") + "）" : "")),
     foodList().map(f => "口袋名單（" + FOOD_KINDS[foodKind(f)][1] + "，還沒排）：" + f.name + (f.area ? "（" + f.area + "）" : "") + (f.day ? "，想在 " + f.day + " 吃" : "")),
     bagList().map(b => "行李寄送 " + b.date + " " + (b.time || "") + "：" + b.from + " → " + b.to + (b.arrive ? "（預計送達 " + b.arrive + "）" : "")));
   return {json: JSON.stringify(plan), skipped, ctx};
@@ -2737,7 +2777,7 @@ function promptBody(){
   "routeMap": { "nodes":[ { "id":"英文代號","name":"短地名 2–6 字","lat":0,"lng":0,"kind":"city | airport | port","far":true（只有出發地在地圖外時才加） } ],
     "legs":[ { "from":"代號","to":"代號","type":"train | plane | boat | car | bus" } ] },
   "scene": { "landmark": "${Object.keys(LANDMARK).join(" | ")}", "vehicle": "${Object.keys(VEHICLE).join(" | ")}" },
-  "flights": [ { "dir":"去程","no":"航班號","date":"YYYY-MM-DD","dep":"HH:MM","arr":"HH:MM","from":"機場代碼","fromName":"","to":"","toName":"","tz":"+08:00" } ],
+  "flights": [ { "dir":"去程","no":"航班號","date":"YYYY-MM-DD","dep":"HH:MM","arr":"HH:MM","from":"機場代碼","fromName":"機場名","depTerm":"出境航廈","to":"","toName":"","arrTerm":"入境航廈","counter":"報到櫃台","tz":"+08:00" } ],
   "days": [ { "date":"YYYY-MM-DD", "title":"當天主題", "stops":[
     { "t":"HH:MM", "name":"中文名稱", "local":"當地語言名稱", "addr":"當地語言完整地址", "lat":0, "lng":0,
       "move": { "type":"train | walk | bus | taxi | car | plane | boat", "text":"例：JR 奈良線 5分" },
@@ -2765,7 +2805,8 @@ function promptBody(){
 7. routeMap 是首頁的路線地圖：3–8 個主要城市／機場／港口，從台灣出發的那站加 "far": true，相距不到 5 公里的地點合併成一站。
 8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。
 9. 所有餐廳和 foods 的 hours 一律寫成「HH:MM–HH:MM」，公休日放 closed（數字）；行程排的時間要在營業時間內。
-10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，以及逛街購物點（商場、市場、藥妝、免稅店、伴手禮店、商店街），全部放進來（不要漏），用 type 分 meal／snack／shop；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。`;
+10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，以及逛街購物點（商場、市場、藥妝、免稅店、伴手禮店、商店街），全部放進來（不要漏），用 type 分 meal／snack／shop；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。
+11. 每個航班都要寫 depTerm（出境航廈）和 arrTerm（入境航廈），請「上網查該航空公司在這兩個機場用哪個航廈」，例如桃園「第2航廈」、金海「國際線航廈」；查得到報到櫃台就寫在 counter。`;
 }
 /* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
@@ -2806,7 +2847,7 @@ function validateTrip(o){
     id: "trip-" + (days[0].date || "x") + "-" + Math.random().toString(36).slice(2,6),
     title: clip(o.title,30) || "我們的旅行", who: clip(o.who,40), lang: /^[a-z]{2}(-[A-Za-z]{2})?$/.test(o.lang||"") ? o.lang : "en", askText: clip(o.askText,40),
     scene: {landmark: LANDMARK[o.scene && o.scene.landmark] ? o.scene.landmark : "city", vehicle: VEHICLE[o.scene && o.scene.vehicle] ? o.scene.vehicle : "plane"},
-    flights: (Array.isArray(o.flights) ? o.flights : []).slice(0,6).filter(f => isDate(f.date)).map(f => ({dir:clip(f.dir,6),no:clip(f.no,12),date:f.date,dep:clip(f.dep,5),arr:clip(f.arr,5),from:clip(f.from,4),fromName:clip(f.fromName,30),to:clip(f.to,4),toName:clip(f.toName,30),tz:/^[+-]\d{2}:\d{2}$/.test(f.tz||"")?f.tz:"+08:00"})),
+    flights: (Array.isArray(o.flights) ? o.flights : []).slice(0,6).filter(f => isDate(f.date)).map(f => ({dir:clip(f.dir,6),no:clip(f.no,12),date:f.date,dep:clip(f.dep,5),arr:clip(f.arr,5),from:clip(f.from,4),fromName:clip(f.fromName,30),depTerm:clip(f.depTerm,20),to:clip(f.to,4),toName:clip(f.toName,30),arrTerm:clip(f.arrTerm,20),counter:clip(f.counter,30),tz:/^[+-]\d{2}:\d{2}$/.test(f.tz||"")?f.tz:"+08:00"})),
     days,
     transfers: [],
     sims: [],

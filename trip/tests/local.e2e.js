@@ -45,6 +45,21 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.click('text=＋ 新增航班'); await p.fill('#fm-no', 'JL814'); await p.fill('#fm-date', '2026-12-22'); await p.fill('#fm-dep', '09:10'); await p.fill('#fm-arr', '10:20'); await p.fill('#fm-from', 'ITM'); await p.fill('#fm-to', 'HND');
   await p.click('#modalbody button[type=submit]'); await p.waitForTimeout(200);
   t('新增航班', await p.locator('#flights .pass').count() === 3);
+  // 航廈：航班卡顯示出境／入境航廈；接送選航班會自動帶航廈，並顯示出入口
+  t('航班卡有出入境航廈', (await p.textContent('#flights .pass >> nth=0')).includes('第2航廈') && (await p.textContent('#flights .pass >> nth=0')).includes('🛬 入境'));
+  t('範例接送顯示航廈和門', (await p.textContent('#transfers article >> nth=0')).includes('第2航廈') && (await p.textContent('#transfers')).includes('2 號門'));
+  await p.click('text=＋ 新增機場接送');
+  await p.selectOption('#fm-kind', 'arrive'); await p.selectOption('#fm-flight', 'KX 821');
+  t('接機自動帶入境航廈', (await p.inputValue('#fm-term')) === '第1航廈');
+  await p.fill('#fm-time', '13:30'); await p.fill('#fm-from', '關西機場'); await p.fill('#fm-to', '京都站前飯店'); await p.fill('#fm-door', '1F 南出口 4 號');
+  await p.click('#modal button[type=submit]'); await p.waitForTimeout(200);
+  t('接送卡顯示航廈＋出口', await p.locator('#transfers .tf-gate:has-text("第1航廈"):has-text("南出口 4 號")').count() === 1);
+  await p.click('#transfers article:has-text("京都站前飯店") button:has-text("編輯")'); await p.selectOption('#fm-flight', 'KX 822');
+  t('自己填過的航廈不被蓋掉', (await p.inputValue('#fm-term')) === '第1航廈'); await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  const vt = await p.evaluate(() => validateTrip({ title: 'x', days: [{ date: '2027-01-01', title: 'a', stops: [{ t: '09:00', name: 'n', lat: 1, lng: 1 }] }], flights: [{ no: 'BR1', date: '2027-01-01', depTerm: '第2航廈', arrTerm: '國際線', counter: '10 號' }] }));
+  const vf = (vt.trip || vt).flights[0];
+  t('AI 匯入保留航廈', vf.depTerm === '第2航廈' && vf.arrTerm === '國際線' && vf.counter === '10 號');
+  t('提示詞有要 AI 查航廈', (await p.evaluate(() => buildPrompt({dest:'釜山',from:'2027-01-01',to:'2027-01-03',who:'',need:'',flights:''}))).includes('depTerm'));
   // 清單打勾＋新增
   await p.locator('#todos input[type=checkbox]').first().check(); await p.waitForTimeout(150);
   await p.fill('#add-1', '泳衣'); await p.locator('#todos form.add').nth(1).locator('button').click(); await p.waitForTimeout(150);
