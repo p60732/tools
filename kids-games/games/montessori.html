@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>蒙特梭利玩具櫃</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: one full-screen illustrated scene (SVG) that re-lays itself for portrait or landscape; two small round buttons float on top.
+   Look: flat shapes, no outlines, warm wall and wooden floor, soft shadows. No scores, no timers. */
+:root{
+  --wall:#F3ECE0; --floor:#E2C9A6; --wood:#C99B6D; --wood-d:#B3865A; --ink:#5B5048;
+  --pink:#E6A2A6; --teal:#6FA39C; --mustard:#E2B451; --coral:#DE8B74; --leaf:#8DB38B; --water:#9CC8DD;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--wall);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.fab{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));width:56px;height:56px;border:0;border-radius:50%;background:#FFFFFF;box-shadow:0 3px 0 rgba(91,80,72,.18);display:grid;place-items:center;cursor:pointer;z-index:5;padding:12px}
+.fab svg{width:100%;height:100%}
+.fab:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(91,80,72,.18)}
+.fab:focus-visible{outline:3px dashed var(--ink);outline-offset:3px}
+#home{left:calc(12px + env(safe-area-inset-left,0px))}
+#music{right:calc(12px + env(safe-area-inset-right,0px))}
+#music .x{display:none}#music.off .x{display:inline}#music.off{opacity:.8}
+text{font-family:var(--font);font-weight:900}
+.tap{cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg id="scene" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+<button class="fab" id="home" type="button" aria-label="回到玩具櫃" hidden><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="#C99B6D"/><rect x="3" y="11" width="18" height="2" fill="#B3865A"/><rect x="6" y="6" width="4" height="4" rx="1" fill="#E6A2A6"/><circle cx="16" cy="8" r="2" fill="#6FA39C"/><rect x="6" y="14" width="5" height="4" rx="1" fill="#E2B451"/><rect x="14" y="15" width="4" height="3" rx="1" fill="#9CC8DD"/></svg></button>
+<button class="fab" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#5B5048" stroke-width="2.4" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#DE8B74"/><circle cx="17.5" cy="16" r="3" fill="#6FA39C"/><path class="x" d="M3 3L21 21" stroke="#5B5048" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+<script>
+/* ================= 聲音:柔和、木頭和鈴聲為主 ================= */
+let ctx=null,sfx=null,musicGain=null,musicOn=false,bgm=null,nextT=0,stepN=0;
+try{musicOn=localStorage.getItem('monteMusic')==='on'}catch(e){}
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();sfx=ctx.createGain();sfx.gain.value=.7;sfx.connect(ctx.destination);musicGain=ctx.createGain();musicGain.gain.value=.045;musicGain.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function tone(f,t,d,{type='sine',v=.2,to=null,bus=null,a=.01}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(bus||sfx);o.start(t);o.stop(t+d+.05)}catch(e){}}
+function noise(t,d,{v=.1,f=800,q=1,type='bandpass'}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(sfx);s.start(t)}catch(e){}}
+const now=()=>ac().currentTime;
+const S={
+  knock(p=1){const t=now();tone(260*p,t,.12,{type:'triangle',v:.16,to:180*p});noise(t,.04,{v:.08,f:1200*p,q:3})},
+  thunk(p=1){const t=now();tone(170*p,t,.18,{type:'triangle',v:.2,to:110*p});noise(t,.05,{v:.07,f:600,q:2})},
+  slide(){const t=now();tone(420,t,.35,{type:'triangle',v:.08,to:200});noise(t,.3,{v:.04,f:900,q:1})},
+  bell(m,v=.22){const t=now();tone(hz(m),t,2.2,{v,a:.004});tone(hz(m)*2.01,t,1.2,{v:v*.25,a:.004});tone(hz(m)*3.0,t,.5,{v:v*.08,a:.004})},
+  chime(){[72,76,79,84].forEach((m,i)=>setTimeout(()=>S.bell(m,.12),i*160))},
+  squish(){noise(now(),.18,{v:.07,f:500,q:.7})},
+  pop(){tone(660,now(),.1,{v:.08,to:880})}
+};
+// 流水聲:倒水時持續播放
+let flowNode=null;
+function flow(on){try{if(on&&!flowNode){const c=ac(),b=c.createBuffer(1,c.sampleRate*2,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource();s.buffer=b;s.loop=true;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=1400;f.Q.value=.6;const g=c.createGain();g.gain.value=.0001;g.gain.exponentialRampToValueAtTime(.06,c.currentTime+.1);s.connect(f).connect(g).connect(sfx);s.start();flowNode={s,g}}
+  else if(!on&&flowNode){const n=flowNode;flowNode=null;n.g.gain.setTargetAtTime(.0001,ctx.currentTime,.05);setTimeout(()=>{try{n.s.stop()}catch(e){}},300)}}catch(e){}}
+// 背景音樂:很慢的八音盒,預設關閉
+const MEL=[72,0,0,76,0,0,79,0,0,76,0,0, 77,0,0,74,0,0,72,0,0,0,0,0];
+function sched(){while(nextT<ctx.currentTime+.2){const m=MEL[stepN%MEL.length];if(m)tone(hz(m),nextT,1.6,{v:.5,bus:musicGain,a:.01});nextT+=.32;stepN++}}
+function startMusic(){if(bgm||!musicOn)return;ac();nextT=ctx.currentTime+.1;bgm=setInterval(sched,40)}
+function stopMusic(){clearInterval(bgm);bgm=null}
+const musicBtn=document.getElementById('music');
+function paintMusic(){musicBtn.classList.toggle('off',!musicOn);musicBtn.setAttribute('aria-pressed',musicOn)}
+musicBtn.onclick=()=>{musicOn=!musicOn;try{localStorage.setItem('monteMusic',musicOn?'on':'off')}catch(e){}paintMusic();musicOn?startMusic():stopMusic()};
+paintMusic();addEventListener('pointerdown',()=>{ac();startMusic()});
+
+/* ================= 畫面工具 ================= */
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('scene'),homeBtn=document.getElementById('home');
+function S_(tag,attrs={},parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+let W=800,H=560,land=true,gen=0,current='shelf';
+function dims(){land=innerWidth>=innerHeight;W=land?800:560;H=land?560:800;svg.setAttribute('viewBox',`0 0 ${W} ${H}`)}
+function toSvg(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+const ease=t=>1-Math.pow(1-t,3);
+function tween(ms,fn,done){const my=gen,t0=performance.now();const step=t=>{if(my!==gen)return;let k=Math.min(1,(t-t0)/ms);fn(ease(k),k);if(k<1)requestAnimationFrame(step);else done&&done()};requestAnimationFrame(step)}
+const rand=(a,b)=>a+Math.random()*(b-a);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function sparkle(x,y,n=8,col='#FFFFFF'){const my=gen;for(let i=0;i<n;i++){const a=Math.PI*2*i/n+rand(-.2,.2),d=rand(30,70);const c=S_('circle',{cx:x,cy:y,r:rand(3,6),fill:col,opacity:.9},svg);
+  tween(900,k=>{c.setAttribute('cx',x+Math.cos(a)*d*k);c.setAttribute('cy',y+Math.sin(a)*d*k-20*k);c.setAttribute('opacity',.9*(1-k))},()=>c.remove())}}
+// 一次只跟著一根手指拖
+let drag=null;
+function draggable(el,h){el.style.cursor='grab';el.addEventListener('pointerdown',ev=>{if(drag)return;if(h.can&&!h.can())return;ev.preventDefault();ev.stopPropagation();drag={id:ev.pointerId,h};h.start&&h.start(toSvg(ev))})}
+addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.id)drag.h.move&&drag.h.move(toSvg(e))});
+const endDrag=e=>{if(!drag||e.pointerId!==drag.id)return;const h=drag.h;drag=null;h.end&&h.end(toSvg(e))};
+addEventListener('pointerup',endDrag);addEventListener('pointercancel',endDrag);
+
+/* 房間背景:牆、木地板;畫到畫面外面,寬螢幕也看不到邊 */
+function room(floorY){S_('rect',{x:-3000,y:-3000,width:6000+W,height:3000+floorY,fill:'#F3ECE0'},svg);
+  S_('rect',{x:-3000,y:floorY,width:6000+W,height:3000,fill:'#E2C9A6'},svg);
+  for(let i=-30;i<60;i++)S_('rect',{x:i*90,y:floorY,width:2,height:3000,fill:'#D9BE98'},svg)}
+function window_(x,y,w,h){const g=S_('g',{},svg);S_('rect',{x,y,width:w,height:h,rx:14,fill:'#DCEAF0'},g);S_('rect',{x:x+w/2-3,y,width:6,height:h,fill:'#F3ECE0'},g);S_('rect',{x,y:y+h/2-3,width:w,height:6,fill:'#F3ECE0'},g);
+  S_('circle',{cx:x+w*.75,cy:y+h*.28,r:Math.min(w,h)*.1,fill:'#F4DE9E'},g);return g}
+function plant(x,y,s=1){const g=S_('g',{transform:`translate(${x} ${y}) scale(${s})`},svg);
+  [[-18,-70,-30],[0,-84,0],[18,-70,30],[-8,-56,-55],[10,-56,50]].forEach(([dx,dy,r])=>S_('ellipse',{cx:dx,cy:dy,rx:12,ry:26,fill:'#8DB38B',transform:`rotate(${r} ${dx} ${dy+20})`},g));
+  S_('path',{d:'M-24 -34h48l-6 34h-36z',fill:'#DE8B74'},g);return g}
+
+/* ================= 玩具櫃(首頁) ================= */
+const TOYS=[['tower','粉紅塔'],['tablets','色板'],['pour','倒水'],['bells','音感鐘']];
+function shelf(){homeBtn.hidden=true;const floorY=land?H*.74:H*.8;room(floorY);
+  if(land){window_(70,70,170,130);plant(W-80,floorY-6,1.1)}else{window_(60,110,150,120);plant(W-70,floorY-4,1)}
+  S_('text',{x:W/2,y:land?60:80,'text-anchor':'middle','font-size':30,fill:'#5B5048'},svg).textContent='玩具櫃';
+  S_('text',{x:W/2,y:land?92:112,'text-anchor':'middle','font-size':17,fill:'#8C7E72','font-weight':700},svg).textContent='點一個玩具,拿出來玩';
+  // 矮櫃
+  const cols=land?4:2,rows=land?1:2,cw=land?160:200,ch=land?150:170,sx=(W-cols*cw)/2,top=floorY-rows*ch-16;
+  S_('rect',{x:sx-18,y:top-16,width:cols*cw+36,height:rows*ch+32,rx:16,fill:'#C99B6D'},svg);
+  S_('rect',{x:sx-26,y:top-26,width:cols*cw+52,height:16,rx:8,fill:'#B3865A'},svg);
+  S_('ellipse',{cx:W/2,cy:floorY+18,rx:cols*cw/2+40,ry:14,fill:'rgba(91,80,72,.12)'},svg);
+  TOYS.forEach(([k,name],i)=>{const c=i%cols,r=Math.floor(i/cols),x=sx+c*cw,y=top+r*ch;
+    S_('rect',{x:x+6,y:y+4,width:cw-12,height:ch-8,rx:10,fill:'#E8D4B8'},svg);
+    if(r<rows-1)S_('rect',{x:sx-18,y:y+ch-6,width:cols*cw+36,height:12,fill:'#B3865A'},svg);
+    const g=S_('g',{class:'tap',transform:`translate(${x+cw/2} ${y+ch-48})`},svg);
+    S_('rect',{x:-cw/2+16,y:-ch+50,width:cw-32,height:ch-34,rx:12,fill:'#FFFFFF',opacity:0},g);
+    S_('ellipse',{cx:0,cy:8,rx:58,ry:8,fill:'rgba(91,80,72,.12)'},g);
+    miniToy(k,g);
+    const lab=S_('g',{transform:'translate(0 26)'},g);S_('rect',{x:-40,y:-14,width:80,height:28,rx:14,fill:'#FFFFFF'},lab);S_('text',{x:0,y:6,'text-anchor':'middle','font-size':16,fill:'#5B5048'},lab).textContent=name;
+    g.addEventListener('click',()=>{S.knock(1.2);open(k)});
+    g.addEventListener('pointerdown',()=>g.setAttribute('transform',`translate(${x+cw/2} ${y+ch-46}) scale(.97)`));
+    g.addEventListener('pointerleave',()=>g.setAttribute('transform',`translate(${x+cw/2} ${y+ch-48})`))})}
+function miniToy(k,g){
+  if(k==='tower'){let y=0;[30,26,22,18,14,10,7].forEach(s=>{cube(g,-s/2,y,s);y-=s});}
+  if(k==='tablets'){[30,40,50,60,70].forEach((l,i)=>{S_('rect',{x:-56+i*23,y:-30,width:20,height:30,rx:3,fill:`hsl(212 45% ${l}%)`},g)})}
+  if(k==='pour'){S_('path',{d:'M-46 0v-58q0-6 6-6h28l10-8v8q4 4 4 10v54z',fill:'#E7F1F5'},g);S_('path',{d:'M-44 0v-30h38v30z',fill:'#9CC8DD'},g);S_('path',{d:'M18 0l-4-40h32l-4 40z',fill:'#E7F1F5'},g);S_('path',{d:'M17 0l-2-20h30l-2 20z',fill:'#9CC8DD'},g)}
+  if(k==='bells'){[-42,-14,14,42].forEach((x,i)=>{const s=1-i*.1;S_('rect',{x:x-12,y:-10,width:24,height:10,rx:3,fill:'#F5EFE6'},g);S_('rect',{x:x-1.5,y:-24*s-8,width:3,height:24*s,fill:'#9C8F84'},g);S_('path',{d:`M${x-12*s} ${-24*s-6}q0-${20*s} ${12*s}-${20*s}t${12*s} ${20*s}z`,fill:'#D9B45F'},g)})}}
+function cube(parent,x,y,s,col=['#E6A2A6','#F3C9CB','#D4898F']){const d=s*.22,g=S_('g',{transform:`translate(${x} ${y})`},parent);
+  S_('path',{d:`M0 ${-s}L${d} ${-s-d}H${s+d}L${s} ${-s}Z`,fill:col[1]},g);S_('path',{d:`M${s} ${-s}L${s+d} ${-s-d}V${-d}L${s} 0Z`,fill:col[2]},g);S_('rect',{x:0,y:-s,width:s,height:s,fill:col[0]},g);return g}
+
+/* ================= 粉紅塔 =================
+   十個方塊從大到小疊。比上面那塊大的方塊放不上去,會自己滑下來。 */
+function tower(){const floorY=land?H-40:H-24;room(floorY);
+  const base=land?78:74,tx=land?W*.73:W/2,by=land?H-70:H*.62;
+  // 地墊
+  if(land)S_('rect',{x:24,y:150,width:W*.53,height:H-180,rx:24,fill:'#EADBC8'},svg);else S_('rect',{x:24,y:by+30,width:W-48,height:H-by-54,rx:24,fill:'#EADBC8'},svg);
+  S_('ellipse',{cx:tx,cy:by+6,rx:base*.8,ry:12,fill:'rgba(91,80,72,.14)'},svg);
+  S_('rect',{x:tx-base*.75,y:by,width:base*1.5+base*.22,height:10,rx:5,fill:'#C99B6D'},svg);
+  const layer=S_('g',{},svg);const rug=land?{x:40,y:200,w:W*.53-36,h:H-232}:{x:40,y:by+70,w:W-80,h:H-by-108};
+  const cubes=[];for(let i=10;i>=1;i--){const s=base*i/10;cubes.push({i,s,x:0,y:0,g:null,on:false})}
+  const stack=[];
+  const place=c=>c.g.setAttribute('transform',`translate(${c.x} ${c.y})`);
+  function scatter(){const boxes=[];cubes.forEach(c=>{let ok=false;for(let t=0;t<300&&!ok;t++){const x=rand(rug.x,rug.x+rug.w-c.s*1.25),y=rand(rug.y+c.s*1.25,rug.y+rug.h);
+      ok=boxes.every(b=>x+c.s*1.25+6<b.x||b.x+b.w+6<x||y+6<b.y-b.h||b.y+6<y-c.s*1.25);if(ok||t===299){c.x=x;c.y=y;boxes.push({x,y,w:c.s*1.25,h:c.s*1.25})}}});
+    stack.length=0;cubes.forEach(c=>c.on=false);redraw()}
+  function redraw(){layer.innerHTML='';const loose=cubes.filter(c=>!c.on).sort((a,b)=>a.y-b.y);[...loose,...stack].forEach(c=>{c.g=cube(layer,c.x,c.y,c.s);S_('ellipse',{cx:c.s/2,cy:2,rx:c.s*.55,ry:4,fill:'rgba(91,80,72,.12)'},c.g).parentNode.insertBefore(c.g.lastChild,c.g.firstChild);bind(c)})}
+  const topY=()=>stack.reduce((y,c)=>y-c.s,by);
+  function bind(c){let off;draggable(c.g,{
+    can:()=>!c.on||stack[stack.length-1]===c,
+    start:p=>{off={x:p.x-c.x,y:p.y-c.y};if(c.on){stack.pop();c.on=false}layer.appendChild(c.g);S.knock(1+(10-c.i)*.05)},
+    move:p=>{c.x=p.x-off.x;c.y=p.y-off.y;place(c)},
+    end:()=>{const cx=c.x+c.s/2;
+      if(Math.abs(cx-tx)<base*.85&&c.y<by+50){const top=stack[stack.length-1];
+        if(!top||top.s>c.s){c.on=true;stack.push(c);const fx=c.x,fy=c.y,gx=tx-c.s/2,gy=topY()+c.s;tween(220,k=>{c.x=fx+(gx-fx)*k;c.y=fy+(gy-fy)*k;place(c)},()=>{S.thunk(1+(10-c.i)*.04);if(stack.length===10)done()});return}
+        // 太大了:先放上去,再慢慢滑下來
+        const fx=c.x,fy=c.y,gx=tx-c.s/2,gy=topY()-2,dir=Math.random()<.5?-1:1,lx=Math.max(rug.x,Math.min(rug.x+rug.w-c.s,land?rand(rug.x+20,rug.x+rug.w-c.s):tx+dir*rand(60,160))),ly=land?rand(rug.y+c.s,rug.y+rug.h):rand(rug.y+c.s,rug.y+rug.h);
+        tween(200,k=>{c.x=fx+(gx-fx)*k;c.y=fy+(gy-fy)*k;place(c)},()=>{S.slide();let r=0;tween(700,k=>{c.x=gx+(lx-gx)*k;c.y=gy+(ly-gy)*k-Math.sin(k*Math.PI)*40;r=dir*20*Math.sin(k*Math.PI);c.g.setAttribute('transform',`translate(${c.x} ${c.y}) rotate(${r} ${c.s/2} ${-c.s/2})`)},()=>{place(c);S.knock(.8);redraw()})});return}
+      c.y=Math.max(c.y,rug.y+c.s);place(c);S.knock(.9);redraw()}})}
+  function done(){S.chime();const t=topY();sparkle(tx,t-20,10,'#FFFFFF');sparkle(tx,t+60,8,'#F3C9CB')}
+  // 收拾按鈕
+  const rb=S_('g',{class:'tap',transform:`translate(${W-40} ${land?110:116})`},svg);S_('circle',{r:28,fill:'#FFFFFF'},rb);S_('path',{d:'M-10 -4a11 11 0 1 1 3 11',fill:'none',stroke:'#5B5048','stroke-width':4,'stroke-linecap':'round'},rb);S_('path',{d:'M-15 -9l5 6 6-5',fill:'none',stroke:'#5B5048','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round'},rb);
+  rb.addEventListener('click',()=>{S.slide();scatter()});
+  scatter()}
+
+/* ================= 色板 =================
+   七片同一個顏色、深淺不同的色板,排成由深到淺(或由淺到深)。 */
+const HUES=[[212,42,'藍'],[6,52,'紅'],[44,66,'黃'],[128,28,'綠']];
+let hueIdx=0;
+function tablets(){const floorY=H-30;room(floorY);
+  const tw=land?74:64,th=land?50:44,gap=land?12:10,n=7,bw=n*tw+(n-1)*gap,bx=(W-bw)/2,by=land?150:210;
+  S_('rect',{x:bx-22,y:by-18,width:bw+44,height:th+36,rx:14,fill:'#C99B6D'},svg);
+  const slots=[];for(let i=0;i<n;i++){const x=bx+i*(tw+gap);S_('rect',{x,y:by,width:tw,height:th,rx:6,fill:'#B3865A'},svg);slots.push({x,y:by,t:null})}
+  const glow=S_('rect',{x:bx-22,y:by-18,width:bw+44,height:th+36,rx:14,fill:'none',stroke:'#F4DE9E','stroke-width':8,opacity:0},svg);
+  // 顏料罐
+  const potY=land?70:120,pots=S_('g',{},svg);
+  HUES.forEach(([h,s],i)=>{const px=(land?W-260:W/2-105)+i*70,g=S_('g',{class:'tap',transform:`translate(${px} ${potY})`},pots);
+    S_('rect',{x:-22,y:-16,width:44,height:36,rx:10,fill:'#F5EFE6'},g);S_('ellipse',{cx:0,cy:-16,rx:22,ry:8,fill:`hsl(${h} ${s}% 55%)`},g);
+    if(i===hueIdx)S_('rect',{x:-26,y:28,width:52,height:6,rx:3,fill:'#5B5048'},g);
+    g.addEventListener('click',()=>{if(hueIdx===i)return;hueIdx=i;S.pop();open('tablets')})});
+  const area=land?{x:60,y:by+th+70,w:W-120,h:H-by-th-130}:{x:40,y:by+th+70,w:W-80,h:H-by-th-130};
+  const [h,s]=HUES[hueIdx],L=[30,39,48,57,66,75,84];
+  const layer=S_('g',{},svg);
+  const tabs=shuffle(L.map((l,i)=>({i,l,x:0,y:0,slot:null,g:null})));
+  // 散開擺在桌上
+  const cols=land?4:3;tabs.forEach((t,k)=>{const c=k%cols,r=Math.floor(k/cols);t.x=area.x+(c+.5)*area.w/cols-tw/2+rand(-14,14);t.y=area.y+r*(th+36)+rand(0,14);draw(t)});
+  function draw(t){if(t.g)t.g.remove();const g=S_('g',{transform:`translate(${t.x} ${t.y})`},layer);t.g=g;
+    S_('rect',{x:2,y:4,width:tw,height:th,rx:6,fill:'rgba(91,80,72,.14)'},g);
+    S_('rect',{x:0,y:0,width:tw,height:th,rx:6,fill:'#D9B88F'},g);S_('rect',{x:10,y:0,width:tw-20,height:th,fill:`hsl(${h} ${s}% ${t.l}%)`},g);
+    let off,from;draggable(g,{start:p=>{off={x:p.x-t.x,y:p.y-t.y};from={x:t.x,y:t.y,slot:t.slot};if(t.slot){t.slot.t=null;t.slot=null}layer.appendChild(g);S.knock(1.3);glow.setAttribute('opacity',0)},
+      move:p=>{t.x=p.x-off.x;t.y=p.y-off.y;g.setAttribute('transform',`translate(${t.x} ${t.y})`)},
+      end:()=>{let best=null,bd=1e9;slots.forEach(sl=>{const d=Math.hypot(sl.x-t.x,sl.y-t.y);if(d<bd){bd=d;best=sl}});
+        if(best&&bd<tw*.8){const other=best.t;if(other){// 換位置
+            if(from.slot){from.slot.t=other;other.slot=from.slot;moveTo(other,from.slot.x,from.slot.y)}else{other.slot=null;moveTo(other,from.x,from.y)}}
+          best.t=t;t.slot=best;moveTo(t,best.x,best.y);S.thunk(1.4);check()}
+        else{t.y=Math.max(t.y,by+th+30);t.x=Math.max(10,Math.min(W-tw-10,t.x));moveTo(t,t.x,t.y);S.knock(1.1)}}})}
+  function moveTo(t,x,y){const fx=t.x,fy=t.y;tween(180,k=>{t.x=fx+(x-fx)*k;t.y=fy+(y-fy)*k;t.g.setAttribute('transform',`translate(${t.x} ${t.y})`)})}
+  function check(){if(slots.some(sl=>!sl.t))return;const ls=slots.map(sl=>sl.t.l);const up=ls.every((v,i)=>!i||v>ls[i-1]),dn=ls.every((v,i)=>!i||v<ls[i-1]);
+    if(up||dn){setTimeout(()=>{S.chime();glow.setAttribute('opacity',1);slots.forEach((sl,i)=>setTimeout(()=>sparkle(sl.x+tw/2,sl.y+th/2,5,'#FFFFFF'),i*90))},200)}}}
+
+/* ================= 倒水 =================
+   拿起水壺或杯子,移到另一個容器上方就會倒水。水龍頭下面可以裝水;灑出來的水用海綿擦。 */
+function pour(){const tableY=land?H*.74:H*.72;room(tableY+60);
+  // 桌子
+  S_('rect',{x:-3000,y:tableY,width:6000+W,height:24,fill:'#C99B6D'},svg);S_('rect',{x:-3000,y:tableY+24,width:6000+W,height:8,fill:'#B3865A'},svg);
+  if(land)window_(W-230,60,160,120);
+  // 水龍頭和洗手台
+  const tapX=land?96:86,spoutY=land?tableY-210:tableY-250;
+  S_('rect',{x:tapX-60,y:spoutY-60,width:22,height:70,rx:6,fill:'#B9C2C8'},svg);S_('path',{d:`M${tapX-50} ${spoutY-50}h40q10 0 10 10v14h-14v-8h-36z`,fill:'#B9C2C8'},svg);
+  S_('rect',{x:tapX-26,y:spoutY-74,width:30,height:10,rx:5,fill:'#DE8B74'},svg);
+  const basin={x:tapX,w:120,top:tableY-30};S_('path',{d:`M${tapX-64} ${tableY-34}h128l-12 34h-104z`,fill:'#E7F1F5'},svg);S_('rect',{x:tapX-66,y:tableY-38,width:132,height:8,rx:4,fill:'#D4E4EA'},svg);
+  const streamEl=S_('path',{d:'',stroke:'#9CC8DD','stroke-width':7,'stroke-linecap':'round',fill:'none',opacity:.9},svg);
+  const puddleLayer=S_('g',{},svg),layer=S_('g',{},svg);
+  // 容器:水壺 + 三個杯子
+  const xs=land?[270,420,520,620]:[215,300,370,440];
+  const C=[{kind:'jug',w:84,h:112,cap:3,water:2.2},{kind:'cup',w:56,h:74,cap:1,water:0},{kind:'cup',w:56,h:74,cap:1,water:0},{kind:'cup',w:56,h:74,cap:1,water:0}];
+  let clipN=0;
+  C.forEach((c,i)=>{c.x=xs[i];c.y=tableY;c.ang=0;c.held=false;build(c)});
+  function shapePath(c){const w=c.w,h=c.h;return c.kind==='jug'?`M${-w/2} 0V${-h+10}Q${-w/2} ${-h} ${-w/2+10} ${-h}H${w/2-6}L${w/2+10} ${-h-10}V${-h+8}Q${w/2} ${-h+16} ${w/2} ${-h+24}V0Z`:`M${-w/2} ${-h}H${w/2}L${w/2-6} 0H${-w/2+6}Z`}
+  function build(c){const g=S_('g',{},layer);c.g=g;const id='clip'+(clipN++)+gen;
+    const cp=S_('clipPath',{id},g);S_('path',{d:shapePath(c)},cp);
+    c.shadow=S_('ellipse',{cx:0,cy:2,rx:c.w*.55,ry:5,fill:'rgba(91,80,72,.14)'},g);
+    c.body=S_('g',{},g);
+    S_('path',{d:shapePath(c),fill:'#EEF5F8',opacity:.9},c.body);
+    const wg=S_('g',{'clip-path':`url(#${id})`},c.body);c.waterEl=S_('rect',{x:-200,y:0,width:400,height:400,fill:'#9CC8DD'},wg);
+    S_('path',{d:shapePath(c),fill:'none',stroke:'#D2E2E8','stroke-width':3},c.body);
+    if(c.kind==='jug')S_('path',{d:`M${-c.w/2} ${-c.h+24}q-26 6 -22 34q2 18 22 22`,fill:'none',stroke:'#D2E2E8','stroke-width':8,'stroke-linecap':'round'},c.body);
+    S_('rect',{x:-c.w/2+8,y:-c.h+14,width:6,height:c.h*.5,rx:3,fill:'#FFFFFF',opacity:.7},c.body);
+    let off;draggable(g,{start:p=>{off={x:p.x-c.x,y:p.y-c.y};c.held=true;layer.appendChild(g);S.knock(1.5)},
+      move:p=>{c.x=p.x-off.x;c.y=Math.min(tableY,p.y-off.y)},
+      end:()=>{c.held=false;const fy=c.y,fx=c.x;const nx=Math.max(40,Math.min(W-40,fx));tween(260,k=>{c.y=fy+(tableY-fy)*k;c.x=fx+(nx-fx)*k},()=>S.thunk(1.6))}})}
+  function render(c){const fill=Math.max(0,Math.min(1,c.water/c.cap)),lvl=-c.h*fill;
+    c.g.setAttribute('transform',`translate(${c.x} ${c.y})`);c.body.setAttribute('transform',`rotate(${c.ang} 0 ${-c.h/2})`);
+    c.waterEl.setAttribute('y',lvl);c.waterEl.setAttribute('transform',`rotate(${-c.ang} 0 ${lvl})`);c.waterEl.setAttribute('opacity',fill>0.01?1:0);
+    c.shadow.setAttribute('opacity',c.y<tableY-4?.4:1)}
+  // 地上的水和海綿
+  const puddles=[];
+  function spill(x,amt){let p=puddles.find(q=>Math.abs(q.x-x)<40);if(!p){p={x,v:0,el:S_('ellipse',{cx:x,cy:tableY+4,rx:0,ry:0,fill:'#9CC8DD',opacity:.7},puddleLayer)};puddles.push(p)}p.v=Math.min(3,p.v+amt)}
+  const sponge={x:land?W-90:W-52,y:tableY,wet:0};const sg=S_('g',{},layer);
+  S_('ellipse',{cx:0,cy:2,rx:34,ry:5,fill:'rgba(91,80,72,.14)'},sg);const sb=S_('rect',{x:-32,y:-30,width:64,height:30,rx:10,fill:'#E2B451'},sg);S_('rect',{x:-32,y:-30,width:64,height:9,rx:4,fill:'#8DB38B'},sg);
+  [[-16,-12],[0,-16],[14,-10]].forEach(([x,y])=>S_('circle',{cx:x,cy:y,r:3,fill:'#C99A3E'},sg));
+  let soff;draggable(sg,{start:p=>{soff={x:p.x-sponge.x,y:p.y-sponge.y};layer.appendChild(sg);S.squish()},move:p=>{sponge.x=p.x-soff.x;sponge.y=Math.min(tableY,p.y-soff.y)},
+    end:()=>{const fy=sponge.y;tween(220,k=>{sponge.y=fy+(tableY-fy)*k})}});
+  // 每一格畫面:倒水、裝水、擦水
+  const my=gen;let last=performance.now(),flowing=false,lastSq=0;
+  function loop(t){if(my!==gen){flow(false);return}const dt=Math.min(.05,(t-last)/1000);last=t;let stream=null;
+    C.forEach(c=>{let target=null;
+      if(c.held&&c.water>.01){// 找下面的容器
+        for(const d of [...C.filter(q=>q!==c),{basin:true,x:basin.x,w:basin.w,y:tableY-4,h:30}]){if(c.y<d.y-d.h-4&&Math.abs(c.x-d.x)<(d.w/2+c.w/2+10)&&c.y>d.y-d.h-170){target=d;break}}}
+      const want=target?(target.x>=c.x?70:-70):0;c.ang+=(want-c.ang)*Math.min(1,dt*8);
+      if(target&&Math.abs(c.ang)>45){const amt=Math.min(c.water,dt*1.1);c.water-=amt;
+        if(target.basin){}else{target.water+=amt;if(target.water>target.cap){spill(target.x,target.water-target.cap);target.water=target.cap}}
+        const sgn=Math.sign(c.ang),lx=sgn*c.w/2,ly=-c.h,a=c.ang*Math.PI/180,cy0=-c.h/2;const px=c.x+lx*Math.cos(a)-(ly-cy0)*Math.sin(a),py=c.y+cy0+lx*Math.sin(a)+(ly-cy0)*Math.cos(a);
+        const ty=target.basin?tableY-20:target.y-target.h*Math.min(1,target.water/target.cap);stream=`M${px} ${py}Q${px+sgn*8} ${py+10} ${target.x+(px-target.x)*.3} ${ty}`}
+      // 水龍頭
+      if(c.held&&Math.abs(c.x-tapX)<c.w/2+4&&c.y-c.h>spoutY+10&&c.water<c.cap){c.water=Math.min(c.cap,c.water+dt*1.2);stream=`M${tapX} ${spoutY}L${tapX} ${c.y-c.h*Math.min(1,c.water/c.cap)}`}
+      render(c)});
+    streamEl.setAttribute('d',stream||'');if(!!stream!==flowing){flowing=!!stream;flow(flowing)}
+    // 海綿吸水
+    puddles.forEach(p=>{if(Math.abs(sponge.x-p.x)<50&&sponge.y>tableY-12&&p.v>0){p.v=Math.max(0,p.v-dt*1.5);sponge.wet=Math.min(1,sponge.wet+dt*.6);if(t-lastSq>350){lastSq=t;S.squish()}}
+      p.el.setAttribute('rx',Math.sqrt(p.v)*40);p.el.setAttribute('ry',Math.sqrt(p.v)*7)});
+    // 海綿拿到洗手台上方就擰乾
+    if(Math.abs(sponge.x-tapX)<60&&sponge.y<tableY-40&&sponge.wet>0){sponge.wet=Math.max(0,sponge.wet-dt);if(t-lastSq>300){lastSq=t;S.squish()}}
+    sb.setAttribute('fill',sponge.wet>.3?'#C99A3E':'#E2B451');sg.setAttribute('transform',`translate(${sponge.x} ${sponge.y})`);
+    requestAnimationFrame(loop)}
+  requestAnimationFrame(loop)}
+
+/* ================= 音感鐘 =================
+   八個鈴,高音越來越小。點一下會響;按播放會彈小星星。 */
+function bells(){const floorY=land?H*.78:H*.74;room(floorY);if(land)plant(70,floorY-4,.9);
+  const n=8,notes=[60,62,64,65,67,69,71,72],gap=land?84:62,bw=(n-1)*gap,bx=(W-bw)/2,by=land?H*.66:H*.6;
+  S_('rect',{x:bx-50,y:by,width:bw+100,height:30,rx:10,fill:'#C99B6D'},svg);S_('ellipse',{cx:W/2,cy:by+40,rx:bw/2+60,ry:10,fill:'rgba(91,80,72,.12)'},svg);
+  const cols=['#DE8B74','#E2A365','#E2B451','#A9BE7B','#8DB38B','#6FA39C','#7E9CC4','#A08CC8'];
+  const B=notes.map((m,i)=>{const x=bx+i*gap,s=1-i*.055,g=S_('g',{class:'tap',transform:`translate(${x} ${by})`},svg);
+    S_('rect',{x:-24,y:-14,width:48,height:14,rx:4,fill:'#F5EFE6'},g);S_('rect',{x:-24,y:-4,width:48,height:4,fill:cols[i]},g);
+    const sw=S_('g',{},g);S_('rect',{x:-2,y:-14-60*s,width:4,height:60*s,fill:'#9C8F84'},sw);
+    S_('path',{d:`M${-24*s} ${-14-56*s}Q${-24*s} ${-14-100*s} 0 ${-14-104*s}Q${24*s} ${-14-100*s} ${24*s} ${-14-56*s}Z`,fill:'#D9B45F'},sw);
+    S_('ellipse',{cx:0,cy:-14-56*s,rx:24*s,ry:5*s,fill:'#C49E4C'},sw);S_('circle',{cx:0,cy:-14-106*s,r:5*s,fill:'#C49E4C'},sw);
+    S_('ellipse',{cx:-9*s,cy:-14-86*s,rx:4*s,ry:12*s,fill:'#F0D79A',opacity:.8},sw);
+    const b={i,m,x,g,sw,s,y:by-14-80*s};g.addEventListener('pointerdown',e=>{e.preventDefault();ring(b)});return b});
+  function ring(b){S.bell(b.m);const my=gen;tween(900,(k,raw)=>{b.sw.setAttribute('transform',`rotate(${Math.sin(raw*Math.PI*6)*10*(1-raw)} 0 -14)`)});
+    const c=S_('g',{transform:`translate(${b.x} ${b.y})`},svg);S_('ellipse',{cx:0,cy:0,rx:7,ry:5.5,fill:cols[b.i],transform:'rotate(-20)'},c);S_('rect',{x:5,y:-22,width:3,height:22,fill:cols[b.i]},c);
+    const dx=rand(-20,20);tween(1400,k=>{c.setAttribute('transform',`translate(${b.x+dx*k} ${b.y-60*k-20})`);c.setAttribute('opacity',1-k)},()=>c.remove())}
+  // 播放小星星
+  const SONG=[0,0,4,4,5,5,4,-1,3,3,2,2,1,1,0,-1,4,4,3,3,2,2,1,-1,4,4,3,3,2,2,1,-1,0,0,4,4,5,5,4,-1,3,3,2,2,1,1,0];
+  const pb=S_('g',{class:'tap',transform:`translate(${W/2} ${land?by+90:by+110})`},svg);const pbBg=S_('rect',{x:-70,y:-26,width:140,height:52,rx:26,fill:'#FFFFFF'},pb);
+  const pbIcon=S_('path',{d:'M-44 -12l20 12-20 12z',fill:'#6FA39C'},pb);const pbT=S_('text',{x:14,y:7,'text-anchor':'middle','font-size':20,fill:'#5B5048'},pb);pbT.textContent='小星星';
+  let playing=false;
+  pb.addEventListener('click',()=>{if(playing){playing=false;return}playing=true;pbIcon.setAttribute('d','M-46 -12h7v24h-7zM-33 -12h7v24h-7z');const my=gen;let k=0;
+    const next=()=>{if(my!==gen||!playing||k>=SONG.length){playing=false;pbIcon.setAttribute('d','M-44 -12l20 12-20 12z');return}const idx=SONG[k++];if(idx>=0)ring(B[idx]);setTimeout(next,idx<0?300:420)};next()});
+  S_('text',{x:W/2,y:land?110:150,'text-anchor':'middle','font-size':18,fill:'#8C7E72','font-weight':700},svg).textContent='點一點鈴鐺,聽聽高音和低音';}
+
+/* ================= 切換 ================= */
+function open(k){current=k;gen++;drag=null;flow(false);svg.innerHTML='';dims();homeBtn.hidden=k==='shelf';
+  ({shelf,tower,tablets,pour,bells})[k]()}
+homeBtn.onclick=()=>{S.knock(.9);open('shelf')};
+let lastLand=null;addEventListener('resize',()=>{const l=innerWidth>=innerHeight;if(l!==lastLand){lastLand=l;open(current)}});
+lastLand=innerWidth>=innerHeight;open('shelf');
+</script>
+</body>
+</html>
