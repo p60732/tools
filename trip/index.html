@@ -49,6 +49,12 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
 .chip{display:inline-flex;align-items:center;gap:4px;border:2px solid var(--ink);border-radius:999px;padding:1px 10px;font-size:13px;line-height:1.6;white-space:nowrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2.5px solid var(--ink);border-radius:999px;background:var(--white);padding:6px 14px;font-size:14px;text-decoration:none;color:var(--ink);box-shadow:0 3px 0 var(--ink);transition:transform .1s,box-shadow .1s;min-height:38px}
 .btn:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+.btn.done{background:var(--green)!important;animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+textarea.flash{animation:flash 1s ease}
+@keyframes flash{0%{background:var(--yellow)}100%{background:var(--white)}}
+.hint.flash{animation:flash2 1s ease}
+@keyframes flash2{0%{background:var(--yellow)}100%{background:transparent}}
 .btn.y{background:var(--yellow)}.btn.b{background:var(--water)}.btn.g{background:var(--green)}.btn.c{background:var(--coral)}
 .small{font-size:13px;color:var(--ink2)}
 
@@ -441,7 +447,7 @@ h2 .dot{width:14px;height:14px;border-radius:50%;border:var(--line);display:inli
     <div class="tools" id="toolbox"></div>
   </section>
 
-  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.3 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
+  <p class="small" style="text-align:center;margin-top:40px">旅遊小筆記 v0.4.4 · <span id="mode-note"></span> · <a href="../" style="color:inherit">回小工具箱</a></p>
 </main>
 
 <div class="mask" id="gate" hidden>
@@ -697,7 +703,7 @@ function fillFlights(list){
   (Array.isArray(list) ? list : []).forEach(f => {
     const hit = DB.live("flight").find(d => flightNo(d.data.no) === flightNo(f.no) && (!f.date || d.data.date === f.date));
     if (!hit) return;
-    const fill = {}; ["fromName","depTerm","toName","arrTerm","counter"].forEach(k => { if (!hit.data[k] && f[k]) fill[k] = f[k]; });
+    const fill = {}; ["fromName","depTerm","toName","arrTerm","counter"].forEach(k => { if ((!hit.data[k] || hit.data[k] === "待確認") && f[k] && f[k] !== "待確認") fill[k] = f[k]; });
     if (Object.keys(fill).length) DB.put("flight", hit.key, Object.assign({}, hit.data, fill));
   });
 }
@@ -1041,6 +1047,24 @@ function gdir(from, to, mode){
   return u.toString();
 }
 function gnear(p, what){ return hasXY(p) ? "https://www.google.com/maps/search/" + encodeURIComponent(what) + "/@" + p.lat + "," + p.lng + ",17z" : "https://www.google.com/maps/search/" + encodeURIComponent(what + " " + pt(p)); }
+/* 按鈕回饋：按下去字變「✓ 已…」、變綠色一下再變回來（iPhone 也看得到） */
+function flashBtn(btn, msg){
+  if (!btn || !btn.isConnected) return;
+  if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+  btn.textContent = "✓ " + msg; btn.classList.add("done");
+  try { navigator.vibrate && navigator.vibrate(15); } catch(e){}
+  clearTimeout(btn._ft); btn._ft = setTimeout(() => { btn.textContent = btn.dataset.label; btn.classList.remove("done"); }, 1600);
+}
+/* 複製：先用剪貼簿 API，不行就用舊方法；回傳成功與否 */
+function copyText(text){
+  const legacy = () => { const ta = h("textarea",{style:"position:fixed;top:0;left:0;opacity:0",readonly:true}); ta.value = text; document.body.append(ta); ta.select(); ta.setSelectionRange(0, text.length); let ok = false; try { ok = document.execCommand("copy"); } catch(e){} ta.remove(); return ok; };
+  try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => legacy()); } catch(e){}
+  return Promise.resolve(legacy());
+}
+function copyBtn(btn, text, what){
+  return copyText(text).then(ok => { if (ok){ flashBtn(btn, "已複製"); toast("已複製" + (what || "") + "，可以去貼上了"); } else toast("沒辦法自動複製，請長按文字手動複製"); return ok; });
+}
+document.addEventListener("touchstart", () => {}, {passive: true});   // 讓 iPhone 的 :active 按下效果生效
 let toastT; function toast(msg){ let t = $("#toast"); if (!t){ t = h("div",{id:"toast",class:"toast",role:"status"}); document.body.append(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>t.hidden = true, 2600); }
 
 /* ===== 首頁插圖：零件組合（地標 × 交通 × 季節） ===== */
@@ -1646,7 +1670,7 @@ function driver(p){
     p.addr ? h("div",{class:"addr",lang:TRIP.lang}, p.addr) : null,
     h("div",{class:"ask",lang:TRIP.lang}, TRIP.askText || ""),
     h("div",{class:"acts",style:"margin-top:16px"},
-      p.addr ? h("button",{class:"btn",type:"button",onclick:()=>{try{navigator.clipboard.writeText(p.addr).catch(()=>{});}catch(e){} }},"複製地址") : null,
+      p.addr ? h("button",{class:"btn",type:"button",onclick:e=>copyBtn(e.currentTarget, p.addr, "地址")},"複製地址") : null,
       h("button",{class:"btn y","data-close":"",type:"button"},"關閉")))));
 }
 
@@ -2585,7 +2609,7 @@ function renderSims(){
   const box = $("#sims"); if (!box) return; box.textContent = "";
   const md = d => d ? d.slice(5).replace("-","/") : "";
   simList().forEach((s, i) => {
-    const copy = () => { try { navigator.clipboard.writeText(s.number).then(() => toast("已複製號碼"), () => {}); } catch(e){} };
+    const copy = e => copyBtn(e.currentTarget, s.number, "號碼");
     box.append(h("article",{class:"box transfer"},
       h("div",{class:"tf-top"},
         h("span",{class:"chip",style:"background:" + (SIM_COLOR[s.kind] || "var(--white)")}, simKind(s.kind)),
@@ -2806,7 +2830,7 @@ function promptBody(){
 8. 需要事先預約、訂位或買票的景點和餐廳標 "book": "todo"；原本行程寫明已經訂好的標 "done"，預約編號放 "bookRef"。
 9. 所有餐廳和 foods 的 hours 一律寫成「HH:MM–HH:MM」，公休日放 closed（數字）；行程排的時間要在營業時間內。
 10. foods 是「口袋名單」：計畫裡提到、但沒有排進每天行程的餐廳、小吃、點心、甜點、咖啡、飲料店，以及逛街購物點（商場、市場、藥妝、免稅店、伴手禮店、商店街），全部放進來（不要漏），用 type 分 meal／snack／shop；每天行程裡已經排的店不要重複放。每家都要有經緯度、當地語言店名和地址，day 填會經過附近的那天。
-11. 每個航班都要寫 depTerm（出境航廈）和 arrTerm（入境航廈），請「上網查該航空公司在這兩個機場用哪個航廈」，例如桃園「第2航廈」、金海「國際線航廈」；查得到報到櫃台就寫在 counter。`;
+11. 每個航班都要寫 depTerm（出境航廈）和 arrTerm（入境航廈）：請「上網查該航空公司『目前』在這兩個機場用哪個航廈」（航空公司會搬航廈，以機場或航空公司官網最新公告為準，不要憑印象），例如桃園「第2航廈」、金海「國際線航廈」；查不到或資料互相矛盾就寫「待確認」，不要猜。查得到報到櫃台就寫在 counter。`;
 }
 /* AI 的回答：可能有好幾個 ```json 區塊（回答太長、AI 分兩次「繼續」），全部接起來再解析 */
 function extractJSON(text){
@@ -2962,8 +2986,13 @@ function renderTools(){
            fld("who","同行"),
            h("div",{class:"field"}, h("label",{for:"tp-paste-src"},"行程內容（不在同一個對話時才需要貼）"), (inputs.paste = h("textarea",{id:"tp-paste-src",placeholder:"例：把行程表、筆記或文件的文字貼在這裡（長度不限）",maxlength:"300000",oninput:e=>{ $("#tp-paste-n").textContent = e.target.value.length ? "已貼上 " + e.target.value.length.toLocaleString() + " 字" : ""; }})), h("div",{id:"tp-paste-n",class:"small",style:"text-align:right"}))],
       h("div",{class:"acts",style:"margin-bottom:10px"},
-        h("button",{class:"btn y",type:"button",onclick:gen},"產生提示詞"),
-        h("button",{class:"btn",type:"button",onclick:()=>{ if(!out.value) gen(); try{ navigator.clipboard.writeText(out.value).then(()=>toast("已複製"),()=>{out.select();toast("請手動長按複製");}); }catch(e){ out.select(); } }},"複製")),
+        h("button",{class:"btn y",type:"button",onclick:e=>{
+          gen(); flashBtn(e.currentTarget, "已產生");
+          out.classList.remove("flash"); void out.offsetWidth; out.classList.add("flash");
+          out.scrollIntoView({block:"nearest", behavior:"smooth"});
+          toast("提示詞已產生（" + out.value.length.toLocaleString() + " 字），按「複製提示詞」");
+        }},"產生提示詞"),
+        h("button",{class:"btn",type:"button",onclick:e=>{ if(!out.value) gen(); const b = e.currentTarget; copyBtn(b, out.value, "提示詞").then(ok => { if (!ok){ out.focus(); out.select(); } }); }},"複製提示詞")),
       h("div",{class:"field"}, out)),
     h("div",{class:"box"},
       h("h3",null, h("span",{class:"step"},"2"), "貼回 AI 的回答"),
@@ -2979,6 +3008,7 @@ function renderTools(){
             applyBtn.hidden = false; replaceBtn.hidden = !canReplace; targetRow.hidden = !canReplace;
             if (canReplace) res.append(h("div",{class:"small",style:"margin-top:6px"}, "「更新這一趟」：只換每日行程和清單，你填的航班、住宿、接送、行李、網路、票券都保留，更新後也能復原。「另存成新旅程」：多一趟新的。"));
           } catch(e){ res.className = "hint"; res.textContent = "讀不懂：" + e.message; }
+          res.classList.add("flash"); res.scrollIntoView({block:"nearest", behavior:"smooth"});
         }},"檢查"),
         h("button",{class:"btn",type:"button",onclick:()=>{paste.value=""; res.className="hint"; res.textContent="已清空"; applyBtn.hidden=true; replaceBtn.hidden=true; targetRow.hidden=true;}},"清空"),
         replaceBtn, applyBtn),

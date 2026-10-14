@@ -224,6 +224,11 @@ let pass = 0, fail = 0; const t = (n, c) => { if (c) pass++; else { fail++; cons
   await p.click('.seg button:has-text("我已經有行程")');
   const long = '第1天 景點描述'.repeat(4000);
   await p.fill('#tp-paste-src', long);
+  await p.click('button:has-text("產生提示詞")');
+  t('產生提示詞有回饋', (await p.locator('button.done').textContent()).includes('已產生') && (await p.textContent('#toast')).includes('提示詞已產生'));
+  await p.click('button:has-text("複製提示詞")'); await p.waitForTimeout(200);
+  t('複製有回饋', (await p.textContent('#toast')).includes('複製'));
+  t('提示詞要 AI 查不到寫待確認', (await p.inputValue('#tp-out')).includes('待確認'));
   t('長行程內容整份保留', (await p.inputValue('#tp-paste-src')).length === long.length && (await p.inputValue('#tp-out')).length > 0);
   const full = JSON.stringify({ title: '分段測試', days: [{ date: '2027-04-01', title: 'A', stops: [{ t: '09:00', name: '甲地', lat: 35, lng: 139 }] }] });
   const cut = Math.floor(full.length / 2);
