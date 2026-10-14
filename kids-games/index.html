@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#E9C46A">
+<meta name="theme-color" content="#F6F0E4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="幼兒遊戲">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>body{margin:0}[hidden]{display:none!important}</style>
 <title>幼兒遊戲大全</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +29,7 @@ body{background:radial-gradient(circle,var(--dot) 18%,transparent 20%) 0 0/34px 
 .sign svg{width:clamp(40px,10vw,60px);height:auto;flex:none}
 h1{margin:0;font-size:clamp(30px,8vw,52px);font-weight:900;letter-spacing:.06em;line-height:1.1;text-wrap:balance}
 h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blue)}h1 span:nth-child(4n+3){color:var(--green)}h1 span:nth-child(4n+4){color:var(--orange)}
+.offline{margin:-12px 0 0;align-self:center;font-weight:700;font-size:15px;color:#5E7A64;background:#E3EEDF;border:2px solid #A9C4A8;border-radius:999px;padding:4px 14px}
 .sub{margin:0;text-align:center;font-weight:700;font-size:clamp(16px,4vw,20px)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:22px}
 .card{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;background:var(--white);border:5px solid var(--ink);border-radius:26px;box-shadow:7px 7px 0 var(--ink);overflow:hidden;transition:transform .12s,box-shadow .12s}
@@ -62,6 +69,7 @@ body.playing{overflow:hidden}
     <h1 aria-label="幼兒遊戲大全"><span>幼</span><span>兒</span><span>遊</span><span>戲</span><span>大</span><span>全</span></h1>
   </div>
   <p class="sub">點一張圖開始玩,玩完按「關閉」回到這裡</p>
+  <p class="offline" id="offline" hidden></p>
 
   <div class="grid">
     <button class="card c1" type="button" data-src="games/toy-tidy.html" data-name="玩具回家囉">
@@ -186,6 +194,12 @@ document.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>ope
 closeBtn.addEventListener('click',()=>closeGame(false));
 addEventListener('keydown',e=>{if(e.key==='Escape')closeGame(false)});
 addEventListener('popstate',()=>closeGame(true));
+// 離線:註冊快取,全部遊戲都存好後顯示提示
+const offEl=document.getElementById('offline');
+const GAMES=[...document.querySelectorAll('.card')].map(c=>c.dataset.src);
+async function checkOffline(){try{if(!('caches' in window))return;const keys=await caches.keys();const k=keys.find(x=>x.startsWith('kids-v'));if(!k)return;const c=await caches.open(k);
+  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩';offEl.hidden=false}}catch(e){}}
+if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(()=>setTimeout(checkOffline,500)).catch(()=>{})});checkOffline()}
 </script>
 
 </body>
