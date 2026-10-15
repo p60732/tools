@@ -130,37 +130,46 @@ function cube(parent,x,y,s,col=['#E6A2A6','#F3C9CB','#D4898F']){const d=s*.22,g=
   S_('path',{d:`M0 ${-s}L${d} ${-s-d}H${s+d}L${s} ${-s}Z`,fill:col[1]},g);S_('path',{d:`M${s} ${-s}L${s+d} ${-s-d}V${-d}L${s} 0Z`,fill:col[2]},g);S_('rect',{x:0,y:-s,width:s,height:s,fill:col[0]},g);return g}
 
 /* ================= 粉紅塔 =================
-   十個方塊從大到小疊。比上面那塊大的方塊放不上去,會自己滑下來。 */
+   十個方塊整齊分散擺在地墊上(每塊有自己的位置),由大到小疊。
+   比上面那塊大的方塊放不上去,會自己滑回原位。小方塊的感應範圍比較大,手指好拿。 */
 function tower(){const floorY=land?H-40:H-24;room(floorY);
-  const base=land?78:74,tx=land?W*.73:W/2,by=land?H-70:H*.62;
-  // 地墊
-  if(land)S_('rect',{x:24,y:150,width:W*.53,height:H-180,rx:24,fill:'#EADBC8'},svg);else S_('rect',{x:24,y:by+30,width:W-48,height:H-by-54,rx:24,fill:'#EADBC8'},svg);
+  const base=land?78:66,tx=land?W*.75:W/2,by=land?H-70:H*.6;
+  const rug=land?{x:28,y:130,w:W*.56,h:H-160}:{x:24,y:by+34,w:W-48,h:H-by-60};
+  S_('rect',{x:rug.x,y:rug.y,width:rug.w,height:rug.h,rx:24,fill:'#EADBC8'},svg);
   S_('ellipse',{cx:tx,cy:by+6,rx:base*.8,ry:12,fill:'rgba(91,80,72,.14)'},svg);
   S_('rect',{x:tx-base*.75,y:by,width:base*1.5+base*.22,height:10,rx:5,fill:'#C99B6D'},svg);
-  const layer=S_('g',{},svg);const rug=land?{x:40,y:200,w:W*.53-36,h:H-232}:{x:40,y:by+70,w:W-80,h:H-by-108};
-  const cubes=[];for(let i=10;i>=1;i--){const s=base*i/10;cubes.push({i,s,x:0,y:0,g:null,on:false})}
+  const layer=S_('g',{},svg);
+  const cubes=[];for(let i=10;i>=1;i--)cubes.push({i,s:base*i/10,x:0,y:0,hx:0,hy:0,g:null,on:false});
+  // 地墊上的固定位置:橫放 3 排(4/3/3),直放 2 排(5/5)
+  const rowsDef=land?[4,3,3]:[5,5],slots=[];
+  rowsDef.forEach((n,r)=>{const rh=rug.h/rowsDef.length;for(let k=0;k<n;k++){const cw=rug.w/n;slots.push({cx:rug.x+cw*(k+.5),by:rug.y+rh*(r+1)-14})}});
   const stack=[];
   const place=c=>c.g.setAttribute('transform',`translate(${c.x} ${c.y})`);
-  function scatter(){const boxes=[];cubes.forEach(c=>{let ok=false;for(let t=0;t<300&&!ok;t++){const x=rand(rug.x,rug.x+rug.w-c.s*1.25),y=rand(rug.y+c.s*1.25,rug.y+rug.h);
-      ok=boxes.every(b=>x+c.s*1.25+6<b.x||b.x+b.w+6<x||y+6<b.y-b.h||b.y+6<y-c.s*1.25);if(ok||t===299){c.x=x;c.y=y;boxes.push({x,y,w:c.s*1.25,h:c.s*1.25})}}});
-    stack.length=0;cubes.forEach(c=>c.on=false);redraw()}
-  function redraw(){layer.innerHTML='';const loose=cubes.filter(c=>!c.on).sort((a,b)=>a.y-b.y);[...loose,...stack].forEach(c=>{c.g=cube(layer,c.x,c.y,c.s);S_('ellipse',{cx:c.s/2,cy:2,rx:c.s*.55,ry:4,fill:'rgba(91,80,72,.12)'},c.g).parentNode.insertBefore(c.g.lastChild,c.g.firstChild);bind(c)})}
+  function scatter(){const order=shuffle(slots.slice());cubes.forEach((c,k)=>{const sl=order[k];c.hx=sl.cx-(c.s*1.22)/2;c.hy=sl.by;c.x=c.hx;c.y=c.hy;c.on=false});stack.length=0;redraw()}
+  function redraw(){layer.innerHTML='';const loose=cubes.filter(c=>!c.on).sort((a,b)=>a.y-b.y);[...loose,...stack].forEach(c=>{c.g=cube(layer,c.x,c.y,c.s);
+      // 陰影放最下面;再加一塊看不見的大感應區,小方塊也好拿
+      const sh=S_('ellipse',{cx:c.s/2,cy:2,rx:c.s*.55,ry:4,fill:'rgba(91,80,72,.12)'},c.g);c.g.insertBefore(sh,c.g.firstChild);
+      const pad=Math.max(0,(64-c.s)/2);const hit=S_('rect',{x:-pad,y:-c.s-c.s*.22-pad,width:c.s*1.22+pad*2,height:c.s*1.22+pad*2,fill:'#000',opacity:0},c.g);c.g.insertBefore(hit,c.g.firstChild);
+      bind(c)})}
   const topY=()=>stack.reduce((y,c)=>y-c.s,by);
+  const glide=(c,x,y,ms,done)=>{const fx=c.x,fy=c.y;tween(ms,k=>{c.x=fx+(x-fx)*k;c.y=fy+(y-fy)*k;place(c)},done)};
   function bind(c){let off;draggable(c.g,{
     can:()=>!c.on||stack[stack.length-1]===c,
-    start:p=>{off={x:p.x-c.x,y:p.y-c.y};if(c.on){stack.pop();c.on=false}layer.appendChild(c.g);S.knock(1+(10-c.i)*.05)},
+    start:p=>{off={x:p.x-c.x,y:p.y-c.y};if(c.on){stack.pop();c.on=false}layer.appendChild(c.g);c.g.setAttribute('opacity',.95);S.knock(1+(10-c.i)*.05)},
     move:p=>{c.x=p.x-off.x;c.y=p.y-off.y;place(c)},
-    end:()=>{const cx=c.x+c.s/2;
-      if(Math.abs(cx-tx)<base*.85&&c.y<by+50){const top=stack[stack.length-1];
-        if(!top||top.s>c.s){c.on=true;stack.push(c);const fx=c.x,fy=c.y,gx=tx-c.s/2,gy=topY()+c.s;tween(220,k=>{c.x=fx+(gx-fx)*k;c.y=fy+(gy-fy)*k;place(c)},()=>{S.thunk(1+(10-c.i)*.04);if(stack.length===10)done()});return}
-        // 太大了:先放上去,再慢慢滑下來
-        const fx=c.x,fy=c.y,gx=tx-c.s/2,gy=topY()-2,dir=Math.random()<.5?-1:1,lx=Math.max(rug.x,Math.min(rug.x+rug.w-c.s,land?rand(rug.x+20,rug.x+rug.w-c.s):tx+dir*rand(60,160))),ly=land?rand(rug.y+c.s,rug.y+rug.h):rand(rug.y+c.s,rug.y+rug.h);
-        tween(200,k=>{c.x=fx+(gx-fx)*k;c.y=fy+(gy-fy)*k;place(c)},()=>{S.slide();let r=0;tween(700,k=>{c.x=gx+(lx-gx)*k;c.y=gy+(ly-gy)*k-Math.sin(k*Math.PI)*40;r=dir*20*Math.sin(k*Math.PI);c.g.setAttribute('transform',`translate(${c.x} ${c.y}) rotate(${r} ${c.s/2} ${-c.s/2})`)},()=>{place(c);S.knock(.8);redraw()})});return}
-      c.y=Math.max(c.y,rug.y+c.s);place(c);S.knock(.9);redraw()}})}
+    end:()=>{c.g.setAttribute('opacity',1);const cx=c.x+c.s/2;
+      // 拖到塔的附近(左右寬一點)就算要疊
+      if(Math.abs(cx-tx)<base*1.1&&(land?c.x>rug.x+rug.w-20:c.y<rug.y+20)){const top=stack[stack.length-1];
+        if(!top||top.s>c.s){c.on=true;stack.push(c);glide(c,tx-c.s/2,topY()+c.s,220,()=>{S.thunk(1+(10-c.i)*.04);if(stack.length===10)done()});return}
+        // 太大了:放上去晃一下,再滑回自己的位置
+        const gx=tx-c.s/2,gy=topY()-2;glide(c,gx,gy,200,()=>{S.slide();const dir=c.hx<gx?-1:1;let fx=c.x,fy=c.y;
+          tween(750,k=>{c.x=fx+(c.hx-fx)*k;c.y=fy+(c.hy-fy)*k-Math.sin(k*Math.PI)*40;c.g.setAttribute('transform',`translate(${c.x} ${c.y}) rotate(${dir*16*Math.sin(k*Math.PI)} ${c.s/2} ${-c.s/2})`)},()=>{place(c);S.knock(.8);redraw()})});return}
+      // 沒放到塔上:回到地墊上自己的位置
+      glide(c,c.hx,c.hy,260,()=>{S.knock(.9);redraw()})}})}
   function done(){S.chime();const t=topY();sparkle(tx,t-20,10,'#FFFFFF');sparkle(tx,t+60,8,'#F3C9CB')}
-  // 收拾按鈕
   const rb=S_('g',{class:'tap',transform:`translate(${W-40} ${land?110:116})`},svg);S_('circle',{r:28,fill:'#FFFFFF'},rb);S_('path',{d:'M-10 -4a11 11 0 1 1 3 11',fill:'none',stroke:'#5B5048','stroke-width':4,'stroke-linecap':'round'},rb);S_('path',{d:'M-15 -9l5 6 6-5',fill:'none',stroke:'#5B5048','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round'},rb);
   rb.addEventListener('click',()=>{S.slide();scatter()});
+  S_('text',{x:land?rug.x+rug.w/2:W/2,y:land?100:by+22,'text-anchor':'middle','font-size':17,fill:'#8C7E72','font-weight':700},svg).textContent=land?'由大到小,疊到右邊的木板上':'';
   scatter()}
 
 /* ================= 色板 =================
@@ -199,25 +208,27 @@ function tablets(){const floorY=H-30;room(floorY);
     if(up||dn){setTimeout(()=>{S.chime();glow.setAttribute('opacity',1);slots.forEach((sl,i)=>setTimeout(()=>sparkle(sl.x+tw/2,sl.y+th/2,5,'#FFFFFF'),i*90))},200)}}}
 
 /* ================= 倒水 =================
-   拿起水壺或杯子,移到另一個容器上方就會倒水。水龍頭下面可以裝水;灑出來的水用海綿擦。 */
+   拿起水壺靠近杯子,水壺會自己對準杯子、慢慢倒;放開手就停。
+   杯子上有一條「倒到這裡」的線,水到線上會叮一聲;倒太多會滿出來,用海綿擦。 */
 function pour(){const tableY=land?H*.74:H*.72;room(tableY+60);
-  // 桌子
   S_('rect',{x:-3000,y:tableY,width:6000+W,height:24,fill:'#C99B6D'},svg);S_('rect',{x:-3000,y:tableY+24,width:6000+W,height:8,fill:'#B3865A'},svg);
   if(land)window_(W-230,60,160,120);
+  const tip=S_('text',{x:W/2,y:land?70:110,'text-anchor':'middle','font-size':18,fill:'#8C7E72','font-weight':700},svg);
+  const say=t=>tip.textContent=t;say('拿起水壺,靠近杯子就會倒水');
   // 水龍頭和洗手台
-  const tapX=land?96:86,spoutY=land?tableY-210:tableY-250;
+  const tapX=land?96:80,spoutY=land?tableY-210:tableY-250;
   S_('rect',{x:tapX-60,y:spoutY-60,width:22,height:70,rx:6,fill:'#B9C2C8'},svg);S_('path',{d:`M${tapX-50} ${spoutY-50}h40q10 0 10 10v14h-14v-8h-36z`,fill:'#B9C2C8'},svg);
   S_('rect',{x:tapX-26,y:spoutY-74,width:30,height:10,rx:5,fill:'#DE8B74'},svg);
-  const basin={x:tapX,w:120,top:tableY-30};S_('path',{d:`M${tapX-64} ${tableY-34}h128l-12 34h-104z`,fill:'#E7F1F5'},svg);S_('rect',{x:tapX-66,y:tableY-38,width:132,height:8,rx:4,fill:'#D4E4EA'},svg);
-  const streamEl=S_('path',{d:'',stroke:'#9CC8DD','stroke-width':7,'stroke-linecap':'round',fill:'none',opacity:.9},svg);
+  const basin={basin:true,x:tapX,w:128,h:30,y:tableY};S_('path',{d:`M${tapX-64} ${tableY-34}h128l-12 34h-104z`,fill:'#E7F1F5'},svg);S_('rect',{x:tapX-66,y:tableY-38,width:132,height:8,rx:4,fill:'#D4E4EA'},svg);
+  const streamEl=S_('path',{d:'',stroke:'#9CC8DD','stroke-width':8,'stroke-linecap':'round',fill:'none',opacity:.9},svg);
+  const ring=S_('ellipse',{cx:0,cy:0,rx:0,ry:0,fill:'none',stroke:'#E2B451','stroke-width':4,'stroke-dasharray':'8 6',opacity:0},svg);
   const puddleLayer=S_('g',{},svg),layer=S_('g',{},svg);
-  // 容器:水壺 + 三個杯子
-  const xs=land?[270,420,520,620]:[215,300,370,440];
-  const C=[{kind:'jug',w:84,h:112,cap:3,water:2.2},{kind:'cup',w:56,h:74,cap:1,water:0},{kind:'cup',w:56,h:74,cap:1,water:0},{kind:'cup',w:56,h:74,cap:1,water:0}];
+  const xs=land?[270,430,540,650]:[215,300,375,450];
+  const LINE=.8; // 「倒到這裡」的高度
+  const C=[{kind:'jug',w:84,h:112,cap:3,water:3},{kind:'cup',w:58,h:78,cap:1,water:0},{kind:'cup',w:58,h:78,cap:1,water:0},{kind:'cup',w:58,h:78,cap:1,water:0}];
   let clipN=0;
-  C.forEach((c,i)=>{c.x=xs[i];c.y=tableY;c.ang=0;c.held=false;build(c)});
   function shapePath(c){const w=c.w,h=c.h;return c.kind==='jug'?`M${-w/2} 0V${-h+10}Q${-w/2} ${-h} ${-w/2+10} ${-h}H${w/2-6}L${w/2+10} ${-h-10}V${-h+8}Q${w/2} ${-h+16} ${w/2} ${-h+24}V0Z`:`M${-w/2} ${-h}H${w/2}L${w/2-6} 0H${-w/2+6}Z`}
-  function build(c){const g=S_('g',{},layer);c.g=g;const id='clip'+(clipN++)+gen;
+  function build(c){const g=S_('g',{},layer);c.g=g;const id='clip'+(clipN++)+'_'+gen;
     const cp=S_('clipPath',{id},g);S_('path',{d:shapePath(c)},cp);
     c.shadow=S_('ellipse',{cx:0,cy:2,rx:c.w*.55,ry:5,fill:'rgba(91,80,72,.14)'},g);
     c.body=S_('g',{},g);
@@ -225,42 +236,58 @@ function pour(){const tableY=land?H*.74:H*.72;room(tableY+60);
     const wg=S_('g',{'clip-path':`url(#${id})`},c.body);c.waterEl=S_('rect',{x:-200,y:0,width:400,height:400,fill:'#9CC8DD'},wg);
     S_('path',{d:shapePath(c),fill:'none',stroke:'#D2E2E8','stroke-width':3},c.body);
     if(c.kind==='jug')S_('path',{d:`M${-c.w/2} ${-c.h+24}q-26 6 -22 34q2 18 22 22`,fill:'none',stroke:'#D2E2E8','stroke-width':8,'stroke-linecap':'round'},c.body);
+    else{// 「倒到這裡」的虛線
+      S_('line',{x1:-c.w/2+4,x2:c.w/2-4,y1:-c.h*LINE,y2:-c.h*LINE,stroke:'#E2B451','stroke-width':3,'stroke-dasharray':'6 5'},c.body);c.done=false}
     S_('rect',{x:-c.w/2+8,y:-c.h+14,width:6,height:c.h*.5,rx:3,fill:'#FFFFFF',opacity:.7},c.body);
-    let off;draggable(g,{start:p=>{off={x:p.x-c.x,y:p.y-c.y};c.held=true;layer.appendChild(g);S.knock(1.5)},
-      move:p=>{c.x=p.x-off.x;c.y=Math.min(tableY,p.y-off.y)},
-      end:()=>{c.held=false;const fy=c.y,fx=c.x;const nx=Math.max(40,Math.min(W-40,fx));tween(260,k=>{c.y=fy+(tableY-fy)*k;c.x=fx+(nx-fx)*k},()=>S.thunk(1.6))}})}
+    let off;draggable(g,{start:p=>{off={x:p.x-c.x,y:p.y-c.y};c.held=true;c.px=c.x;c.py=c.y;layer.appendChild(g);S.knock(1.5)},
+      move:p=>{c.px=p.x-off.x;c.py=Math.min(tableY,p.y-off.y)},
+      end:()=>{c.held=false;c.target=null;const fy=c.y,fx=c.x;let nx=Math.max(40,Math.min(W-40,fx));
+        // 放下時不要疊在別的杯子上
+        for(const d of C)if(d!==c&&Math.abs(d.x-nx)<(d.w+c.w)/2+4)nx=d.x+(nx>=d.x?1:-1)*((d.w+c.w)/2+6);
+        nx=Math.max(40,Math.min(W-40,nx));tween(280,k=>{c.y=fy+(tableY-fy)*k;c.x=fx+(nx-fx)*k},()=>S.thunk(1.6))}})}
+  C.forEach((c,i)=>{c.x=xs[i];c.y=tableY;c.ang=0;c.held=false;build(c)});
   function render(c){const fill=Math.max(0,Math.min(1,c.water/c.cap)),lvl=-c.h*fill;
     c.g.setAttribute('transform',`translate(${c.x} ${c.y})`);c.body.setAttribute('transform',`rotate(${c.ang} 0 ${-c.h/2})`);
     c.waterEl.setAttribute('y',lvl);c.waterEl.setAttribute('transform',`rotate(${-c.ang} 0 ${lvl})`);c.waterEl.setAttribute('opacity',fill>0.01?1:0);
     c.shadow.setAttribute('opacity',c.y<tableY-4?.4:1)}
-  // 地上的水和海綿
   const puddles=[];
   function spill(x,amt){let p=puddles.find(q=>Math.abs(q.x-x)<40);if(!p){p={x,v:0,el:S_('ellipse',{cx:x,cy:tableY+4,rx:0,ry:0,fill:'#9CC8DD',opacity:.7},puddleLayer)};puddles.push(p)}p.v=Math.min(3,p.v+amt)}
-  const sponge={x:land?W-90:W-52,y:tableY,wet:0};const sg=S_('g',{},layer);
-  S_('ellipse',{cx:0,cy:2,rx:34,ry:5,fill:'rgba(91,80,72,.14)'},sg);const sb=S_('rect',{x:-32,y:-30,width:64,height:30,rx:10,fill:'#E2B451'},sg);S_('rect',{x:-32,y:-30,width:64,height:9,rx:4,fill:'#8DB38B'},sg);
-  [[-16,-12],[0,-16],[14,-10]].forEach(([x,y])=>S_('circle',{cx:x,cy:y,r:3,fill:'#C99A3E'},sg));
-  let soff;draggable(sg,{start:p=>{soff={x:p.x-sponge.x,y:p.y-sponge.y};layer.appendChild(sg);S.squish()},move:p=>{sponge.x=p.x-soff.x;sponge.y=Math.min(tableY,p.y-soff.y)},
-    end:()=>{const fy=sponge.y;tween(220,k=>{sponge.y=fy+(tableY-fy)*k})}});
-  // 每一格畫面:倒水、裝水、擦水
+  const sponge={x:land?W-80:W-52,y:tableY,wet:0};const sg=S_('g',{},layer);
+  S_('ellipse',{cx:0,cy:2,rx:34,ry:5,fill:'rgba(91,80,72,.14)'},sg);const sb=S_('rect',{x:-30,y:-30,width:60,height:30,rx:10,fill:'#E2B451'},sg);S_('rect',{x:-30,y:-30,width:60,height:9,rx:4,fill:'#8DB38B'},sg);
+  [[-15,-12],[0,-16],[13,-10]].forEach(([x,y])=>S_('circle',{cx:x,cy:y,r:3,fill:'#C99A3E'},sg));
+  let soff,sHeld=false;draggable(sg,{start:p=>{soff={x:p.x-sponge.x,y:p.y-sponge.y};sHeld=true;layer.appendChild(sg);S.squish()},move:p=>{sponge.x=p.x-soff.x;sponge.y=Math.min(tableY,p.y-soff.y)},
+    end:()=>{sHeld=false;const fy=sponge.y;tween(220,k=>{sponge.y=fy+(tableY-fy)*k})}});
+  // 找手上容器附近可以倒的目標:左右寬鬆、只要拿起來高過桌面就算
+  function findTarget(c){let best=null,bd=1e9;for(const d of [...C.filter(q=>q!==c),basin]){const dx=Math.abs(c.px-d.x);if(dx<(d.w/2+c.w/2+40)&&c.py<tableY-30&&dx<bd){bd=dx;best=d}}return best}
   const my=gen;let last=performance.now(),flowing=false,lastSq=0;
-  function loop(t){if(my!==gen){flow(false);return}const dt=Math.min(.05,(t-last)/1000);last=t;let stream=null;
-    C.forEach(c=>{let target=null;
-      if(c.held&&c.water>.01){// 找下面的容器
-        for(const d of [...C.filter(q=>q!==c),{basin:true,x:basin.x,w:basin.w,y:tableY-4,h:30}]){if(c.y<d.y-d.h-4&&Math.abs(c.x-d.x)<(d.w/2+c.w/2+10)&&c.y>d.y-d.h-170){target=d;break}}}
-      const want=target?(target.x>=c.x?70:-70):0;c.ang+=(want-c.ang)*Math.min(1,dt*8);
-      if(target&&Math.abs(c.ang)>45){const amt=Math.min(c.water,dt*1.1);c.water-=amt;
-        if(target.basin){}else{target.water+=amt;if(target.water>target.cap){spill(target.x,target.water-target.cap);target.water=target.cap}}
-        const sgn=Math.sign(c.ang),lx=sgn*c.w/2,ly=-c.h,a=c.ang*Math.PI/180,cy0=-c.h/2;const px=c.x+lx*Math.cos(a)-(ly-cy0)*Math.sin(a),py=c.y+cy0+lx*Math.sin(a)+(ly-cy0)*Math.cos(a);
-        const ty=target.basin?tableY-20:target.y-target.h*Math.min(1,target.water/target.cap);stream=`M${px} ${py}Q${px+sgn*8} ${py+10} ${target.x+(px-target.x)*.3} ${ty}`}
-      // 水龍頭
-      if(c.held&&Math.abs(c.x-tapX)<c.w/2+4&&c.y-c.h>spoutY+10&&c.water<c.cap){c.water=Math.min(c.cap,c.water+dt*1.2);stream=`M${tapX} ${spoutY}L${tapX} ${c.y-c.h*Math.min(1,c.water/c.cap)}`}
+  function loop(t){if(my!==gen){flow(false);return}const dt=Math.min(.05,(t-last)/1000);last=t;let stream=null,showRing=null;
+    C.forEach(c=>{
+      if(c.held){
+        // 水龍頭:拿到水龍頭下面就裝水
+        const underTap=Math.abs(c.px-tapX)<c.w/2+30&&c.py<tableY-20&&c.water<c.cap;
+        const target=underTap?null:(c.water>.01?findTarget(c):null);c.target=target;
+        if(target){// 自動對準:壺口在杯子正上方
+          const sgn=target.x>=c.px?1:-1;const gx=target.x-sgn*(c.w*.5),gy=(target.basin?tableY-34:target.y-target.h)-14;
+          c.x+=(gx-c.x)*Math.min(1,dt*10);c.y+=(gy-c.y)*Math.min(1,dt*10);showRing=target}
+        else if(underTap){const gx=tapX,gy=Math.max(spoutY+c.h+30,Math.min(tableY-6,c.py));c.x+=(gx-c.x)*Math.min(1,dt*10);c.y+=(gy-c.y)*Math.min(1,dt*10)}
+        else{c.x+=(c.px-c.x)*Math.min(1,dt*16);c.y+=(c.py-c.y)*Math.min(1,dt*16)}
+        const want=target?(target.x>=c.x?62:-62):0;c.ang+=(want-c.ang)*Math.min(1,dt*6);
+        if(target&&Math.abs(c.ang)>40&&c.water>0){const amt=Math.min(c.water,dt*.42);c.water-=amt;
+          if(!target.basin){target.water+=amt;const f=target.water/target.cap;
+            if(!target.done&&f>=LINE-.03&&f<=1){target.done=true;S.chime();say('剛剛好!放開手就停了');sparkle(target.x,target.y-target.h-10,6,'#F4DE9E')}
+            if(target.water>target.cap){spill(target.x,target.water-target.cap);target.water=target.cap;say('滿出來了!用海綿擦一擦')}}
+          const sgn=Math.sign(c.ang),lx=sgn*c.w/2,ly=-c.h,a=c.ang*Math.PI/180,cy0=-c.h/2;const px=c.x+lx*Math.cos(a)-(ly-cy0)*Math.sin(a),py=c.y+cy0+lx*Math.sin(a)+(ly-cy0)*Math.cos(a);
+          const ty=target.basin?tableY-20:target.y-target.h*Math.min(1,target.water/target.cap);stream=`M${px} ${py}Q${px+sgn*6} ${py+8} ${target.x} ${ty}`}
+        if(underTap){c.water=Math.min(c.cap,c.water+dt*.8);stream=`M${tapX} ${spoutY}L${tapX} ${c.y-c.h*Math.min(1,c.water/c.cap)}`;if(c.kind==='cup'&&c.water<c.cap*LINE)c.done=false}
+        if(c.water<.05&&c.kind==='jug'&&!target)say('水壺空了,拿到水龍頭下面裝水');
+      }else c.ang+=(0-c.ang)*Math.min(1,dt*8);
+      if(c.kind==='cup'&&c.water<c.cap*.5)c.done=false;
       render(c)});
+    if(showRing){ring.setAttribute('cx',showRing.x);ring.setAttribute('cy',showRing.basin?tableY-34:showRing.y-showRing.h);ring.setAttribute('rx',showRing.w/2+10);ring.setAttribute('ry',10);ring.setAttribute('opacity',.9)}else ring.setAttribute('opacity',0);
     streamEl.setAttribute('d',stream||'');if(!!stream!==flowing){flowing=!!stream;flow(flowing)}
-    // 海綿吸水
-    puddles.forEach(p=>{if(Math.abs(sponge.x-p.x)<50&&sponge.y>tableY-12&&p.v>0){p.v=Math.max(0,p.v-dt*1.5);sponge.wet=Math.min(1,sponge.wet+dt*.6);if(t-lastSq>350){lastSq=t;S.squish()}}
+    puddles.forEach(p=>{if(Math.abs(sponge.x-p.x)<54&&sponge.y>tableY-16&&p.v>0){p.v=Math.max(0,p.v-dt*1.5);sponge.wet=Math.min(1,sponge.wet+dt*.6);if(t-lastSq>350){lastSq=t;S.squish()}}
       p.el.setAttribute('rx',Math.sqrt(p.v)*40);p.el.setAttribute('ry',Math.sqrt(p.v)*7)});
-    // 海綿拿到洗手台上方就擰乾
-    if(Math.abs(sponge.x-tapX)<60&&sponge.y<tableY-40&&sponge.wet>0){sponge.wet=Math.max(0,sponge.wet-dt);if(t-lastSq>300){lastSq=t;S.squish()}}
+    if(Math.abs(sponge.x-tapX)<70&&sponge.y<tableY-30&&sponge.wet>0){sponge.wet=Math.max(0,sponge.wet-dt);if(t-lastSq>300){lastSq=t;S.squish()}}
     sb.setAttribute('fill',sponge.wet>.3?'#C99A3E':'#E2B451');sg.setAttribute('transform',`translate(${sponge.x} ${sponge.y})`);
     requestAnimationFrame(loop)}
   requestAnimationFrame(loop)}

@@ -29,15 +29,16 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .ibtn{flex:none;width:42px;height:42px;border:3px solid var(--ink);border-radius:50%;background:var(--yellow);box-shadow:2px 2px 0 var(--shadow);padding:6px;cursor:pointer;display:grid;place-items:center}
 .ibtn svg{width:100%;height:100%}
 .ibtn.white{background:var(--white)}
+.lvnav{width:38px;height:38px;padding:5px}.lvnav:disabled{opacity:.3;cursor:default}
 #music .x{display:none}#music.off{background:var(--white)}#music.off .x{display:inline}
 .ibtn:focus-visible,.big:focus-visible,.mode:focus-visible,.lvl:focus-visible,.tool:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .banner{flex:none;display:flex;align-items:center;justify-content:center;min-height:2.6em;box-sizing:border-box;text-align:center;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:4px 10px;font-weight:900;font-size:clamp(16px,4.2vw,22px);line-height:1.3;box-shadow:3px 3px 0 var(--shadow);text-wrap:balance}
 .main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
 
 /* ---- 選單 ---- */
-.menu{width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;align-items:center;padding:4px 2px 8px;box-sizing:border-box;touch-action:pan-y}
+.menu{width:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:14px;align-items:center;padding:4px 2px 8px;box-sizing:border-box;touch-action:pan-y}
 .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px;width:100%}
-.mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border:4px solid var(--ink);border-radius:22px;box-shadow:4px 4px 0 var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.mode{all:unset;box-sizing:border-box;cursor:pointer;touch-action:manipulation;background:var(--white);border:4px solid var(--ink);border-radius:22px;box-shadow:4px 4px 0 var(--shadow);overflow:hidden;display:flex;flex-direction:column}
 .mode .pic{aspect-ratio:2/1;max-width:100%;display:grid;place-items:center;border-bottom:4px solid var(--ink)}
 .mode .pic svg{width:80%;height:80%}
 .mode .t{padding:10px 14px;display:flex;flex-direction:column;gap:2px}
@@ -46,7 +47,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .mode:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow)}
 .m1 .pic{background:#E5EEDC}.m2 .pic{background:#F2E6D3}.m3 .pic{background:#DDE7F0}
 .levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:min(100%,520px)}
-.lvl{all:unset;box-sizing:border-box;cursor:pointer;aspect-ratio:1;max-width:100%;background:var(--white);border:4px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:clamp(24px,6vw,34px);font-variant-numeric:tabular-nums;position:relative}
+.lvl{all:unset;box-sizing:border-box;cursor:pointer;touch-action:manipulation;aspect-ratio:1;max-width:100%;background:var(--white);border:4px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:clamp(24px,6vw,34px);font-variant-numeric:tabular-nums;position:relative}
 .lvl.done{background:#F4EBCB}
 .lvl .st{position:absolute;top:4px;right:6px;width:28%;height:28%}
 .lvl small{font-size:12px;font-weight:700;color:#6E6876}
@@ -91,7 +92,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 .done p{margin:0;font-size:clamp(17px,4.4vw,22px);font-weight:700}
 .done .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 
-@media (max-width:560px){.app.ingame h1{display:none}.app.ingame .tools{margin-left:0;width:100%;justify-content:flex-end}.chip{margin-right:auto}}
+@media (max-width:560px){.app.ingame h1{display:none}.app.ingame .tools{margin-left:0;width:100%;justify-content:flex-end;gap:6px}.chip{font-size:13px;padding:3px 8px}#nextLv:not([hidden]){margin-right:auto}.chip:has(+ #nextLv[hidden]){margin-right:auto}}
 @media (min-width:700px) and (min-height:600px){
   h1{font-size:36px}.count{font-size:26px}.ibtn{width:54px;height:54px}.chip{font-size:20px}
   .banner{font-size:26px;padding:8px 16px}
@@ -115,7 +116,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
   <header>
     <h1>鐵路接接看</h1>
     <div class="tools">
-      <span class="chip" id="chip" hidden></span>
+      <button class="ibtn white lvnav" id="prevLv" type="button" aria-label="上一關" hidden><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#4A4552" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="chip" id="chip" hidden></span><button class="ibtn white lvnav" id="nextLv" type="button" aria-label="下一關" hidden><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#4A4552" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div class="count"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A" stroke="#4A4552" stroke-width="2" stroke-linejoin="round"/></svg><span id="stars">0</span></div>
       <button class="ibtn white" id="homeBtn" type="button" aria-label="選關" hidden><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="14" y="3" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="3" y="14" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/><rect x="14" y="14" width="7" height="7" rx="2" fill="none" stroke="#4A4552" stroke-width="2.4"/></svg></button>
       <button class="ibtn" id="music" type="button" aria-label="背景音樂"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="#4A4552" stroke-width="2.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="#D8796E" stroke="#4A4552" stroke-width="2"/><circle cx="17.5" cy="16" r="3" fill="#6E91C7" stroke="#4A4552" stroke-width="2"/><path class="x" d="M3 3L21 21" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/></svg></button>
@@ -238,7 +239,9 @@ function buildFree(){const R=5,C=6,cells=[];for(let r=0;r<R;r++){cells.push([]);
 
 /* ================= 狀態與畫面 ================= */
 let L=null,tool='straight',locked=false,boardEl=null,cs=60,trainEls=[];
-function setHeader(inGame){homeBtn.hidden=!inGame;chip.hidden=!inGame;app.classList.toggle('menu-on',!inGame);app.classList.toggle('ingame',inGame)}
+const prevLv=document.getElementById('prevLv'),nextLv=document.getElementById('nextLv');
+prevLv.onclick=()=>{if(L&&L.n>1){S.turn();startLevel(L.mode,L.n-1)}};nextLv.onclick=()=>{if(L&&L.n<LEVELS){S.turn();startLevel(L.mode,L.n+1)}};
+function setHeader(inGame){homeBtn.hidden=!inGame;chip.hidden=!inGame;prevLv.hidden=nextLv.hidden=true;app.classList.toggle('menu-on',!inGame);app.classList.toggle('ingame',inGame)}
 homeBtn.onclick=()=>{S.erase();showMenu(L&&L.mode!=='free'?L.mode:null)};
 
 function showMenu(mode){L=null;locked=false;setHeader(false);controls.innerHTML='';main.innerHTML='';
@@ -263,6 +266,7 @@ function modePic(k){
 
 function startLevel(mode,n){L=mode==='free'?buildFree():buildLevel(mode,n);locked=false;tool=mode==='free'?'straight':(L.counts&&L.counts.straight?'straight':'curve');
   setHeader(true);chip.textContent=mode==='free'?'隨意玩':(mode==='rotate'?'轉轉看 ':'放放看 ')+'第 '+n+' 關';
+  if(mode!=='free'){prevLv.hidden=nextLv.hidden=false;prevLv.disabled=n<=1;nextLv.disabled=n>=LEVELS}
   main.innerHTML='';boardEl=el('div','board');main.appendChild(boardEl);
   boardEl.style.setProperty('--cols',L.C+2);boardEl.style.setProperty('--rows',L.R);
   for(let r=0;r<L.R;r++){
