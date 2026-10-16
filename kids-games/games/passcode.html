@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>密碼解鎖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: a pretend phone lock screen. Portrait: lock + dots on top, keypad below, sticky note and robot guard in the corners.
+   Landscape: lock, dots, note and robot on the left; keypad on the right. Soft low-stimulation palette like the other games. */
+:root{
+  --ink:#4A4552; --sky1:#D7E6E9; --sky2:#EFE6D8; --key:#FFFFFF; --key-d:#E9E2D6; --key-txt:#4A4552;
+  --ok:#7FB08A; --bad:#D8796E; --gold:#E9C46A; --note:#F4E3A1; --robot:#B9C7D3; --robot-d:#93A3B2;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{font-family:var(--font);color:var(--ink);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+  background:linear-gradient(170deg,var(--sky1),var(--sky2));transition:background-color .4s}
+body::before{content:"";position:fixed;inset:0;background:var(--bad);opacity:0;transition:opacity .25s;pointer-events:none;z-index:0}
+body.alarm::before{animation:alarm 1s ease-in-out infinite}
+@keyframes alarm{50%{opacity:.22}}
+.app{position:relative;z-index:1;height:100%;box-sizing:border-box;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));
+  display:grid;grid-template-rows:auto 1fr auto;gap:8px;max-width:560px;margin:0 auto}
+.bar{display:flex;align-items:center;gap:12px;min-height:84px}
+.top{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px}
+.clock{font-weight:900;font-size:clamp(44px,12vw,64px);line-height:1;letter-spacing:.02em;color:#5E5866;font-variant-numeric:tabular-nums}
+.date{font-weight:700;font-size:16px;color:#6E6876;margin-top:-4px}
+.lock{width:46px;height:52px;transition:transform .3s}
+.lock .shackle{transition:transform .45s cubic-bezier(.3,1.6,.5,1);transform-origin:70% 100%}
+.unlocked .lock .shackle{transform:translateY(-6px) rotate(-28deg)}
+.title{font-weight:900;font-size:20px}
+.dots{display:flex;gap:18px;height:22px;align-items:center}
+.dot{width:18px;height:18px;border-radius:50%;border:3px solid var(--ink);box-sizing:border-box;transition:background .12s,transform .12s}
+.dot.on{background:var(--ink);transform:scale(1.15)}
+.dots.shake{animation:shake .5s}
+.dots.good .dot{background:var(--ok);border-color:var(--ok)}
+.dots.bad .dot{border-color:var(--bad)}.dots.bad .dot.on{background:var(--bad)}
+@keyframes shake{15%,55%{transform:translateX(-16px)}35%,75%{transform:translateX(16px)}}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,3.5vw,22px);align-content:center;justify-items:center;padding:4px 6px 0}
+.k{all:unset;box-sizing:border-box;width:clamp(76px,22vw,104px);aspect-ratio:1;max-width:100%;border-radius:50%;background:var(--key);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 5px 0 var(--key-d);position:relative;overflow:hidden;touch-action:manipulation;transition:transform .08s,box-shadow .08s,background .2s}
+.k b{font-size:clamp(32px,9vw,44px);font-weight:900;line-height:1;color:var(--key-txt)}
+.k small{font-size:clamp(10px,2.6vw,13px);font-weight:700;letter-spacing:.2em;color:#9A93A0;margin-top:2px}
+.k.down{transform:translateY(4px) scale(.94);box-shadow:0 1px 0 var(--key-d);background:#F6F1E8}
+.k .rip{position:absolute;width:20px;height:20px;border-radius:50%;background:var(--gold);opacity:.55;transform:scale(0);animation:rip .5s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(7);opacity:0}}
+.k.fn{background:transparent;box-shadow:none}
+.k.fn b{font-size:clamp(18px,5vw,22px)}
+.k.fn.down{background:rgba(255,255,255,.5)}
+.k:focus-visible{outline:4px dashed var(--ink);outline-offset:4px}
+.k.hint{animation:hint 1.2s ease-in-out infinite}
+@keyframes hint{50%{box-shadow:0 5px 0 var(--key-d),0 0 0 8px rgba(233,196,106,.55)}}
+
+/* 便利貼 */
+.note{all:unset;position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:14px;z-index:3;background:var(--note);padding:10px 14px 12px;border-radius:4px 4px 14px 4px;transform:rotate(4deg);box-shadow:0 6px 12px rgba(74,69,82,.15);cursor:pointer;text-align:center}
+.note::before{content:"";position:absolute;top:-10px;left:50%;width:46px;height:18px;margin-left:-23px;background:rgba(255,255,255,.6);transform:rotate(-4deg)}
+.note span{display:block;font-size:13px;font-weight:700;color:#8A7A4A}
+.note b{display:block;font-size:30px;letter-spacing:.18em;font-variant-numeric:tabular-nums;line-height:1.1}
+.note i{display:block;font-style:normal;font-size:12px;color:#8A7A4A}
+
+/* 機器人警衛 */
+.guard{flex:none;width:68px;height:84px}
+.guard svg{width:100%;height:100%;overflow:visible}
+.guard .bulb{transition:fill .15s}
+.guard.wrong .bulb{animation:bulb .5s ease-in-out infinite}
+@keyframes bulb{50%{fill:#D8796E}}
+.guard.wrong svg{animation:wob .25s ease-in-out 4}
+@keyframes wob{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+.guard .mouth{transition:d .2s}
+.bubble{position:relative;background:#FFFFFF;border-radius:18px;padding:10px 16px;font-weight:900;font-size:20px;box-shadow:0 4px 0 rgba(74,69,82,.12);opacity:0;transform:scale(.6);transform-origin:0 50%;transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+.bubble.show{opacity:1;transform:scale(1)}
+.bubble::after{content:"";position:absolute;left:-10px;top:50%;margin-top:-10px;border:10px solid transparent;border-right-color:#FFFFFF;border-left:0}
+.bubble.bad{color:#B4594E}.bubble.good{color:#5E8F69}
+
+/* 解鎖後 */
+.open{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(170deg,#F4EBD5,#E3EEE6);text-align:center;padding:0 16px;
+  transform:translateY(100%);transition:transform .55s cubic-bezier(.2,.9,.3,1)}
+.open.show{transform:none}
+.open h2{margin:0;font-size:clamp(34px,9vw,52px);font-weight:900;color:#FFFFFF;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:0 3px 0 rgba(74,69,82,.2)}
+.open p{margin:0;font-size:18px;font-weight:700;color:#6E6876}
+.chest{width:min(60vw,240px);height:auto}
+.chest .lid{transform-origin:20px 70px;transition:transform .6s cubic-bezier(.3,1.6,.5,1) .35s}
+.open.show .chest .lid{transform:rotate(-32deg)}
+.chest .shine{opacity:0;transition:opacity .4s .7s}
+.open.show .chest .shine{opacity:1}
+.again{all:unset;cursor:pointer;font-weight:900;font-size:24px;padding:12px 30px;border-radius:999px;background:var(--ok);color:#FFFFFF;box-shadow:0 5px 0 #5E8F69}
+.again:active{transform:translateY(4px);box-shadow:0 1px 0 #5E8F69}
+.again:focus-visible{outline:4px dashed var(--ink);outline-offset:4px}
+.star{position:fixed;width:26px;height:26px;pointer-events:none;z-index:11;animation:fly 1s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.3);opacity:0}}
+
+@media (orientation:landscape) and (min-width:700px){
+  .app{max-width:1100px;grid-template-rows:1fr auto;grid-template-columns:1fr 1fr;align-items:center;gap:20px 30px}
+  .top{grid-column:1;grid-row:1}.pad{grid-column:2;grid-row:1/3}.bar{grid-column:1;grid-row:2;align-self:end}
+  .guard{width:96px;height:120px}
+  .top{justify-content:center}
+  .pad{max-width:420px;justify-self:center}
+}
+@media (orientation:landscape) and (max-height:520px){
+  .clock{font-size:36px}.date{display:none}.pad{gap:8px}.k{width:62px}.guard{width:60px;height:74px}
+}
+@media (max-width:480px){.note{padding:6px 10px 8px;right:8px}.note b{font-size:22px}.note i{display:none}.top{padding-top:22px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="clock" id="clock">10:10</div>
+    <div class="date" id="date"></div>
+    <svg class="lock" viewBox="0 0 46 52" aria-hidden="true"><path class="shackle" d="M12 24V15a11 11 0 0 1 22 0v9" fill="none" stroke="#4A4552" stroke-width="6" stroke-linecap="round"/><rect x="4" y="22" width="38" height="28" rx="8" fill="#4A4552"/><circle cx="23" cy="34" r="4" fill="#FFFFFF"/><rect x="21" y="35" width="4" height="8" rx="2" fill="#FFFFFF"/></svg>
+    <div class="title" id="title">輸入密碼</div>
+    <div class="dots" id="dots" aria-live="polite"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  </div>
+  <div class="pad" id="pad"></div>
+  <div class="bar"><div class="guard" id="guard" aria-hidden="true"><svg viewBox="0 0 96 120">
+    <line x1="48" y1="14" x2="48" y2="26" stroke="#93A3B2" stroke-width="4"/><circle class="bulb" cx="48" cy="10" r="8" fill="#E9C46A"/>
+    <rect x="14" y="26" width="68" height="52" rx="18" fill="#B9C7D3"/><rect x="22" y="36" width="52" height="30" rx="12" fill="#EEF3F6"/>
+    <circle class="eye" cx="38" cy="50" r="5" fill="#4A4552"/><circle class="eye" cx="58" cy="50" r="5" fill="#4A4552"/>
+    <path class="mouth" d="M40 59q8 6 16 0" fill="none" stroke="#4A4552" stroke-width="3" stroke-linecap="round"/>
+    <rect x="24" y="80" width="48" height="32" rx="12" fill="#93A3B2"/><circle cx="48" cy="96" r="6" fill="#E9C46A"/>
+    <rect x="6" y="84" width="14" height="22" rx="7" fill="#B9C7D3"/><rect x="76" y="84" width="14" height="22" rx="7" fill="#B9C7D3"/>
+  </svg></div>
+  <div class="bubble" id="bubble"></div></div>
+</div>
+
+<button class="note" id="note" type="button" aria-label="密碼紙條,點一下換一組密碼"><span>密碼</span><b id="code">0000</b><i>點我換一組</i></button>
+
+
+
+<div class="open" id="open" aria-live="polite">
+  <svg class="chest" viewBox="0 0 160 130" aria-hidden="true">
+    <g class="shine"><path d="M80 40L60 0M80 40L80 -6M80 40L100 0M80 40L40 14M80 40L120 14" stroke="#E9C46A" stroke-width="5" stroke-linecap="round"/><circle cx="62" cy="62" r="9" fill="#E9C46A"/><circle cx="84" cy="58" r="10" fill="#F1D58C"/><circle cx="104" cy="64" r="8" fill="#E9C46A"/></g>
+    <rect x="20" y="66" width="120" height="58" rx="10" fill="#C99B6D"/><rect x="20" y="88" width="120" height="8" fill="#B3865A"/><rect x="72" y="80" width="16" height="22" rx="4" fill="#E9C46A"/>
+    <g class="lid"><path d="M20 70V54q0-22 60-22t60 22v16z" fill="#D7A877"/><rect x="20" y="62" width="120" height="8" fill="#B3865A"/></g>
+  </svg>
+  <h2>解鎖成功!</h2>
+  <p id="openMsg">你找到寶藏了</p>
+  <button class="again" id="again" type="button">再鎖起來</button>
+</div>
+
+<script>
+/* ================= 聲音 ================= */
+let ctx=null,out=null;
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.6;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.setValueAtTime(v,t+Math.max(.012,d-.04));g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.02)}catch(e){}}
+const T=()=>ac().currentTime;
+// 電話按鍵音(雙音)
+const ROW=[697,770,852,941],COL=[1209,1336,1477];
+const POS={1:[0,0],2:[0,1],3:[0,2],4:[1,0],5:[1,1],6:[1,2],7:[2,0],8:[2,1],9:[2,2],0:[3,1]};
+function dtmf(d){const [r,c]=POS[d],t=T();tone(ROW[r],t,.14,{v:.09});tone(COL[c],t,.14,{v:.07})}
+const S={
+  del(){const t=T();tone(500,t,.08,{type:'triangle',v:.1,to:300})},
+  clear(){const t=T();tone(700,t,.2,{type:'triangle',v:.08,to:200})},
+  // 錯了:機器人「嗶嗶嗶」
+  alarm(n=3){const t=T();for(let i=0;i<n;i++){tone(988,t+i*.3,.14,{type:'square',v:.06});tone(740,t+i*.3+.15,.14,{type:'square',v:.06})}},
+  siren(){const t=T();for(let i=0;i<3;i++){tone(620,t+i*.7,.35,{type:'triangle',v:.12,to:900});tone(900,t+i*.7+.35,.35,{type:'triangle',v:.12,to:620})}},
+  unlock(){const t=T();tone(1400,t,.05,{type:'square',v:.05});tone(900,t+.06,.08,{type:'triangle',v:.12});[72,76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+.25+i*.12,.4,{type:'triangle',v:.12}))}
+};
+// 會說話:平板內建的語音(沒有也沒關係)
+function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1.05;u.pitch=1.5;speechSynthesis.speak(u)}catch(e){}}
+function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
+
+/* ================= 時鐘 ================= */
+function tick(){const d=new Date();document.getElementById('clock').textContent=d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('date').textContent=(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+'日一二三四五六'[d.getDay()]}
+tick();setInterval(tick,10000);
+
+/* ================= 密碼 ================= */
+const LEN=4,dotsEl=document.getElementById('dots'),dots=[...dotsEl.children],codeEl=document.getElementById('code'),titleEl=document.getElementById('title');
+const guard=document.getElementById('guard'),bubble=document.getElementById('bubble'),openEl=document.getElementById('open'),app=document.getElementById('app');
+let code='',entry='',wrongs=0,busy=false,bubbleT=null;
+function newCode(){let c;do{c=Array.from({length:LEN},()=>Math.floor(Math.random()*10)).join('')}while(c===code||/^(\d)\1+$/.test(c));code=c;codeEl.textContent=code;try{localStorage.setItem('kidCode',code)}catch(e){}}
+try{const s=localStorage.getItem('kidCode');if(s&&/^\d{4}$/.test(s)){code=s;codeEl.textContent=s}else newCode()}catch(e){newCode()}
+function paint(){dots.forEach((d,i)=>d.classList.toggle('on',i<entry.length));hint()}
+// 下一個要按的鍵會輕輕發光(只在答錯過一次之後提示)
+function hint(){document.querySelectorAll('.k').forEach(k=>k.classList.remove('hint'));if(wrongs<1||entry.length>=LEN)return;
+  if(code.startsWith(entry)){const k=document.querySelector(`.k[data-d="${code[entry.length]}"]`);k&&k.classList.add('hint')}}
+function say(txt,kind){bubble.textContent=txt;bubble.className='bubble show '+(kind||'');clearTimeout(bubbleT);bubbleT=setTimeout(()=>bubble.classList.remove('show'),2200)}
+function setMouth(kind){const m=guard.querySelector('.mouth');m.setAttribute('d',kind==='sad'?'M40 62q8 -6 16 0':kind==='o'?'M44 60a4 4 0 1 0 8 0a4 4 0 1 0 -8 0':'M40 59q8 6 16 0')}
+
+function press(d){if(busy)return;if(entry.length>=LEN)return;entry+=d;dtmf(d);buzz(12);paint();
+  if(entry.length===LEN){busy=true;setTimeout(check,280)}}
+function del(){if(busy||!entry)return;entry=entry.slice(0,-1);S.del();paint()}
+function clearAll(){if(busy||!entry)return;entry='';S.clear();paint()}
+function check(){
+  if(entry===code){dotsEl.classList.add('good');setMouth('happy');S.unlock();talk('答對了!');say('答對了!','good');app.classList.add('unlocked');wrongs=0;
+    setTimeout(()=>{openEl.classList.add('show');burst()},600);return}
+  wrongs++;dotsEl.classList.add('bad','shake');guard.classList.add('wrong');setMouth(wrongs>=3?'o':'sad');buzz([60,40,60]);
+  if(wrongs>=3){document.body.classList.add('alarm');S.siren();talk('警報!警報!密碼錯了!');say('警報!警報!🚨 看看紙條上的密碼','bad');titleEl.textContent='看紙條上的數字'}
+  else{S.alarm();talk('嗶嗶!密碼錯了!');say('嗶嗶!密碼錯了!','bad');titleEl.textContent='再試一次'}
+  setTimeout(()=>{dotsEl.classList.remove('bad','shake');guard.classList.remove('wrong');document.body.classList.remove('alarm');setMouth('happy');entry='';busy=false;paint()},wrongs>=3?2100:1100)}
+function burst(){const cx=innerWidth/2,cy=innerHeight*.4;for(let i=0;i<12;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('star');
+  s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A"/>';const a=Math.PI*2*i/12;
+  s.style.left=cx-13+'px';s.style.top=cy-13+'px';s.style.setProperty('--dx',Math.cos(a)*160+'px');s.style.setProperty('--dy',Math.sin(a)*160+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),1100)}}
+document.getElementById('again').onclick=()=>{S.clear();openEl.classList.remove('show');app.classList.remove('unlocked');dotsEl.classList.remove('good');entry='';busy=false;wrongs=0;titleEl.textContent='輸入密碼';newCode();paint();say('換新密碼了,看紙條!','')};
+document.getElementById('note').onclick=()=>{if(busy)return;newCode();entry='';wrongs=0;titleEl.textContent='輸入密碼';paint();S.del();say('換新密碼了!','')};
+
+/* ================= 按鍵 ================= */
+const LET={2:'ABC',3:'DEF',4:'GHI',5:'JKL',6:'MNO',7:'PQRS',8:'TUV',9:'WXYZ',0:'+'};
+const pad=document.getElementById('pad');
+[1,2,3,4,5,6,7,8,9,'clr',0,'del'].forEach(k=>{const b=document.createElement('button');b.type='button';
+  if(k==='clr'){b.className='k fn';b.innerHTML='<b>清除</b>';b.setAttribute('aria-label','全部清除')}
+  else if(k==='del'){b.className='k fn';b.innerHTML='<b>⌫</b>';b.setAttribute('aria-label','刪掉一個')}
+  else{b.className='k';b.dataset.d=k;b.innerHTML=`<b>${k}</b><small>${LET[k]||'&nbsp;'}</small>`}
+  // 一按下去就有反應(不用等放開)
+  b.addEventListener('pointerdown',e=>{e.preventDefault();ac();b.classList.add('down');
+    const r=b.getBoundingClientRect(),rp=document.createElement('span');rp.className='rip';rp.style.left=(e.clientX-r.left-10)+'px';rp.style.top=(e.clientY-r.top-10)+'px';b.appendChild(rp);setTimeout(()=>rp.remove(),520);
+    if(k==='clr')clearAll();else if(k==='del')del();else press(String(k))});
+  const up=()=>b.classList.remove('down');b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);
+  b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(k==='clr')clearAll();else if(k==='del')del();else press(String(k))}});
+  pad.appendChild(b)});
+addEventListener('keydown',e=>{if(/^\d$/.test(e.key))press(e.key);else if(e.key==='Backspace')del()});
+paint();
+</script>
+</body>
+</html>

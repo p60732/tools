@@ -38,7 +38,7 @@ h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blu
 .card:focus-visible{outline:5px dashed var(--ink);outline-offset:5px}
 .pic{aspect-ratio:4/3;max-width:100%;border-bottom:5px solid var(--ink);display:grid;place-items:center}
 .pic svg{width:86%;height:86%}
-.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
+.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
 .info{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .info .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .name{font-size:clamp(24px,6vw,30px);font-weight:900}
@@ -174,6 +174,18 @@ body.playing{overflow:hidden}
         <rect x="26" y="14" width="44" height="34" rx="6" fill="#DCEAF0"/><circle cx="58" cy="24" r="5" fill="#F4DE9E"/>
       </svg></span>
       <span class="info"><span class="txt"><span class="name">蒙特梭利玩具櫃</span><span class="desc">粉紅塔、色板、倒水、音感鐘</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+    </button>
+
+    <button class="card c10" type="button" data-src="games/passcode.html" data-name="密碼解鎖">
+      <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect width="200" height="150" fill="#E3E6E2"/>
+        <g transform="translate(92 8)"><path d="M6 12V8a7 7 0 0 1 14 0v4" fill="none" stroke="#4A4552" stroke-width="4"/><rect x="2" y="11" width="22" height="16" rx="4" fill="#4A4552"/></g>
+        <circle cx="86" cy="42" r="4" fill="#4A4552"/><circle cx="98" cy="42" r="4" fill="#4A4552"/><circle cx="110" cy="42" r="4" fill="none" stroke="#4A4552" stroke-width="2"/><circle cx="122" cy="42" r="4" fill="none" stroke="#4A4552" stroke-width="2"/>
+        <circle cx="60" cy="58" r="13" fill="#FFFFFF"/><text x="60" y="64" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">1</text><circle cx="100" cy="58" r="13" fill="#FFFFFF"/><text x="100" y="64" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">2</text><circle cx="140" cy="58" r="13" fill="#FFFFFF"/><text x="140" y="64" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">3</text><circle cx="60" cy="90" r="13" fill="#FFFFFF"/><text x="60" y="96" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">4</text><circle cx="100" cy="90" r="13" fill="#FFFFFF"/><text x="100" y="96" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">5</text><circle cx="140" cy="90" r="13" fill="#FFFFFF"/><text x="140" y="96" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">6</text><circle cx="60" cy="122" r="13" fill="#FFFFFF"/><text x="60" y="128" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">7</text><circle cx="100" cy="122" r="13" fill="#FFFFFF"/><text x="100" y="128" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">8</text><circle cx="140" cy="122" r="13" fill="#FFFFFF"/><text x="140" y="128" text-anchor="middle" font-size="16" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">9</text>
+        <g transform="rotate(6 172 30)"><rect x="150" y="12" width="46" height="34" rx="3" fill="#F4E3A1"/><text x="173" y="35" text-anchor="middle" font-size="13" font-weight="900" fill="#4A4552" font-family="Noto Sans TC,sans-serif">1234</text></g>
+        <g transform="translate(6 96)"><line x1="20" y1="2" x2="20" y2="10" stroke="#93A3B2" stroke-width="3"/><circle cx="20" cy="4" r="5" fill="#D8796E"/><rect x="4" y="10" width="32" height="26" rx="9" fill="#B9C7D3"/><circle cx="14" cy="22" r="3" fill="#4A4552"/><circle cx="26" cy="22" r="3" fill="#4A4552"/><rect x="9" y="38" width="22" height="14" rx="6" fill="#93A3B2"/></g>
+      </svg></span>
+      <span class="info"><span class="txt"><span class="name">密碼解鎖</span><span class="desc">按數字解鎖,答錯機器人會叫</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
     </button>
   </div>
 </main>
