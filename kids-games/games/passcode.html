@@ -93,6 +93,35 @@ body.alarm::before{animation:alarm 1s ease-in-out infinite}
 .star{position:fixed;width:26px;height:26px;pointer-events:none;z-index:11;animation:fly 1s ease-out forwards}
 @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.3);opacity:0}}
 
+/* 搞笑動作 */
+.guard.a-spin svg{animation:spin .9s ease-in-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+.guard.a-jump svg{animation:jump .35s ease-out 3}
+@keyframes jump{50%{transform:translateY(-22px)}}
+.guard.a-squish svg{animation:squish .3s ease-in-out 3;transform-origin:50% 100%}
+@keyframes squish{50%{transform:scale(1.25,.7)}}
+.guard.a-dizzy svg{animation:dizzy .3s linear 6}
+@keyframes dizzy{25%{transform:translateX(-5px) rotate(-6deg)}75%{transform:translateX(5px) rotate(6deg)}}
+/* 貼紙 */
+.got{width:min(34vw,150px);aspect-ratio:1;max-width:100%;margin-top:-30px;transform:scale(0) rotate(-30deg);transition:transform .6s cubic-bezier(.3,1.7,.5,1) .9s}
+.open.show .got{transform:scale(1) rotate(-6deg)}
+.got svg{width:100%;height:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.again.w{background:#FFFFFF;color:var(--ink);box-shadow:0 5px 0 #D9D2C6}
+.bookbtn{all:unset;position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:12px;z-index:3;cursor:pointer;display:flex;align-items:center;gap:6px;background:#FFFFFF;border-radius:999px;padding:6px 14px 6px 8px;font-weight:900;font-size:16px;box-shadow:0 3px 0 rgba(74,69,82,.15)}
+.bookbtn svg{width:30px;height:30px}
+.bookbtn:active{transform:translateY(2px)}
+.bookbtn:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.book{position:fixed;inset:0;z-index:20;background:#F4EBD5;display:flex;flex-direction:column;align-items:center;gap:12px;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px));box-sizing:border-box;overflow-y:auto;touch-action:pan-y}
+.book h2{margin:0;font-size:28px;font-weight:900}
+.book .cnt{font-weight:700;color:#6E6876}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px;width:min(100%,760px)}
+.cell{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:15px;text-align:center}
+.cell svg{width:100%;max-width:110px;aspect-ratio:1}
+.cell.no{cursor:default;color:#B5ADA2}
+.cell.no .blank{width:100%;max-width:110px;aspect-ratio:1;border-radius:50%;border:4px dashed #D2C7B6;display:grid;place-items:center;font-size:34px;color:#D2C7B6;box-sizing:border-box}
+.cell.wig svg{animation:wig .5s ease-in-out}
+@keyframes wig{25%{transform:rotate(-10deg) scale(1.1)}75%{transform:rotate(10deg) scale(1.1)}}
 @media (orientation:landscape) and (min-width:700px){
   .app{max-width:1100px;grid-template-rows:1fr auto;grid-template-columns:1fr 1fr;align-items:center;gap:20px 30px}
   .top{grid-column:1;grid-row:1}.pad{grid-column:2;grid-row:1/3}.bar{grid-column:1;grid-row:2;align-self:end}
@@ -105,6 +134,9 @@ body.alarm::before{animation:alarm 1s ease-in-out infinite}
 }
 @media (max-width:480px){.note{padding:6px 10px 8px;right:8px}.note b{font-size:22px}.note i{display:none}.top{padding-top:22px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== 底部多留空間,避開手機底部的手勢列 ===== */
+.app{padding-bottom:calc(44px + env(safe-area-inset-bottom,0px))!important}
 </style>
 </head>
 <body>
@@ -128,6 +160,7 @@ body.alarm::before{animation:alarm 1s ease-in-out infinite}
   <div class="bubble" id="bubble"></div></div>
 </div>
 
+<button class="bookbtn" id="bookBtn" type="button"><svg viewBox="0 0 30 30"><rect x="4" y="3" width="22" height="24" rx="4" fill="#E9C46A"/><circle cx="15" cy="14" r="6" fill="#FFFFFF"/><path d="M15 10l1.4 2.8 3 .4-2.2 2 .6 3-2.8-1.5-2.8 1.5.6-3-2.2-2 3-.4z" fill="#D8796E"/></svg><span id="bookCnt">貼紙簿</span></button>
 <button class="note" id="note" type="button" aria-label="密碼紙條,點一下換一組密碼"><span>密碼</span><b id="code">0000</b><i>點我換一組</i></button>
 
 
@@ -138,12 +171,47 @@ body.alarm::before{animation:alarm 1s ease-in-out infinite}
     <rect x="20" y="66" width="120" height="58" rx="10" fill="#C99B6D"/><rect x="20" y="88" width="120" height="8" fill="#B3865A"/><rect x="72" y="80" width="16" height="22" rx="4" fill="#E9C46A"/>
     <g class="lid"><path d="M20 70V54q0-22 60-22t60 22v16z" fill="#D7A877"/><rect x="20" y="62" width="120" height="8" fill="#B3865A"/></g>
   </svg>
+  <div class="got" id="got"></div>
   <h2>解鎖成功!</h2>
   <p id="openMsg">你找到寶藏了</p>
-  <button class="again" id="again" type="button">再鎖起來</button>
+  <div class="row"><button class="again w" id="seeBook" type="button">看貼紙簿</button><button class="again" id="again" type="button">再鎖起來</button></div>
 </div>
 
+<div class="book" id="book" hidden><h2>我的貼紙簿</h2><div class="cnt" id="cnt"></div><div class="grid" id="grid"></div><button class="again" id="closeBook" type="button">回去解鎖</button></div>
+
 <script>
+/* ================= 貼紙 ================= */
+const K='#4A4552';
+const eyes=(y=52,dx=10,r=4)=>`<circle cx="${50-dx}" cy="${y}" r="${r}" fill="${K}"/><circle cx="${50+dx}" cy="${y}" r="${r}" fill="${K}"/><circle cx="${50-dx+1.5}" cy="${y-1.5}" r="1.3" fill="#fff"/><circle cx="${50+dx+1.5}" cy="${y-1.5}" r="1.3" fill="#fff"/>`;
+const cheeks=(y=62)=>`<circle cx="33" cy="${y}" r="5" fill="#EDB9BF" opacity=".8"/><circle cx="67" cy="${y}" r="5" fill="#EDB9BF" opacity=".8"/>`;
+const smile=(y=64,w=6)=>`<path d="M${50-w} ${y}q${w} ${w*.9} ${w*2} 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`;
+const STICKERS=[
+ ['cat','小貓',`<path d="M24 44L26 14L46 32ZM76 44L74 14L54 32Z" fill="#E3A06B"/><path d="M28 36L29 22L38 31ZM72 36L71 22L62 31Z" fill="#EDB9BF"/><circle cx="50" cy="56" r="28" fill="#E3A06B"/>${eyes()}${cheeks()}<path d="M47 58h6l-3 3z" fill="${K}"/>${smile(63,4)}<path d="M20 58h12M20 64h12M68 58h12M68 64h12" stroke="${K}" stroke-width="1.6"/>`],
+ ['dog','小狗',`<ellipse cx="24" cy="50" rx="11" ry="20" fill="#8A6A52" transform="rotate(18 24 50)"/><ellipse cx="76" cy="50" rx="11" ry="20" fill="#8A6A52" transform="rotate(-18 76 50)"/><circle cx="50" cy="54" r="27" fill="#C99B6D"/><ellipse cx="50" cy="64" rx="14" ry="10" fill="#EAD6BE"/>${eyes(50)}<ellipse cx="50" cy="59" rx="5" ry="4" fill="${K}"/>${smile(66,4)}`],
+ ['bunny','小兔子',`<ellipse cx="38" cy="22" rx="8" ry="22" fill="#F2ECE6"/><ellipse cx="62" cy="22" rx="8" ry="22" fill="#F2ECE6"/><ellipse cx="38" cy="24" rx="4" ry="15" fill="#EDB9BF"/><ellipse cx="62" cy="24" rx="4" ry="15" fill="#EDB9BF"/><circle cx="50" cy="58" r="26" fill="#F2ECE6"/>${eyes(56)}${cheeks(64)}<path d="M47 62h6l-3 3z" fill="#D8796E"/>${smile(66,3)}`],
+ ['bear','小熊',`<circle cx="28" cy="32" r="12" fill="#A9805E"/><circle cx="72" cy="32" r="12" fill="#A9805E"/><circle cx="28" cy="32" r="6" fill="#D9B48A"/><circle cx="72" cy="32" r="6" fill="#D9B48A"/><circle cx="50" cy="56" r="28" fill="#A9805E"/><ellipse cx="50" cy="64" rx="13" ry="10" fill="#D9B48A"/>${eyes(50)}<ellipse cx="50" cy="60" rx="5" ry="3.5" fill="${K}"/>${smile(66,3)}`],
+ ['pig','小豬',`<path d="M26 34l2-16 14 10zM74 34l-2-16-14 10z" fill="#E2A0B0"/><circle cx="50" cy="56" r="28" fill="#EDB9BF"/><ellipse cx="50" cy="64" rx="12" ry="8" fill="#E2A0B0"/><ellipse cx="46" cy="64" rx="2.5" ry="3.5" fill="${K}"/><ellipse cx="54" cy="64" rx="2.5" ry="3.5" fill="${K}"/>${eyes(50)}`],
+ ['frog','青蛙',`<circle cx="34" cy="34" r="13" fill="#8DBE96"/><circle cx="66" cy="34" r="13" fill="#8DBE96"/><circle cx="34" cy="33" r="8" fill="#fff"/><circle cx="66" cy="33" r="8" fill="#fff"/><circle cx="35" cy="34" r="4" fill="${K}"/><circle cx="65" cy="34" r="4" fill="${K}"/><ellipse cx="50" cy="60" rx="32" ry="22" fill="#8DBE96"/><path d="M34 62q16 12 32 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>${cheeks(66)}`],
+ ['chick','小雞',`<path d="M48 22q2-10 8-6q-4 2-2 8" fill="#E9C46A"/><circle cx="50" cy="56" r="30" fill="#F1DCA2"/>${eyes(50,11)}<path d="M44 58h12l-6 8z" fill="#E3A06B"/>${cheeks(62)}<path d="M22 60q-8 4-2 12M78 60q8 4 2 12" fill="none" stroke="#E9C46A" stroke-width="5" stroke-linecap="round"/>`],
+ ['panda','熊貓',`<circle cx="28" cy="30" r="12" fill="${K}"/><circle cx="72" cy="30" r="12" fill="${K}"/><circle cx="50" cy="56" r="29" fill="#FFFFFF" stroke="#E6E1EA" stroke-width="2"/><ellipse cx="38" cy="52" rx="8" ry="10" fill="${K}" transform="rotate(-20 38 52)"/><ellipse cx="62" cy="52" rx="8" ry="10" fill="${K}" transform="rotate(20 62 52)"/><circle cx="39" cy="51" r="3" fill="#fff"/><circle cx="61" cy="51" r="3" fill="#fff"/><ellipse cx="50" cy="62" rx="5" ry="3.5" fill="${K}"/>${smile(68,3)}`],
+ ['mouse','小老鼠',`<circle cx="26" cy="32" r="17" fill="#C9C4CE"/><circle cx="74" cy="32" r="17" fill="#C9C4CE"/><circle cx="26" cy="32" r="10" fill="#EDB9BF"/><circle cx="74" cy="32" r="10" fill="#EDB9BF"/><circle cx="50" cy="58" r="25" fill="#C9C4CE"/>${eyes(54,9)}<circle cx="50" cy="64" r="4" fill="#D8796E"/>${smile(68,3)}`],
+ ['fox','狐狸',`<path d="M22 44L24 14L44 30ZM78 44L76 14L56 30Z" fill="#E3A06B"/><path d="M22 46Q50 20 78 46Q76 76 50 84Q24 76 22 46Z" fill="#E3A06B"/><path d="M26 58Q40 62 50 84Q60 62 74 58Q66 80 50 84Q34 80 26 58Z" fill="#FFFFFF"/>${eyes(52,11)}<circle cx="50" cy="74" r="4" fill="${K}"/>`],
+ ['koala','無尾熊',`<circle cx="24" cy="40" r="17" fill="#B9B4C0"/><circle cx="76" cy="40" r="17" fill="#B9B4C0"/><circle cx="24" cy="40" r="9" fill="#E6E1EA"/><circle cx="76" cy="40" r="9" fill="#E6E1EA"/><circle cx="50" cy="56" r="27" fill="#B9B4C0"/>${eyes(50,12)}<ellipse cx="50" cy="61" rx="7" ry="9" fill="${K}"/>`],
+ ['lion','獅子',`<circle cx="50" cy="54" r="40" fill="#D9A15A"/><circle cx="50" cy="56" r="27" fill="#E9C46A"/>${eyes(52)}${cheeks(62)}<path d="M46 59h8l-4 4z" fill="${K}"/>${smile(65,4)}`],
+ ['owl','貓頭鷹',`<path d="M24 28l10 10M76 28l-10 10" stroke="#A98467" stroke-width="6" stroke-linecap="round"/><ellipse cx="50" cy="58" rx="30" ry="32" fill="#A98467"/><ellipse cx="50" cy="70" rx="18" ry="16" fill="#D9C2A5"/><circle cx="38" cy="46" r="12" fill="#fff"/><circle cx="62" cy="46" r="12" fill="#fff"/><circle cx="38" cy="47" r="5" fill="${K}"/><circle cx="62" cy="47" r="5" fill="${K}"/><path d="M46 56h8l-4 7z" fill="#E3A06B"/>`],
+ ['penguin','企鵝',`<ellipse cx="50" cy="56" rx="30" ry="34" fill="#5E6A7E"/><ellipse cx="50" cy="62" rx="20" ry="25" fill="#FFFFFF"/>${eyes(48,9)}<path d="M44 55h12l-6 6z" fill="#E3A06B"/>${cheeks(58)}`],
+ ['apple','蘋果',`<path d="M50 30C36 22 18 30 20 52C22 74 38 86 50 80C62 86 78 74 80 52C82 30 64 22 50 30Z" fill="#D8796E"/><path d="M50 30q0-12 6-16" stroke="#8A6A52" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M54 22q14-8 20 2q-12 6-20-2z" fill="#8DBE96"/>${eyes(54,9,3.5)}${smile(62,4)}`],
+ ['star','星星',`<path d="M50 12l11 23 25 3-18 17 5 25-23-12-23 12 5-25-18-17 25-3z" fill="#E9C46A" stroke="#D9A94A" stroke-width="3" stroke-linejoin="round"/>${eyes(48,8,3.5)}${smile(56,4)}`],
+ ['rainbow','彩虹',`${['#D8796E','#E3A06B','#E9C46A','#8DBE96','#7E9CC4'].map((c,i)=>`<path d="M${14+i*7} 70a${36-i*7} ${36-i*7} 0 0 1 ${72-i*14} 0" fill="none" stroke="${c}" stroke-width="7"/>`).join('')}<circle cx="20" cy="72" r="10" fill="#fff" stroke="#E6E1EA" stroke-width="2"/><circle cx="80" cy="72" r="10" fill="#fff" stroke="#E6E1EA" stroke-width="2"/>`],
+ ['rocket','火箭',`<path d="M50 12Q68 30 66 64H34Q32 30 50 12Z" fill="#E6E1EA"/><circle cx="50" cy="40" r="8" fill="#7E9CC4" stroke="#fff" stroke-width="3"/><path d="M34 52L22 70H34ZM66 52L78 70H66Z" fill="#D8796E"/><path d="M42 66Q50 90 58 66Z" fill="#E9C46A"/>`],
+ ['icecream','冰淇淋',`<path d="M34 54L50 88L66 54Z" fill="#D9B48A"/><path d="M40 60l14 10M46 56l12 10" stroke="#C99B6D" stroke-width="2"/><circle cx="40" cy="48" r="13" fill="#EDB9BF"/><circle cx="60" cy="48" r="13" fill="#F1DCA2"/><circle cx="50" cy="34" r="14" fill="#9CC79F"/><circle cx="50" cy="20" r="4" fill="#D8796E"/>`],
+ ['balloon','氣球',`<path d="M50 70q-4 10 2 20" stroke="#9A93A0" stroke-width="2" fill="none"/><ellipse cx="50" cy="40" rx="24" ry="28" fill="#7E9CC4"/><path d="M46 68h8l-4-4z" fill="#7E9CC4"/><ellipse cx="41" cy="30" rx="5" ry="9" fill="#fff" opacity=".5"/>${eyes(42,8,3.5)}${smile(50,4)}`]
+];
+const stickerSVG=id=>{const s=STICKERS.find(x=>x[0]===id);return `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="47" fill="rgba(74,69,82,.12)"/><circle cx="50" cy="50" r="47" fill="#FFFFFF"/>${s?s[2]:''}</svg>`};
+let got=[];try{got=JSON.parse(localStorage.getItem('kidStickers')||'[]')}catch(e){}
+function saveGot(){try{localStorage.setItem('kidStickers',JSON.stringify(got))}catch(e){}}
+function pickSticker(){const fresh=STICKERS.filter(s=>!got.includes(s[0]));const pool=fresh.length?fresh:STICKERS;return pool[Math.floor(Math.random()*pool.length)]}
+
 /* ================= 聲音 ================= */
 let ctx=null,out=null;
 function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.6;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
@@ -160,6 +228,16 @@ const S={
   // 錯了:機器人「嗶嗶嗶」
   alarm(n=3){const t=T();for(let i=0;i<n;i++){tone(988,t+i*.3,.14,{type:'square',v:.06});tone(740,t+i*.3+.15,.14,{type:'square',v:.06})}},
   siren(){const t=T();for(let i=0;i<3;i++){tone(620,t+i*.7,.35,{type:'triangle',v:.12,to:900});tone(900,t+i*.7+.35,.35,{type:'triangle',v:.12,to:620})}},
+  // 搞笑的錯誤音效(隨機)
+  trombone(){const t=T();[392,370,349].forEach((f,i)=>tone(f,t+i*.28,.26,{type:'triangle',v:.13}));try{const c=ac(),o=c.createOscillator(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();o.type='triangle';o.frequency.value=330;l.frequency.value=6;lg.gain.value=10;l.connect(lg).connect(o.frequency);g.gain.setValueAtTime(.0001,t+.84);g.gain.exponentialRampToValueAtTime(.13,t+.9);g.gain.exponentialRampToValueAtTime(.0001,t+1.7);o.connect(g).connect(out);o.start(t+.84);l.start(t+.84);o.stop(t+1.75);l.stop(t+1.75)}catch(e){}},
+  boing(){try{const c=ac(),t=c.currentTime,o=c.createOscillator(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();o.type='sine';o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(520,t+.12);o.frequency.exponentialRampToValueAtTime(260,t+.7);l.frequency.setValueAtTime(18,t);l.frequency.linearRampToValueAtTime(6,t+.7);lg.gain.value=60;l.connect(lg).connect(o.frequency);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.2,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.8);o.connect(g).connect(out);o.start(t);l.start(t);o.stop(t+.85);l.stop(t+.85)}catch(e){}},
+  quack(){const t=T();[0,.22].forEach(d=>{tone(620,t+d,.14,{type:'sawtooth',v:.07,to:380});tone(1240,t+d,.1,{type:'square',v:.02,to:700})})},
+  slide(){const t=T();tone(1500,t,.75,{type:'sine',v:.14,to:260})},
+  glitch(){const t=T();for(let i=0;i<9;i++)tone(200+Math.random()*1200,t+i*.06,.05,{type:'square',v:.05})},
+  cuckoo(){const t=T();[0,.45].forEach(d=>{tone(659,t+d,.18,{v:.18});tone(523,t+d+.2,.24,{v:.18})})},
+  honk(){const t=T();[0,.25].forEach(d=>{tone(330,t+d,.18,{type:'square',v:.06,to:300});tone(415,t+d,.18,{type:'square',v:.04,to:380})})},
+  wobble(){try{const c=ac(),t=c.currentTime,o=c.createOscillator(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();o.type='triangle';o.frequency.setValueAtTime(420,t);o.frequency.exponentialRampToValueAtTime(180,t+1);l.frequency.value=9;lg.gain.value=40;l.connect(lg).connect(o.frequency);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.15,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+1.05);o.connect(g).connect(out);o.start(t);l.start(t);o.stop(t+1.1);l.stop(t+1.1)}catch(e){}},
+  pop(){const t=T();tone(500,t,.12,{v:.14,to:1200});tone(1600,t+.12,.2,{type:'triangle',v:.1})},
   unlock(){const t=T();tone(1400,t,.05,{type:'square',v:.05});tone(900,t+.06,.08,{type:'triangle',v:.12});[72,76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+.25+i*.12,.4,{type:'triangle',v:.12}))}
 };
 // 會說話:平板內建的語音(沒有也沒關係)
@@ -188,17 +266,36 @@ function press(d){if(busy)return;if(entry.length>=LEN)return;entry+=d;dtmf(d);bu
   if(entry.length===LEN){busy=true;setTimeout(check,280)}}
 function del(){if(busy||!entry)return;entry=entry.slice(0,-1);S.del();paint()}
 function clearAll(){if(busy||!entry)return;entry='';S.clear();paint()}
+const FUNNY=[
+  ['trombone','哎呀呀!不對喔~','wob'],['boing','啵嚶~按錯了啦!','jump'],['quack','呱呱!不是這個!','squish'],['slide','咻~~密碼溜走了!','spin'],
+  ['glitch','嗶嗶嗶!我的螺絲轉錯了!','dizzy'],['cuckoo','咕咕!咕咕!再試一次!','jump'],['honk','叭叭!錯錯錯!','squish'],['wobble','嗚嗚嗚~門打不開!','wob']];
+let lastFunny=-1;
+function funny(){let i;do{i=Math.floor(Math.random()*FUNNY.length)}while(i===lastFunny&&FUNNY.length>1);lastFunny=i;const [snd,line,anim]=FUNNY[i];
+  S[snd]();setTimeout(()=>talk(line.replace(/~/g,'')),snd==='trombone'?1500:700);say(line,'bad');guard.className='guard wrong a-'+anim}
 function check(){
-  if(entry===code){dotsEl.classList.add('good');setMouth('happy');S.unlock();talk('答對了!');say('答對了!','good');app.classList.add('unlocked');wrongs=0;
-    setTimeout(()=>{openEl.classList.add('show');burst()},600);return}
+  if(entry===code){dotsEl.classList.add('good');setMouth('happy');S.unlock();app.classList.add('unlocked');wrongs=0;
+    const st=pickSticker(),isNew=!got.includes(st[0]);if(isNew){got.push(st[0]);saveGot()}paintCnt();
+    document.getElementById('got').innerHTML=stickerSVG(st[0]);
+    document.getElementById('openMsg').textContent=(isNew?'你得到新貼紙「':'又拿到「')+st[1]+'」!貼紙簿 '+got.length+' / '+STICKERS.length;
+    talk(isNew?'答對了!你得到'+st[1]+'貼紙':'答對了!');say('答對了!','good');
+    setTimeout(()=>{openEl.classList.add('show');burst();setTimeout(()=>S.pop(),900)},600);return}
   wrongs++;dotsEl.classList.add('bad','shake');guard.classList.add('wrong');setMouth(wrongs>=3?'o':'sad');buzz([60,40,60]);
   if(wrongs>=3){document.body.classList.add('alarm');S.siren();talk('警報!警報!密碼錯了!');say('警報!警報!🚨 看看紙條上的密碼','bad');titleEl.textContent='看紙條上的數字'}
-  else{S.alarm();talk('嗶嗶!密碼錯了!');say('嗶嗶!密碼錯了!','bad');titleEl.textContent='再試一次'}
-  setTimeout(()=>{dotsEl.classList.remove('bad','shake');guard.classList.remove('wrong');document.body.classList.remove('alarm');setMouth('happy');entry='';busy=false;paint()},wrongs>=3?2100:1100)}
+  else{funny();titleEl.textContent='再試一次'}
+  setTimeout(()=>{dotsEl.classList.remove('bad','shake');guard.className='guard';document.body.classList.remove('alarm');setMouth('happy');entry='';busy=false;paint()},wrongs>=3?2100:1100)}
 function burst(){const cx=innerWidth/2,cy=innerHeight*.4;for(let i=0;i<12;i++){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.classList.add('star');
   s.innerHTML='<path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="#E9C46A"/>';const a=Math.PI*2*i/12;
   s.style.left=cx-13+'px';s.style.top=cy-13+'px';s.style.setProperty('--dx',Math.cos(a)*160+'px');s.style.setProperty('--dy',Math.sin(a)*160+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),1100)}}
 document.getElementById('again').onclick=()=>{S.clear();openEl.classList.remove('show');app.classList.remove('unlocked');dotsEl.classList.remove('good');entry='';busy=false;wrongs=0;titleEl.textContent='輸入密碼';newCode();paint();say('換新密碼了,看紙條!','')};
+function paintCnt(){document.getElementById('bookCnt').textContent='貼紙 '+got.length+'/'+STICKERS.length}
+function openBook(){const g=document.getElementById('grid');g.innerHTML='';document.getElementById('cnt').textContent='已經收集 '+got.length+' / '+STICKERS.length+' 張'+(got.length===STICKERS.length?',全部收集完成!':'');
+  STICKERS.forEach(([id,name])=>{const has=got.includes(id),b=document.createElement('button');b.type='button';b.className='cell'+(has?'':' no');
+    b.innerHTML=has?stickerSVG(id)+'<span>'+name+'</span>':'<span class="blank">?</span><span>還沒拿到</span>';
+    if(has)b.onclick=()=>{b.classList.remove('wig');void b.offsetWidth;b.classList.add('wig');S.pop();talk(name)};g.appendChild(b)});
+  document.getElementById('book').hidden=false}
+document.getElementById('bookBtn').onclick=()=>{S.del();openBook()};
+document.getElementById('seeBook').onclick=()=>{S.del();openBook()};
+document.getElementById('closeBook').onclick=()=>{S.del();document.getElementById('book').hidden=true};
 document.getElementById('note').onclick=()=>{if(busy)return;newCode();entry='';wrongs=0;titleEl.textContent='輸入密碼';paint();S.del();say('換新密碼了!','')};
 
 /* ================= 按鍵 ================= */
@@ -216,7 +313,7 @@ const pad=document.getElementById('pad');
   b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(k==='clr')clearAll();else if(k==='del')del();else press(String(k))}});
   pad.appendChild(b)});
 addEventListener('keydown',e=>{if(/^\d$/.test(e.key))press(e.key);else if(e.key==='Backspace')del()});
-paint();
+paintCnt();paint();
 </script>
 </body>
 </html>
