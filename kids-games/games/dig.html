@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>挖寶沙坑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* Layout: header (back, title, collection) / row of silhouettes to find / big sand field filling the rest. Landscape tablet: silhouettes become a column on the right.
+   Flat shapes, no outlines, soft low-stimulation palette like the other games. */
+:root{
+  --ink:#4A4552; --bg:#EFE6D8; --white:#FFFFFF; --sand:#E8D2A6; --sand-d:#D9BE8C; --wet:#CDB07E;
+  --sea:#A9CFDC; --sea-d:#8FBCCB; --rock:#D3AE84; --rock-d:#B98C63; --ok:#7FB08A; --gold:#E9C46A;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px calc(44px + env(safe-area-inset-bottom,0px));max-width:1300px;margin:0 auto}
+header{display:flex;align-items:center;gap:10px}
+.ib{all:unset;cursor:pointer;flex:none;width:48px;height:48px;border-radius:50%;background:var(--white);display:grid;place-items:center;box-shadow:0 3px 0 rgba(74,69,82,.15)}
+.ib svg{width:26px;height:26px}
+.ib:active,.pill:active,.big:active{transform:translateY(2px)}
+h1{margin:0;font-size:clamp(22px,5.5vw,32px);font-weight:900;white-space:nowrap}
+.pill{all:unset;cursor:pointer;margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--white);border-radius:999px;padding:8px 16px 8px 10px;font-weight:900;font-size:17px;box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.pill svg{width:26px;height:26px}
+.ib:focus-visible,.pill:focus-visible,.big:focus-visible,.mode:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.tip{text-align:center;font-weight:700;font-size:clamp(15px,4vw,19px);color:#6E6876;min-height:1.4em}
+.body{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+/* 要找的東西 */
+.tray{flex:none;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.slot{width:clamp(52px,14vw,76px);aspect-ratio:1;max-width:100%;border-radius:18px;background:rgba(255,255,255,.6);display:grid;place-items:center;transition:background .3s,transform .3s}
+.slot svg{width:82%;height:82%;filter:brightness(0) opacity(.18);transition:filter .5s}
+.slot.got{background:var(--white);transform:scale(1.06)}
+.slot.got svg{filter:none}
+/* 沙地 */
+.field{position:relative;flex:1;min-height:0;border-radius:26px;overflow:hidden;background:var(--wet);touch-action:none}
+.deep{position:absolute;inset:0}
+.item{position:absolute;transition:transform .4s cubic-bezier(.3,1.6,.5,1),filter .3s}
+.item svg{width:100%;height:100%;display:block;overflow:visible}
+.item.found{transform:scale(1.18) rotate(-6deg);filter:drop-shadow(0 6px 0 rgba(74,69,82,.18))}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+canvas.sand{cursor:pointer;touch-action:none}
+canvas.fx{pointer-events:none}
+.label{position:absolute;transform:translate(-50%,-100%);background:var(--white);border-radius:999px;padding:4px 14px;font-weight:900;font-size:clamp(16px,4vw,22px);white-space:nowrap;box-shadow:0 3px 0 rgba(74,69,82,.12);pointer-events:none;animation:lab 1.6s ease-out forwards;z-index:5}
+@keyframes lab{0%{opacity:0;margin-top:10px}15%{opacity:1;margin-top:0}80%{opacity:1}100%{opacity:0;margin-top:-16px}}
+.twinkle{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none;z-index:4;animation:tw 1.4s ease-in-out 2}
+.twinkle svg{width:100%;height:100%}
+@keyframes tw{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(40deg)}}
+/* 背景:海邊、化石場 */
+.beach .field{background:var(--wet)}
+.sky{flex:none;height:clamp(40px,8vh,70px);border-radius:22px;position:relative;overflow:hidden}
+.beach .sky{background:linear-gradient(#DCEBF0 0 45%,var(--sea) 45%)}
+.beach .sky::after{content:"";position:absolute;left:-10%;right:-10%;bottom:-8px;height:22px;background:radial-gradient(circle at 20px 0,transparent 16px,#F4EEE2 17px) 0 0/40px 22px repeat-x;animation:wave 6s linear infinite}
+@keyframes wave{to{transform:translateX(40px)}}
+.fossil .sky{background:linear-gradient(#EEE3CF 0 40%,#D9B48A 40% 60%,#C99B6D 60% 80%,#B98C63 80%)}
+/* 選單 */
+.menu{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow-y:auto;touch-action:pan-y}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:18px;width:min(100%,760px)}
+.mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border-radius:26px;overflow:hidden;box-shadow:0 5px 0 rgba(74,69,82,.14);display:flex;flex-direction:column;touch-action:manipulation}
+.mode .pic{aspect-ratio:16/10;max-width:100%;display:grid;place-items:center}
+.mode .pic svg{width:100%;height:100%}
+.mode .t{padding:12px 18px 16px;display:flex;flex-direction:column;gap:2px}
+.mode b{font-size:clamp(22px,5.5vw,28px)}
+.mode small{font-size:15px;font-weight:700;color:#6E6876}
+.mode:active{transform:translateY(3px)}
+/* 完成、收藏館 */
+.over{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(239,230,216,.96);text-align:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(44px + env(safe-area-inset-bottom,0px));box-sizing:border-box;overflow-y:auto;touch-action:pan-y}
+.over h2{margin:0;font-size:clamp(30px,8vw,46px);font-weight:900}
+.over p{margin:0;font-weight:700;color:#6E6876;font-size:18px}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:22px;padding:12px 28px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 #5E8F69}
+.big.w{background:var(--white);color:var(--ink);box-shadow:0 5px 0 #D9D2C6}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:14px;width:min(100%,760px)}
+.card{all:unset;cursor:pointer;background:var(--white);border-radius:20px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:16px}
+.card svg{width:80%;aspect-ratio:1;max-width:100%}
+.card.no{cursor:default;color:#B5ADA2;background:rgba(255,255,255,.5)}
+.card.no svg{filter:brightness(0) opacity(.12)}
+.card.wig svg{animation:wig .5s}
+@keyframes wig{25%{transform:rotate(-10deg) scale(1.1)}75%{transform:rotate(10deg) scale(1.1)}}
+.found-big{width:min(40vw,180px);aspect-ratio:1;max-width:100%}
+.found-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.found-row div{width:70px;aspect-ratio:1;background:var(--white);border-radius:18px;display:grid;place-items:center}
+.found-row svg{width:80%;height:80%}
+@media (orientation:landscape) and (min-width:800px){
+  .body{flex-direction:row}
+  .tray{flex-direction:column;justify-content:center;order:2}
+  .slot{width:80px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <button class="ib" id="back" type="button" aria-label="回到選單" hidden><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#4A4552" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h1 id="title">挖寶沙坑</h1>
+    <button class="pill" id="museum" type="button" hidden><svg viewBox="0 0 26 26"><path d="M3 10L13 3l10 7z" fill="#C99B6D"/><rect x="5" y="11" width="3" height="10" fill="#D9BE8C"/><rect x="11.5" y="11" width="3" height="10" fill="#D9BE8C"/><rect x="18" y="11" width="3" height="10" fill="#D9BE8C"/><rect x="3" y="21" width="20" height="3" rx="1" fill="#C99B6D"/></svg><span id="mcount">收藏館</span></button>
+  </header>
+  <div class="tip" id="tip"></div>
+  <div class="menu" id="menu"></div>
+  <div class="sky" id="sky" hidden></div>
+  <div class="body" id="body" hidden>
+    <div class="tray" id="tray"></div>
+    <div class="field" id="field">
+      <div class="deep" id="deep"></div>
+      <div id="items"></div>
+      <canvas class="sand" id="sand"></canvas>
+      <canvas class="fx" id="fx"></canvas>
+    </div>
+  </div>
+</div>
+<div class="over" id="over" hidden></div>
+
+<script>
+/* ================= 聲音 ================= */
+let ctx=null,out=null;
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.7;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(t,d,{v=.1,f=900,q=1,type='bandpass'}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(out);s.start(t)}catch(e){}}
+const T=()=>ac().currentTime;
+const S={
+  dig(){const t=T();noise(t,.14,{v:.12,f:700+Math.random()*500,q:.8});noise(t+.03,.08,{v:.05,f:2400,q:2})},
+  brush(){const t=T();noise(t,.16,{v:.07,f:3200+Math.random()*800,q:.6,type:'highpass'})},
+  find(){const t=T();[76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.1,.5,{type:'triangle',v:.13}))},
+  win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.13,.6,{type:'triangle',v:.12}))},
+  tap(){tone(520,T(),.08,{type:'triangle',v:.1})}
+};
+function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
+
+/* ================= 寶物圖案(原創扁平風) ================= */
+const K='#4A4552';
+const BEACH=[
+ ['scallop','扇貝',`<path d="M50 90L12 44Q50 -2 88 44Z" fill="#EBA9A2"/>${[-30,-15,0,15,30].map(a=>`<path d="M50 88L${50+Math.sin(a*Math.PI/180)*44} ${48-Math.cos(a*Math.PI/180)*30}" stroke="#D88E87" stroke-width="4"/>`).join('')}<path d="M38 84h24l-4 10H42z" fill="#D88E87"/>`],
+ ['conch','海螺',`<path d="M24 74Q20 40 50 18Q74 6 84 30Q90 50 70 70Q52 86 24 74Z" fill="#F1DAB8"/><path d="M40 30Q60 26 70 40M32 46Q56 42 74 56M30 62Q48 60 60 70" stroke="#E3A06B" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M24 74Q14 86 10 92Q26 88 34 80Z" fill="#E7C7A0"/><ellipse cx="60" cy="56" rx="10" ry="14" fill="#F4C9C2" transform="rotate(30 60 56)"/>`],
+ ['starfish','海星',`<path d="M50 8Q56 34 92 38Q64 52 74 88Q50 66 26 88Q36 52 8 38Q44 34 50 8Z" fill="#E3A06B" stroke="#E3A06B" stroke-width="8" stroke-linejoin="round"/>${[[50,30],[66,42],[60,62],[40,62],[34,42],[50,48]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="#F1C79A"/>`).join('')}`],
+ ['crab','小螃蟹',`<path d="M20 70l-12 8M22 78l-10 12M80 70l12 8M78 78l10 12" stroke="#C9665B" stroke-width="5" stroke-linecap="round"/><path d="M26 46Q14 30 20 22Q30 28 30 40M74 46Q86 30 80 22Q70 28 70 40" fill="#D8796E"/><circle cx="18" cy="24" r="9" fill="#D8796E"/><circle cx="82" cy="24" r="9" fill="#D8796E"/><ellipse cx="50" cy="66" rx="32" ry="22" fill="#D8796E"/><path d="M42 46V36M58 46V36" stroke="#D8796E" stroke-width="4"/><circle cx="42" cy="34" r="6" fill="#fff"/><circle cx="58" cy="34" r="6" fill="#fff"/><circle cx="42" cy="35" r="3" fill="${K}"/><circle cx="58" cy="35" r="3" fill="${K}"/><path d="M42 72q8 6 16 0" stroke="${K}" stroke-width="3" fill="none" stroke-linecap="round"/>`],
+ ['pearl','珍珠',`<path d="M10 58Q50 98 90 58Z" fill="#B9B4C0"/><path d="M14 56Q50 4 86 56Z" fill="#C9C4CE"/><path d="M16 58Q50 84 84 58Z" fill="#EDE8EF"/><circle cx="50" cy="60" r="13" fill="#FFFFFF"/><circle cx="45" cy="55" r="4" fill="#F4EFF6"/>`],
+ ['sanddollar','沙錢',`<circle cx="50" cy="50" r="40" fill="#E9DCC2"/><circle cx="50" cy="50" r="40" fill="none" stroke="#D9C8A6" stroke-width="3"/>${[0,72,144,216,288].map(a=>`<ellipse cx="50" cy="32" rx="5" ry="13" fill="#D3BF98" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="4" fill="#D3BF98"/>`],
+ ['bottle','漂流瓶',`<g transform="rotate(-30 50 50)"><rect x="30" y="26" width="40" height="64" rx="14" fill="#A9CFDC" opacity=".85"/><rect x="40" y="10" width="20" height="20" rx="4" fill="#A9CFDC" opacity=".85"/><rect x="41" y="4" width="18" height="10" rx="3" fill="#A98467"/><rect x="38" y="40" width="24" height="34" rx="4" fill="#F4EEE2"/><path d="M42 48h16M42 56h16M42 64h10" stroke="#C9B9A0" stroke-width="2.5"/><rect x="34" y="32" width="5" height="40" rx="2.5" fill="#fff" opacity=".6"/></g>`],
+ ['nautilus','鸚鵡螺',`<circle cx="50" cy="52" r="38" fill="#F4E6D2"/><path d="M50 52m-30 0a30 30 0 1 0 30-30a22 22 0 1 1-22 22a14 14 0 1 0 14-14" fill="none" stroke="#D9A57A" stroke-width="6" stroke-linecap="round"/>${[0,40,80,120,160].map(a=>`<path d="M50 14Q${50+10} 30 ${50} 52" stroke="#E7B88E" stroke-width="5" fill="none" transform="rotate(${a} 50 52)"/>`).join('')}`]
+];
+const FOSSIL=[
+ ['skull','恐龍頭骨',`<path d="M10 54Q12 26 44 22Q70 18 90 34Q94 44 84 50L80 62Q60 66 40 64L28 74Q16 72 10 54Z" fill="#EFE3CC"/><circle cx="62" cy="36" r="8" fill="#B98C63"/><ellipse cx="34" cy="44" rx="10" ry="7" fill="#D9C8A6"/>${[44,52,60,68,76].map(x=>`<path d="M${x} 62l3 9 3-9z" fill="#FFFFFF"/>`).join('')}<path d="M28 74Q44 82 60 76l18-12" stroke="#E2D2B4" stroke-width="7" fill="none" stroke-linecap="round"/>`],
+ ['ammonite','菊石',`<circle cx="50" cy="50" r="40" fill="#C9AF8C"/><path d="M50 50m-34 0a34 34 0 1 0 34-34a25 25 0 1 1-25 25a16 16 0 1 0 16-16a8 8 0 1 1-8 8" fill="none" stroke="#A88B67" stroke-width="5" stroke-linecap="round"/>${Array.from({length:14},(_,i)=>`<path d="M50 12v12" stroke="#B89C78" stroke-width="3" transform="rotate(${i*26} 50 50)"/>`).join('')}`],
+ ['trilobite','三葉蟲',`<ellipse cx="50" cy="52" rx="28" ry="40" fill="#A99E92"/><path d="M24 30Q50 8 76 30Q64 36 50 36Q36 36 24 30Z" fill="#BDB3A6"/>${[42,50,58,66,74].map(y=>`<path d="M24 ${y}Q50 ${y+6} 76 ${y}" stroke="#8E8478" stroke-width="3" fill="none"/>`).join('')}<path d="M40 22v66M60 22v66" stroke="#8E8478" stroke-width="3"/><circle cx="38" cy="26" r="3" fill="#6E655B"/><circle cx="62" cy="26" r="3" fill="#6E655B"/>`],
+ ['footprint','恐龍腳印',`<circle cx="50" cy="50" r="44" fill="#C9AA84"/><path d="M50 82Q34 76 38 58L26 26Q30 20 36 26L46 48L48 18Q52 12 56 18L56 48L66 26Q72 20 76 26L64 58Q68 76 50 82Z" fill="#A6865F"/>`],
+ ['tooth','恐龍牙齒',`<path d="M30 88Q26 50 42 26Q52 12 70 10Q60 30 64 56Q66 76 62 88Z" fill="#F2E8D6"/><path d="M30 88h32" stroke="#D9C8A6" stroke-width="6" stroke-linecap="round"/><path d="M60 22Q54 40 56 60" stroke="#E2D2B4" stroke-width="4" fill="none" stroke-linecap="round"/>`],
+ ['amber','琥珀',`<path d="M50 10Q84 18 86 52Q84 86 50 90Q16 86 14 52Q16 18 50 10Z" fill="#E9A85A" opacity=".9"/><path d="M30 26Q40 18 52 18" stroke="#F5CF94" stroke-width="6" fill="none" stroke-linecap="round"/><ellipse cx="50" cy="56" rx="7" ry="11" fill="#6E4A2E"/><circle cx="50" cy="43" r="5" fill="#6E4A2E"/><path d="M44 52l-10-6M44 58l-11 1M44 64l-9 6M56 52l10-6M56 58l11 1M56 64l9 6" stroke="#6E4A2E" stroke-width="2.5"/><ellipse cx="42" cy="50" rx="8" ry="4" fill="#F4E6D2" opacity=".7" transform="rotate(-30 42 50)"/><ellipse cx="58" cy="50" rx="8" ry="4" fill="#F4E6D2" opacity=".7" transform="rotate(30 58 50)"/>`],
+ ['leaf','葉子化石',`<path d="M12 30Q14 12 34 12H70Q90 14 88 34V70Q86 88 66 88H30Q12 86 12 66Z" fill="#B9B0A4"/><path d="M28 74Q30 40 72 26Q70 64 28 74Z" fill="#9C9286"/><path d="M28 74L66 32" stroke="#B9B0A4" stroke-width="3"/>${[[40,58,34,48],[48,50,42,38],[56,42,52,32],[44,62,54,62],[52,54,62,52],[60,46,68,42]].map(([a,b,c,d])=>`<path d="M${a} ${b}L${c} ${d}" stroke="#B9B0A4" stroke-width="2"/>`).join('')}`],
+ ['fish','魚化石',`<path d="M10 26Q12 10 30 10H72Q90 12 90 30V72Q88 90 70 90H30Q10 88 10 70Z" fill="#C2B6A6"/><path d="M22 50Q36 34 58 40L74 30V70L58 60Q36 66 22 50Z" fill="#A89C8C"/><path d="M34 50H64" stroke="#C2B6A6" stroke-width="3"/>${[38,44,50,56].map(x=>`<path d="M${x} 42V58" stroke="#C2B6A6" stroke-width="2.5"/>`).join('')}<circle cx="30" cy="48" r="3" fill="#7E7466"/>`],
+ ['egg','恐龍蛋',`<ellipse cx="50" cy="54" rx="30" ry="38" fill="#E6DCC4"/>${[[38,38,5],[60,32,4],[56,56,6],[40,64,4],[64,72,5],[46,80,3],[30,52,3]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#C9B48E"/>`).join('')}<path d="M38 26Q30 34 30 46" stroke="#F4EEE2" stroke-width="5" fill="none" stroke-linecap="round"/>`]
+];
+const MODES={beach:{name:'海邊挖貝殼',list:BEACH,tip:'用手指在沙灘上挖一挖,找找貝殼!',done:'貝殼都找到了!'},fossil:{name:'沙地挖化石',list:FOSSIL,tip:'用刷子刷開沙土,找找化石!',done:'化石都挖出來了!'}};
+const svgOf=(it,extra='')=>`<svg viewBox="0 0 100 100" ${extra}>${it[2]}</svg>`;
+
+/* ================= 收藏 ================= */
+let coll={beach:[],fossil:[]};try{const c=JSON.parse(localStorage.getItem('digFound')||'null');if(c&&c.beach&&c.fossil)coll=c}catch(e){}
+const saveColl=()=>{try{localStorage.setItem('digFound',JSON.stringify(coll))}catch(e){}};
+
+/* ================= 畫面 ================= */
+const $=id=>document.getElementById(id);
+const app=$('app'),menuEl=$('menu'),bodyEl=$('body'),skyEl=$('sky'),tray=$('tray'),field=$('field'),deep=$('deep'),itemsEl=$('items'),sand=$('sand'),fx=$('fx'),tipEl=$('tip'),over=$('over');
+let mode=null,items=[],found=0,lastFind=0,hintT=null;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function showMenu(){mode=null;clearInterval(hintT);app.className='app';$('back').hidden=true;$('museum').hidden=true;$('title').textContent='挖寶沙坑';tipEl.textContent='選一個地方去挖寶';
+  bodyEl.hidden=true;skyEl.hidden=true;menuEl.hidden=false;menuEl.innerHTML='';const m=document.createElement('div');m.className='modes';menuEl.appendChild(m);
+  [['beach','海邊挖貝殼','貝殼、海星、小螃蟹…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#E8D2A6"/><rect width="320" height="70" fill="#DCEBF0"/><rect y="50" width="320" height="34" fill="#A9CFDC"/><path d="M0 84q20 -10 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0v8H0z" fill="#F4EEE2"/><ellipse cx="110" cy="146" rx="46" ry="22" fill="#CDB07E"/><g transform="translate(78 108) scale(.62)">${BEACH[0][2]}</g><g transform="translate(190 112) scale(.6)">${BEACH[2][2]}</g><circle cx="270" cy="30" r="16" fill="#F4DE9E"/></svg>`],
+   ['fossil','沙地挖化石','恐龍頭骨、菊石、琥珀…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#D3AE84"/><rect width="320" height="60" fill="#EEE3CF"/><path d="M0 60L60 30L120 56L190 22L260 50L320 34V80H0z" fill="#C99B6D"/><rect y="80" width="320" height="10" fill="#B98C63"/><ellipse cx="120" cy="144" rx="56" ry="26" fill="#B98C63"/><g transform="translate(84 104) scale(.72)">${FOSSIL[0][2]}</g><g transform="translate(206 112) scale(.56)">${FOSSIL[1][2]}</g></svg>`]].forEach(([k,n,d,pic])=>{
+    const b=document.createElement('button');b.type='button';b.className='mode';b.innerHTML=`<span class="pic">${pic}</span><span class="t"><b>${n}</b><small>${d}</small></span>`;b.onclick=()=>{S.tap();start(k)};m.appendChild(b)})}
+
+function start(k){mode=k;const M=MODES[k];app.className='app '+k;$('back').hidden=false;$('museum').hidden=false;$('title').textContent=M.name;tipEl.textContent=M.tip;paintCount();
+  menuEl.hidden=true;bodyEl.hidden=false;skyEl.hidden=false;over.hidden=true;
+  requestAnimationFrame(()=>{setupField();lastFind=performance.now()});
+  clearInterval(hintT);hintT=setInterval(hint,1000)}
+function paintCount(){if(!mode)return;$('mcount').textContent='收藏館 '+coll[mode].length+'/'+MODES[mode].list.length}
+
+/* 鋪沙、藏寶 */
+let W=0,H=0,dpr=1,sctx,fctx,R=40;
+function setupField(){const r=field.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(2,devicePixelRatio||1);
+  [sand,fx].forEach(c=>{c.width=Math.round(W*dpr);c.height=Math.round(H*dpr)});sctx=sand.getContext('2d');fctx=fx.getContext('2d');sctx.setTransform(dpr,0,0,dpr,0,0);fctx.setTransform(dpr,0,0,dpr,0,0);
+  const beach=mode==='beach',base=beach?'#E8D2A6':'#D3AE84',dot=beach?['#DCC395','#F1E0BC','#D6BC8B']:['#C49C70','#DEBD96','#B98C63'];
+  // 下層:挖開後看到的顏色
+  deep.style.background=beach?'radial-gradient(circle at 30% 40%,#D2B583,transparent 60%),#CDB07E':'repeating-linear-gradient(170deg,#B98C63 0 26px,#B08359 26px 52px)';
+  // 上層沙:底色 + 小沙粒
+  sctx.globalCompositeOperation='source-over';sctx.fillStyle=base;sctx.fillRect(0,0,W,H);
+  for(let i=0;i<W*H/90;i++){sctx.fillStyle=dot[i%3];const x=Math.random()*W,y=Math.random()*H,s=Math.random()*2.6+.8;sctx.beginPath();sctx.arc(x,y,s,0,7);sctx.fill()}
+  if(!beach){sctx.strokeStyle='rgba(185,140,99,.35)';sctx.lineWidth=3;for(let y=30;y<H;y+=46){sctx.beginPath();sctx.moveTo(0,y);for(let x=0;x<=W;x+=40)sctx.lineTo(x,y+Math.sin(x/60+y)*6);sctx.stroke()}}
+  else{for(let i=0;i<6;i++){sctx.fillStyle='rgba(255,255,255,.5)';const x=Math.random()*W,y=Math.random()*H;sctx.beginPath();sctx.ellipse(x,y,8,4,Math.random()*3,0,7);sctx.fill()}}
+  // 藏 5 個寶物,不重疊
+  const M=MODES[mode],pick=shuffle(M.list.slice()).slice(0,5),size=Math.max(70,Math.min(140,Math.min(W,H)*.24));R=Math.max(26,size*.36);
+  itemsEl.innerHTML='';items=[];found=0;tray.innerHTML='';
+  pick.forEach(it=>{let x,y,ok=false;for(let t=0;t<300&&!ok;t++){x=size*.15+Math.random()*(W-size*1.3);y=size*.15+Math.random()*(H-size*1.3);ok=items.every(o=>Math.hypot(o.x-x,o.y-y)>size*1.05)}
+    const el=document.createElement('div');el.className='item';el.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;transform:rotate(${Math.random()*40-20}deg)`;el.innerHTML=svgOf(it);itemsEl.appendChild(el);
+    const sl=document.createElement('div');sl.className='slot';sl.innerHTML=svgOf(it);tray.appendChild(sl);
+    items.push({it,x,y,size,el,slot:sl,found:false})})}
+
+/* 挖 */
+let digging=null,lastPt=null,lastSnd=0,lastCheck=0;
+const parts=[];
+function toField(e){const r=sand.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function digAt(x,y){const beach=mode==='beach';sctx.globalCompositeOperation='destination-out';
+  for(let i=0;i<5;i++){const a=Math.random()*7,d=Math.random()*R*.35,rr=R*(.55+Math.random()*.45);sctx.beginPath();sctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,rr,0,7);sctx.fill()}
+  // 噴出來的沙
+  for(let i=0;i<(beach?7:5);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:beach?['#E8D2A6','#DCC395','#F1E0BC'][i%3]:['#D3AE84','#C49C70','#DEBD96'][i%3],s:Math.random()*4+2});
+  const now=performance.now();if(now-lastSnd>90){lastSnd=now;beach?S.dig():S.brush()}
+  if(now-lastCheck>100){lastCheck=now;check()}}
+sand.addEventListener('pointerdown',e=>{if(digging!==null||!mode)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);digAt(lastPt.x,lastPt.y)});
+addEventListener('pointermove',e=>{if(e.pointerId!==digging)return;const p=toField(e),d=Math.hypot(p.x-lastPt.x,p.y-lastPt.y),step=R*.45;
+  for(let s=step;s<=d;s+=step){const k=s/d;digAt(lastPt.x+(p.x-lastPt.x)*k,lastPt.y+(p.y-lastPt.y)*k)}if(d>=step)lastPt=p});
+const endDig=e=>{if(e.pointerId!==digging)return;digging=null;check()};
+addEventListener('pointerup',endDig);addEventListener('pointercancel',endDig);
+
+/* 寶物露出一半以上就算找到 */
+function check(){if(!mode)return;const w=sand.width;items.forEach(o=>{if(o.found)return;let clear=0,n=0;
+  const x0=Math.max(0,Math.floor((o.x+o.size*.18)*dpr)),y0=Math.max(0,Math.floor((o.y+o.size*.18)*dpr)),sw=Math.max(1,Math.floor(o.size*.64*dpr)),sh=sw;
+  const d=sctx.getImageData(x0,y0,Math.min(sw,sand.width-x0),Math.min(sh,sand.height-y0)).data,rw=Math.min(sw,sand.width-x0);
+  for(let yy=0;yy<8;yy++)for(let xx=0;xx<8;xx++){const px=Math.floor((xx+.5)/8*rw),py=Math.floor((yy+.5)/8*Math.min(sh,sand.height-y0));const a=d[(py*rw+px)*4+3];n++;if(a<60)clear++}
+  if(clear/n>=.55)reveal(o)})}
+function reveal(o){o.found=true;found++;lastFind=performance.now();
+  // 把剩下的沙也撥開,寶物整個露出來
+  sctx.globalCompositeOperation='destination-out';sctx.beginPath();sctx.ellipse(o.x+o.size/2,o.y+o.size/2,o.size*.62,o.size*.62,0,0,7);sctx.fill();
+  o.el.classList.add('found');S.find();talk(o.it[1]);
+  const lab=document.createElement('div');lab.className='label';lab.textContent='找到'+o.it[1]+'了!';lab.style.left=Math.max(80,Math.min(W-80,o.x+o.size/2))+'px';lab.style.top=Math.max(44,o.y-4)+'px';field.appendChild(lab);setTimeout(()=>lab.remove(),1700);
+  setTimeout(()=>o.slot.classList.add('got'),500);
+  if(!coll[mode].includes(o.it[0])){coll[mode].push(o.it[0]);saveColl();paintCount()}
+  if(found===items.length)setTimeout(done,1400)}
+function done(){clearInterval(hintT);S.win();const M=MODES[mode];
+  over.innerHTML=`<h2>${M.done}</h2><div class="found-row">${items.map(o=>`<div>${svgOf(o.it)}</div>`).join('')}</div><p>收藏館 ${coll[mode].length} / ${M.list.length}</p><div class="row"><button class="big w" type="button" id="toMuseum">看收藏館</button><button class="big" type="button" id="again">再挖一次</button></div>`;
+  over.hidden=false;$('again').onclick=()=>{S.tap();start(mode)};$('toMuseum').onclick=()=>{S.tap();museum()}}
+function museum(){const M=MODES[mode];over.innerHTML=`<h2>${M.name.slice(-2)}收藏館</h2><p>已經收集 ${coll[mode].length} / ${M.list.length} 種${coll[mode].length===M.list.length?',全部找齊了!':''}</p><div class="grid" id="mg"></div><div class="row"><button class="big" type="button" id="closeM">回去挖寶</button></div>`;
+  over.hidden=false;const g=$('mg');M.list.forEach(it=>{const has=coll[mode].includes(it[0]),b=document.createElement('button');b.type='button';b.className='card'+(has?'':' no');b.innerHTML=svgOf(it)+'<span>'+(has?it[1]:'還沒找到')+'</span>';
+    if(has)b.onclick=()=>{b.classList.remove('wig');void b.offsetWidth;b.classList.add('wig');S.tap();talk(it[1])};g.appendChild(b)});
+  $('closeM').onclick=()=>{S.tap();over.hidden=true;if(found===items.length)start(mode)}}
+// 太久沒找到,在寶物上方閃一下提示
+function hint(){if(!mode||over.hidden===false)return;if(performance.now()-lastFind<12000)return;const left=items.filter(o=>!o.found);if(!left.length)return;
+  const o=left[Math.floor(Math.random()*left.length)],tw=document.createElement('div');tw.className='twinkle';tw.style.left=(o.x+o.size/2)+'px';tw.style.top=(o.y+o.size/2)+'px';
+  tw.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z" fill="#FFFFFF"/></svg>';field.appendChild(tw);setTimeout(()=>tw.remove(),2900);lastFind=performance.now()-6000}
+
+/* 沙粒動畫 */
+function loop(){if(fctx){fctx.clearRect(0,0,W,H);for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.45;p.life-=.035;if(p.life<=0){parts.splice(i,1);continue}
+  fctx.globalAlpha=p.life;fctx.fillStyle=p.c;fctx.beginPath();fctx.arc(p.x,p.y,p.s,0,7);fctx.fill()}fctx.globalAlpha=1}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+$('back').onclick=()=>{S.tap();showMenu()};
+$('museum').onclick=()=>{S.tap();museum()};
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(mode&&found===0)setupField()},300)});
+showMenu();
+</script>
+</body>
+</html>

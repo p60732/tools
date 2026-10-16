@@ -38,7 +38,7 @@ h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blu
 .card:focus-visible{outline:5px dashed var(--ink);outline-offset:5px}
 .pic{aspect-ratio:4/3;max-width:100%;border-bottom:5px solid var(--ink);display:grid;place-items:center}
 .pic svg{width:86%;height:86%}
-.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
+.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c11 .pic{background:#E8D2A6}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
 .info{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .info .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .name{font-size:clamp(24px,6vw,30px);font-weight:900}
@@ -186,6 +186,19 @@ body.playing{overflow:hidden}
         <g transform="translate(6 96)"><line x1="20" y1="2" x2="20" y2="10" stroke="#93A3B2" stroke-width="3"/><circle cx="20" cy="4" r="5" fill="#D8796E"/><rect x="4" y="10" width="32" height="26" rx="9" fill="#B9C7D3"/><circle cx="14" cy="22" r="3" fill="#4A4552"/><circle cx="26" cy="22" r="3" fill="#4A4552"/><rect x="9" y="38" width="22" height="14" rx="6" fill="#93A3B2"/></g>
       </svg></span>
       <span class="info"><span class="txt"><span class="name">密碼解鎖</span><span class="desc">按數字解鎖,答錯機器人會叫</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+    </button>
+
+    <button class="card c11" type="button" data-src="games/dig.html" data-name="挖寶沙坑">
+      <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect width="200" height="150" fill="#E8D2A6"/><rect width="200" height="34" fill="#DCEBF0"/><rect y="26" width="200" height="16" fill="#A9CFDC"/>
+        <circle cx="0" cy="50" r="1.5" fill="#D6BC8B"/><circle cx="53" cy="87" r="2.5" fill="#D6BC8B"/><circle cx="106" cy="124" r="3.5" fill="#D6BC8B"/><circle cx="159" cy="65" r="1.5" fill="#D6BC8B"/><circle cx="12" cy="102" r="2.5" fill="#D6BC8B"/><circle cx="65" cy="139" r="3.5" fill="#D6BC8B"/><circle cx="118" cy="80" r="1.5" fill="#D6BC8B"/><circle cx="171" cy="117" r="2.5" fill="#D6BC8B"/><circle cx="24" cy="58" r="3.5" fill="#D6BC8B"/><circle cx="77" cy="95" r="1.5" fill="#D6BC8B"/><circle cx="130" cy="132" r="2.5" fill="#D6BC8B"/><circle cx="183" cy="73" r="3.5" fill="#D6BC8B"/><circle cx="36" cy="110" r="1.5" fill="#D6BC8B"/><circle cx="89" cy="51" r="2.5" fill="#D6BC8B"/><circle cx="142" cy="88" r="3.5" fill="#D6BC8B"/><circle cx="195" cy="125" r="1.5" fill="#D6BC8B"/><circle cx="48" cy="66" r="2.5" fill="#D6BC8B"/><circle cx="101" cy="103" r="3.5" fill="#D6BC8B"/><circle cx="154" cy="140" r="1.5" fill="#D6BC8B"/><circle cx="7" cy="81" r="2.5" fill="#D6BC8B"/><circle cx="60" cy="118" r="3.5" fill="#D6BC8B"/><circle cx="113" cy="59" r="1.5" fill="#D6BC8B"/><circle cx="166" cy="96" r="2.5" fill="#D6BC8B"/><circle cx="19" cy="133" r="3.5" fill="#D6BC8B"/><circle cx="72" cy="74" r="1.5" fill="#D6BC8B"/><circle cx="125" cy="111" r="2.5" fill="#D6BC8B"/>
+        <ellipse cx="70" cy="98" rx="38" ry="26" fill="#CDB07E"/>
+        <g transform="translate(46 70) scale(.5)"><path d="M50 90L12 44Q50 -2 88 44Z" fill="#EBA9A2"/><path d="M50 88L50 18M50 88L28 26M50 88L72 26" stroke="#D88E87" stroke-width="5"/></g>
+        <ellipse cx="146" cy="104" rx="30" ry="20" fill="#B98C63"/>
+        <g transform="translate(124 84) scale(.44)"><path d="M10 54Q12 26 44 22Q70 18 90 34Q94 44 84 50L80 62Q60 66 40 64L28 74Q16 72 10 54Z" fill="#EFE3CC"/><circle cx="62" cy="36" r="8" fill="#B98C63"/></g>
+        <g transform="translate(150 40) rotate(30)"><rect x="-4" y="0" width="8" height="40" rx="3" fill="#A98467"/><path d="M-16 38h32l-6 26h-20z" fill="#9EB3C2"/></g>
+      </svg></span>
+      <span class="info"><span class="txt"><span class="name">挖寶沙坑</span><span class="desc">海邊挖貝殼、沙地挖化石</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
     </button>
   </div>
 </main>
