@@ -42,7 +42,14 @@ h1{margin:0;font-size:clamp(22px,5.5vw,32px);font-weight:900;white-space:nowrap}
 .item svg{width:100%;height:100%;display:block;overflow:visible}
 .item.found{transform:scale(1.18) rotate(-6deg);filter:drop-shadow(0 6px 0 rgba(74,69,82,.18))}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-canvas.sand{cursor:pointer;touch-action:none}
+.field{cursor:pointer}
+#layers,#layers canvas{pointer-events:none}
+.fly{position:fixed;z-index:30;pointer-events:none;filter:drop-shadow(0 6px 0 rgba(74,69,82,.18))}
+.fly svg{width:100%;height:100%;display:block;overflow:visible}
+.pill.bump{animation:bump .5s}
+@keyframes bump{30%{transform:scale(1.18)}60%{transform:scale(.95)}}
+.plus{position:fixed;z-index:31;pointer-events:none;font-weight:900;font-size:22px;color:#5E8F69;animation:plus 1.1s ease-out forwards}
+@keyframes plus{0%{opacity:0;transform:translateY(6px)}20%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
 canvas.fx{pointer-events:none}
 .label{position:absolute;transform:translate(-50%,-100%);background:var(--white);border-radius:999px;padding:4px 14px;font-weight:900;font-size:clamp(16px,4vw,22px);white-space:nowrap;box-shadow:0 3px 0 rgba(74,69,82,.12);pointer-events:none;animation:lab 1.6s ease-out forwards;z-index:5}
 @keyframes lab{0%{opacity:0;margin-top:10px}15%{opacity:1;margin-top:0}80%{opacity:1}100%{opacity:0;margin-top:-16px}}
@@ -107,7 +114,7 @@ canvas.fx{pointer-events:none}
     <div class="field" id="field">
       <div class="deep" id="deep"></div>
       <div id="items"></div>
-      <canvas class="sand" id="sand"></canvas>
+      <div id="layers"></div>
       <canvas class="fx" id="fx"></canvas>
     </div>
   </div>
@@ -128,7 +135,8 @@ const S={
   brush(){const t=T();noise(t,.16,{v:.07,f:3200+Math.random()*800,q:.6,type:'highpass'})},
   find(){const t=T();[76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.1,.5,{type:'triangle',v:.13}))},
   win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.13,.6,{type:'triangle',v:.12}))},
-  tap(){tone(520,T(),.08,{type:'triangle',v:.1})}
+  tap(){tone(520,T(),.08,{type:'triangle',v:.1})},
+  ding(){const t=T();tone(1568,t,.35,{type:'sine',v:.12});tone(2093,t+.07,.45,{type:'sine',v:.09})}
 };
 function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
 
@@ -164,7 +172,7 @@ const saveColl=()=>{try{localStorage.setItem('digFound',JSON.stringify(coll))}ca
 
 /* ================= 畫面 ================= */
 const $=id=>document.getElementById(id);
-const app=$('app'),menuEl=$('menu'),bodyEl=$('body'),skyEl=$('sky'),tray=$('tray'),field=$('field'),deep=$('deep'),itemsEl=$('items'),sand=$('sand'),fx=$('fx'),tipEl=$('tip'),over=$('over');
+const app=$('app'),menuEl=$('menu'),bodyEl=$('body'),skyEl=$('sky'),tray=$('tray'),field=$('field'),deep=$('deep'),itemsEl=$('items'),layersEl=$('layers'),fx=$('fx'),tipEl=$('tip'),over=$('over');
 let mode=null,items=[],found=0,lastFind=0,hintT=null;
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 
@@ -174,26 +182,35 @@ function showMenu(){mode=null;clearInterval(hintT);app.className='app';$('back')
    ['fossil','沙地挖化石','恐龍頭骨、菊石、琥珀…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#D3AE84"/><rect width="320" height="60" fill="#EEE3CF"/><path d="M0 60L60 30L120 56L190 22L260 50L320 34V80H0z" fill="#C99B6D"/><rect y="80" width="320" height="10" fill="#B98C63"/><ellipse cx="120" cy="144" rx="56" ry="26" fill="#B98C63"/><g transform="translate(84 104) scale(.72)">${FOSSIL[0][2]}</g><g transform="translate(206 112) scale(.56)">${FOSSIL[1][2]}</g></svg>`]].forEach(([k,n,d,pic])=>{
     const b=document.createElement('button');b.type='button';b.className='mode';b.innerHTML=`<span class="pic">${pic}</span><span class="t"><b>${n}</b><small>${d}</small></span>`;b.onclick=()=>{S.tap();start(k)};m.appendChild(b)})}
 
-function start(k){mode=k;const M=MODES[k];app.className='app '+k;$('back').hidden=false;$('museum').hidden=false;$('title').textContent=M.name;tipEl.textContent=M.tip;paintCount();
+function start(k){mode=k;const M=MODES[k];app.className='app '+k;$('back').hidden=false;$('museum').hidden=false;$('title').textContent=M.name;tipEl.textContent=M.tip;paintCount();document.querySelectorAll('.fly,.plus').forEach(e=>e.remove());
   menuEl.hidden=true;bodyEl.hidden=false;skyEl.hidden=false;over.hidden=true;
   requestAnimationFrame(()=>{setupField();lastFind=performance.now()});
   clearInterval(hintT);hintT=setInterval(hint,1000)}
 function paintCount(){if(!mode)return;$('mcount').textContent='收藏館 '+coll[mode].length+'/'+MODES[mode].list.length}
 
 /* 鋪沙、藏寶 */
-let W=0,H=0,dpr=1,sctx,fctx,R=40;
+let W=0,H=0,dpr=1,fctx,R=40;
+const LAYERS={beach:[['#E8D2A6',['#DCC395','#F1E0BC','#D6BC8B']],['#D8BB89',['#CBAA76','#E3C99B','#C7A672']],['#C4A57A',['#B6966A','#D1B38A','#AE8E63']],['#B5A48E',['#A69480','#C3B39E','#9E8C77']]],
+  fossil:[['#D3AE84',['#C49C70','#DEBD96','#B98C63']],['#C28D66',['#B47F59','#CF9C76','#A9754F']],['#AFA294',['#A09385','#BEB2A4','#968A7C']],['#958676',['#877868','#A39484','#7E7061']]]};
+let layers=[],NL=2,CELL=30,depth=null,dugT=null,GW=1;
 function setupField(){const r=field.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(2,devicePixelRatio||1);
-  [sand,fx].forEach(c=>{c.width=Math.round(W*dpr);c.height=Math.round(H*dpr)});sctx=sand.getContext('2d');fctx=fx.getContext('2d');sctx.setTransform(dpr,0,0,dpr,0,0);fctx.setTransform(dpr,0,0,dpr,0,0);
-  const beach=mode==='beach',base=beach?'#E8D2A6':'#D3AE84',dot=beach?['#DCC395','#F1E0BC','#D6BC8B']:['#C49C70','#DEBD96','#B98C63'];
-  // 下層:挖開後看到的顏色
-  deep.style.background=beach?'radial-gradient(circle at 30% 40%,#D2B583,transparent 60%),#CDB07E':'repeating-linear-gradient(170deg,#B98C63 0 26px,#B08359 26px 52px)';
-  // 上層沙:底色 + 小沙粒
-  sctx.globalCompositeOperation='source-over';sctx.fillStyle=base;sctx.fillRect(0,0,W,H);
-  for(let i=0;i<W*H/90;i++){sctx.fillStyle=dot[i%3];const x=Math.random()*W,y=Math.random()*H,s=Math.random()*2.6+.8;sctx.beginPath();sctx.arc(x,y,s,0,7);sctx.fill()}
-  if(!beach){sctx.strokeStyle='rgba(185,140,99,.35)';sctx.lineWidth=3;for(let y=30;y<H;y+=46){sctx.beginPath();sctx.moveTo(0,y);for(let x=0;x<=W;x+=40)sctx.lineTo(x,y+Math.sin(x/60+y)*6);sctx.stroke()}}
-  else{for(let i=0;i<6;i++){sctx.fillStyle='rgba(255,255,255,.5)';const x=Math.random()*W,y=Math.random()*H;sctx.beginPath();sctx.ellipse(x,y,8,4,Math.random()*3,0,7);sctx.fill()}}
+  fx.width=Math.round(W*dpr);fx.height=Math.round(H*dpr);fctx=fx.getContext('2d');fctx.setTransform(dpr,0,0,dpr,0,0);
+  const beach=mode==='beach';
+  // 最底層:寶物躺的地方
+  deep.style.background=beach?'radial-gradient(circle at 30% 40%,#BFA680,transparent 60%),#B9A07A':'repeating-linear-gradient(170deg,#8E7F70 0 26px,#86786A 26px 52px)';
+  // 隨機 2~4 層沙,一層一層挖
+  NL=2+Math.floor(Math.random()*3);layersEl.innerHTML='';layers=[];
+  const pal=LAYERS[mode];
+  for(let k=NL-1;k>=0;k--){const c=document.createElement('canvas');c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+    const [base,dot]=pal[k];g.fillStyle=base;g.fillRect(0,0,W,H);
+    for(let i=0;i<W*H/(k?140:90);i++){g.fillStyle=dot[i%3];const x=Math.random()*W,y=Math.random()*H,sz=Math.random()*2.6+.8;g.beginPath();g.arc(x,y,sz,0,7);g.fill()}
+    if(k===0){if(!beach){g.strokeStyle='rgba(185,140,99,.35)';g.lineWidth=3;for(let y=30;y<H;y+=46){g.beginPath();g.moveTo(0,y);for(let x=0;x<=W;x+=40)g.lineTo(x,y+Math.sin(x/60+y)*6);g.stroke()}}
+      else{for(let i=0;i<6;i++){g.fillStyle='rgba(255,255,255,.5)';const x=Math.random()*W,y=Math.random()*H;g.beginPath();g.ellipse(x,y,8,4,Math.random()*3,0,7);g.fill()}}}
+    else{for(let i=0;i<W*H/9000;i++){g.fillStyle=dot[0];const x=Math.random()*W,y=Math.random()*H;g.beginPath();g.ellipse(x,y,6+Math.random()*8,4+Math.random()*5,Math.random()*3,0,7);g.fill()}}
+    layersEl.appendChild(c);layers[k]={c,g,col:[base,...dot]}}
+  tipEl.textContent=MODES[mode].tip+' 這次有 '+NL+' 層沙喔';
   // 藏 5 個寶物,不重疊
-  const M=MODES[mode],pick=shuffle(M.list.slice()).slice(0,5),size=Math.max(70,Math.min(140,Math.min(W,H)*.24));R=Math.max(26,size*.36);
+  const M=MODES[mode],pick=shuffle(M.list.slice()).slice(0,5),size=Math.max(70,Math.min(140,Math.min(W,H)*.24));R=Math.max(26,size*.36);CELL=R*.7;GW=Math.ceil(W/CELL)+1;depth=new Uint8Array(GW*(Math.ceil(H/CELL)+1));dugT=new Float64Array(depth.length);
   itemsEl.innerHTML='';items=[];found=0;tray.innerHTML='';
   pick.forEach(it=>{let x,y,ok=false;for(let t=0;t<300&&!ok;t++){x=size*.15+Math.random()*(W-size*1.3);y=size*.15+Math.random()*(H-size*1.3);ok=items.every(o=>Math.hypot(o.x-x,o.y-y)>size*1.05)}
     const el=document.createElement('div');el.className='item';el.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;transform:rotate(${Math.random()*40-20}deg)`;el.innerHTML=svgOf(it);itemsEl.appendChild(el);
@@ -203,33 +220,49 @@ function setupField(){const r=field.getBoundingClientRect();W=r.width;H=r.height
 /* 挖 */
 let digging=null,lastPt=null,lastSnd=0,lastCheck=0;
 const parts=[];
-function toField(e){const r=sand.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
-function digAt(x,y){const beach=mode==='beach';sctx.globalCompositeOperation='destination-out';
-  for(let i=0;i<5;i++){const a=Math.random()*7,d=Math.random()*R*.35,rr=R*(.55+Math.random()*.45);sctx.beginPath();sctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,rr,0,7);sctx.fill()}
-  // 噴出來的沙
-  for(let i=0;i<(beach?7:5);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:beach?['#E8D2A6','#DCC395','#F1E0BC'][i%3]:['#D3AE84','#C49C70','#DEBD96'][i%3],s:Math.random()*4+2});
-  const now=performance.now();if(now-lastSnd>90){lastSnd=now;beach?S.dig():S.brush()}
+function toField(e){const r=field.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+// 每個小區塊記錄挖到第幾層:一次划過只往下挖一層,停在同一處多挖一下才會更深
+function digAt(x,y){if(!depth)return;const beach=mode==='beach',now=performance.now();
+  const ci=Math.max(0,Math.floor(y/CELL))*GW+Math.max(0,Math.floor(x/CELL));let k;
+  if(depth[ci]<NL&&now-dugT[ci]>450){k=depth[ci];depth[ci]++;dugT[ci]=now}else k=Math.min(NL-1,Math.max(0,depth[ci]-1));
+  const L=layers[k],g=L.g;g.globalCompositeOperation='destination-out';
+  for(let i=0;i<5;i++){const a=Math.random()*7,d=Math.random()*R*.35,rr=R*(.55+Math.random()*.45);g.beginPath();g.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,rr,0,7);g.fill()}
+  // 噴出來的沙(顏色跟著這一層)
+  for(let i=0;i<(beach?7:5);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:L.col[i%4],s:Math.random()*4+2});
+  if(now-lastSnd>90){lastSnd=now;beach?S.dig():S.brush()}
   if(now-lastCheck>100){lastCheck=now;check()}}
-sand.addEventListener('pointerdown',e=>{if(digging!==null||!mode)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);digAt(lastPt.x,lastPt.y)});
+field.addEventListener('pointerdown',e=>{if(digging!==null||!mode||!depth)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);digAt(lastPt.x,lastPt.y)});
 addEventListener('pointermove',e=>{if(e.pointerId!==digging)return;const p=toField(e),d=Math.hypot(p.x-lastPt.x,p.y-lastPt.y),step=R*.45;
   for(let s=step;s<=d;s+=step){const k=s/d;digAt(lastPt.x+(p.x-lastPt.x)*k,lastPt.y+(p.y-lastPt.y)*k)}if(d>=step)lastPt=p});
 const endDig=e=>{if(e.pointerId!==digging)return;digging=null;check()};
 addEventListener('pointerup',endDig);addEventListener('pointercancel',endDig);
 
 /* 寶物露出一半以上就算找到 */
-function check(){if(!mode)return;const w=sand.width;items.forEach(o=>{if(o.found)return;let clear=0,n=0;
-  const x0=Math.max(0,Math.floor((o.x+o.size*.18)*dpr)),y0=Math.max(0,Math.floor((o.y+o.size*.18)*dpr)),sw=Math.max(1,Math.floor(o.size*.64*dpr)),sh=sw;
-  const d=sctx.getImageData(x0,y0,Math.min(sw,sand.width-x0),Math.min(sh,sand.height-y0)).data,rw=Math.min(sw,sand.width-x0);
-  for(let yy=0;yy<8;yy++)for(let xx=0;xx<8;xx++){const px=Math.floor((xx+.5)/8*rw),py=Math.floor((yy+.5)/8*Math.min(sh,sand.height-y0));const a=d[(py*rw+px)*4+3];n++;if(a<60)clear++}
+function check(){if(!mode||!layers.length)return;const cw=layers[0].c.width,chh=layers[0].c.height;items.forEach(o=>{if(o.found)return;
+  const x0=Math.max(0,Math.floor((o.x+o.size*.18)*dpr)),y0=Math.max(0,Math.floor((o.y+o.size*.18)*dpr)),sw=Math.max(1,Math.floor(o.size*.64*dpr)),rw=Math.min(sw,cw-x0),rh=Math.min(sw,chh-y0);if(rw<1||rh<1)return;
+  const ds=layers.map(L=>L.g.getImageData(x0,y0,rw,rh).data);let clear=0,n=0;
+  for(let yy=0;yy<8;yy++)for(let xx=0;xx<8;xx++){const px=Math.floor((xx+.5)/8*rw),py=Math.floor((yy+.5)/8*rh),j=(py*rw+px)*4+3;n++;if(ds.every(d=>d[j]<60))clear++}
   if(clear/n>=.55)reveal(o)})}
 function reveal(o){o.found=true;found++;lastFind=performance.now();
   // 把剩下的沙也撥開,寶物整個露出來
-  sctx.globalCompositeOperation='destination-out';sctx.beginPath();sctx.ellipse(o.x+o.size/2,o.y+o.size/2,o.size*.62,o.size*.62,0,0,7);sctx.fill();
+  layers.forEach(L=>{L.g.globalCompositeOperation='destination-out';L.g.beginPath();L.g.ellipse(o.x+o.size/2,o.y+o.size/2,o.size*.62,o.size*.62,0,0,7);L.g.fill()});
   o.el.classList.add('found');S.find();talk(o.it[1]);
   const lab=document.createElement('div');lab.className='label';lab.textContent='找到'+o.it[1]+'了!';lab.style.left=Math.max(80,Math.min(W-80,o.x+o.size/2))+'px';lab.style.top=Math.max(44,o.y-4)+'px';field.appendChild(lab);setTimeout(()=>lab.remove(),1700);
-  setTimeout(()=>o.slot.classList.add('got'),500);
-  if(!coll[mode].includes(o.it[0])){coll[mode].push(o.it[0]);saveColl();paintCount()}
-  if(found===items.length)setTimeout(done,1400)}
+  const isNew=!coll[mode].includes(o.it[0]);if(isNew){coll[mode].push(o.it[0]);saveColl()}
+  // 先從洞裡跳出來
+  try{o.el.animate([{transform:'scale(1) rotate(0)'},{transform:'translateY(-40%) scale(1.35) rotate(-10deg)',offset:.45},{transform:'translateY(-8%) scale(1.2) rotate(6deg)',offset:.75},{transform:'scale(1.18) rotate(-6deg)'}],{duration:700,easing:'ease-out'})}catch(e){}
+  setTimeout(()=>flyToMuseum(o,isNew),800);
+  if(found===items.length)setTimeout(done,2200)}
+// 再飛進收藏館
+function flyToMuseum(o,isNew){const m=$('museum'),land=()=>{o.slot.classList.add('got');paintCount();S.ding();m.classList.remove('bump');void m.offsetWidth;m.classList.add('bump');
+    if(isNew&&!m.hidden){const pr=m.getBoundingClientRect(),p=document.createElement('div');p.className='plus';p.textContent='+1';p.style.left=(pr.right-28)+'px';p.style.top=(pr.bottom+2)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1200)}};
+  if(!mode||m.hidden||!o.el.isConnected){land();return}
+  const a=o.el.getBoundingClientRect(),b=m.getBoundingClientRect(),sz=o.size,f=document.createElement('div');f.className='fly';f.innerHTML=svgOf(o.it);
+  f.style.cssText=`left:${a.left+a.width/2-sz/2}px;top:${a.top+a.height/2-sz/2}px;width:${sz}px;height:${sz}px`;document.body.appendChild(f);o.el.style.visibility='hidden';
+  const dx=b.left+22-(a.left+a.width/2),dy=b.top+b.height/2-(a.top+a.height/2),sc=Math.max(.2,30/sz),lift=Math.min(160,Math.max(80,Math.abs(dy)*.5));
+  let fin=false;const end=()=>{if(fin)return;fin=true;f.remove();land()};
+  try{const an=f.animate([{transform:'translate(0,0) scale(1.18) rotate(0)'},{transform:`translate(${dx*.45}px,${dy*.45-lift}px) scale(.9) rotate(200deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(${sc}) rotate(360deg)`}],{duration:850,easing:'cubic-bezier(.45,0,.55,1)'});an.onfinish=end}catch(e){end()}
+  setTimeout(end,1100)}
 function done(){clearInterval(hintT);S.win();const M=MODES[mode];
   over.innerHTML=`<h2>${M.done}</h2><div class="found-row">${items.map(o=>`<div>${svgOf(o.it)}</div>`).join('')}</div><p>收藏館 ${coll[mode].length} / ${M.list.length}</p><div class="row"><button class="big w" type="button" id="toMuseum">看收藏館</button><button class="big" type="button" id="again">再挖一次</button></div>`;
   over.hidden=false;$('again').onclick=()=>{S.tap();start(mode)};$('toMuseum').onclick=()=>{S.tap();museum()}}
