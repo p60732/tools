@@ -161,6 +161,12 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .oi.ok b::after{content:" ✓"}
 .store{position:absolute;right:3%;bottom:30%;width:min(28%,170px);aspect-ratio:1}
 .store svg{width:100%;height:100%}
+/* 牧場雞舍:道具放下方,點畫面走流程 */
+.tapscene{cursor:pointer}
+.tapscene .prop{bottom:3%}
+.prop.l{left:4%}.prop.r{right:4%}.prop.r2{right:calc(6% + clamp(64px,16vmin,120px))}
+.tapscene .cow{width:min(78%,calc(var(--sh,400px)*1.05));bottom:14%}
+.tapscene .bird{width:min(58%,calc(var(--sh,400px)*.7));bottom:12%}
 /* 種子店 */
 .seedn{position:absolute;left:8px;top:8px;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:999px;padding:2px 10px 2px 4px;font-weight:900;font-size:15px}
 .seedn svg{width:24px;height:24px}
@@ -642,78 +648,75 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
   cleanup=()=>tm.forEach(clearTimeout);
 }
 
-/* ================= 牧場 ================= */
+/* ================= 牧場(單一點擊:點牛就做下一步) ================= */
+const FENCE=`<div class="fence">${svg(`${[...Array(11)].map((_,i)=>`<rect x="${i*30+4}" y="4" width="10" height="56" rx="4" fill="#F4EEE2"/>`).join('')}<rect y="16" width="320" height="8" fill="#F4EEE2"/><rect y="40" width="320" height="8" fill="#F4EEE2"/>`,'0 0 320 60')}</div>`;
+function propMove(el,host,x,y,rot,dur,hold=.8){const r=el.getBoundingClientRect(),g=host.getBoundingClientRect(),dx=x-(r.left-g.left+r.width/2),dy=y-(r.top-g.top+r.height/2);
+  return el.animate([{transform:'none'},{transform:`translate(${dx}px,${dy}px)`,offset:.3},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:hold},{transform:'none'}],{duration:dur,easing:'ease-in-out'})}
+function stepChips(el,names,idx){el.innerHTML=names.map((n,i)=>`<span class="${i<idx?'done':i===idx?'now':''}">${n}</span>`).join('')}
 function showBarn(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
-  sc.innerHTML=`<div class="tools"><button class="tbtn" id="tFeed" type="button">${svg(GRASS)}餵草</button><button class="tbtn" id="tWash" type="button">${svg(SPONGE)}洗澡</button><button class="tbtn" id="tMilk" type="button">${svg(PAIL)}擠奶</button></div>
-  <div class="stats" id="cstats"></div><div class="scene" id="scene"><div class="fence">${svg(`${[...Array(11)].map((_,i)=>`<rect x="${i*30+4}" y="4" width="10" height="56" rx="4" fill="#F4EEE2"/>`).join('')}<rect y="16" width="320" height="8" fill="#F4EEE2"/><rect y="40" width="320" height="8" fill="#F4EEE2"/>`,'0 0 320 60')}</div><div class="hero cow" id="cow"></div></div>`;
-  const C=G.cow,cowEl=$('cow'),scene=$('scene');let mode=null,bubbles=[],wpid=null,lastB=null,sponge=null,level=0,bucket=null;
+  sc.innerHTML=`<div class="steps" id="csteps"></div><div class="scene tapscene" id="scene">${FENCE}<div class="hero cow" id="cow"></div>
+    <div class="prop l" id="pGrass">${svg(GRASS)}</div><div class="prop r" id="pSponge">${svg(SPONGE)}</div><div class="prop r2" id="pPail">${svg(PAIL)}</div></div>`;
+  const C=G.cow,cowEl=$('cow'),scene=$('scene'),tm=[];let busy=false;
   const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
-  function draw(){cowEl.innerHTML=svg(cowSVG(C.grown,!C.clean),'0 0 200 150');$('tMilk').hidden=!C.grown;
-    $('cstats').innerHTML=`<span>肚子 ${[0,1,2].map(i=>`<svg viewBox="0 0 100 100" class="${i<C.full?'':'off'}">${GRASS}</svg>`).join('')}</span><span>乾淨 <svg viewBox="0 0 24 24" class="${C.clean?'':'off'}">${STAR}</svg></span>`;
-    tipEl.textContent=mode==='wash'?'用手指在牛身上擦一擦,搓出泡泡!':mode==='milk'?'點牛的身體擠牛奶,裝滿桶子!':
-      !C.grown?(C.full<3?'小牛肚子餓了,餵牠吃草':!C.clean?'小牛身上髒髒的,幫牠洗澡':'小牛長大囉'):
-      (C.full<2?'母牛要吃飽才有牛奶,餵牠吃草':!C.clean?'幫母牛洗乾淨,就可以擠奶了':'母牛準備好了,來擠牛奶!');
-    $('tMilk').classList.toggle('on',C.grown&&C.full>=2&&C.clean)}
+  const NAMES=()=>C.grown?['吃草','吃草','洗澡','擠奶']:['吃草','吃草','吃草','洗澡','長大'];
+  const need=()=>C.grown?(C.full<2?'feed':!C.clean?'wash':'milk'):(C.full<3?'feed':!C.clean?'wash':'grow');
+  const idx=()=>C.grown?(C.full<2?C.full:!C.clean?2:3):(C.full<3?C.full:!C.clean?3:4);
+  function draw(){cowEl.innerHTML=svg(cowSVG(C.grown,!C.clean),'0 0 200 150');$('pPail').hidden=!C.grown;stepChips($('csteps'),NAMES(),idx());
+    const n=need();tipEl.textContent=n==='feed'?(C.grown?'母牛要吃飽才有牛奶,點一點牛,餵牠吃草':'小牛肚子餓了,點一點牠,餵牠吃草'):n==='wash'?'身上髒髒的,點一點,幫牠洗澡':n==='grow'?'點一點,小牛要長大了!':'母牛準備好了,點一點擠牛奶!'}
   draw();
-  function setMode(m){mode=m;['tWash','tMilk'].forEach(id=>$(id).classList.toggle('on',(id==='tWash'&&m==='wash')||(id==='tMilk'&&m==='milk')));if(m!=='milk'&&bucket){bucket.remove();bucket=null}draw()}
   function cowAnim(c){cowEl.classList.remove('jump','wig','growup');void cowEl.offsetWidth;cowEl.classList.add(c)}
-  function checkGrow(){if(!C.grown&&C.full>=3&&C.clean){setTimeout(()=>{cowAnim('growup');S.grow();setTimeout(()=>{C.grown=true;C.full=0;C.clean=true;save();draw();S.moo();talk('小牛長大變成母牛了');const r=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();sparkAt(scene,r.left-sr.left+r.width/2,r.top-sr.top+r.height/2,6)},600)},700)}}
-  $('tFeed').onclick=()=>{ac();setMode(null);if(C.full>=3){cowAnim('wig');S.no();talk('吃飽了');return}
-    const mz=cowEl.querySelector('.muz'),br=$('tFeed').getBoundingClientRect();
-    fly(GRASS,br,mz,()=>{C.full++;save();cowEl.querySelector('svg').classList.add('chew');S.munch();setTimeout(()=>{const s=cowEl.querySelector('svg');s&&s.classList.remove('chew')},1600);draw();if(C.full===(C.grown?2:3))setTimeout(()=>{S.moo()},900);checkGrow()},64)};
-  $('tWash').onclick=()=>{ac();if(C.clean){cowAnim('jump');S.ding();talk('已經很乾淨了');const r=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();sparkAt(scene,r.left-sr.left+r.width/2,r.top-sr.top+r.height/3);return}S.tap();setMode(mode==='wash'?null:'wash')};
-  $('tMilk').onclick=()=>{ac();if(!(C.full>=2&&C.clean)){S.no();cowAnim('wig');talk(C.full<2?'母牛肚子餓了':'母牛髒髒的');return}if(mode==='milk')return;setMode('milk');S.tap();
-    const u=cowEl.querySelector('.udder').getBoundingClientRect(),sr=scene.getBoundingClientRect();level=0;bucket=document.createElement('div');bucket.className='bucket';
-    bucket.style.left=(u.left-sr.left+u.width/2)+'px';bucket.style.top=(Math.min(sr.height-84,u.bottom-sr.top+4))+'px';scene.appendChild(bucket);drawBucket()};
-  function drawBucket(){bucket.innerHTML=svg(`<path d="M22 34h56l-8 56H30z" fill="#B9BEC5"/><clipPath id="bk"><path d="M22 34h56l-8 56H30z"/></clipPath><rect clip-path="url(#bk)" x="0" y="${90-level*9.3}" width="100" height="60" fill="#FFFFFF"/><path d="M22 34Q50 -4 78 34" stroke="#8E8791" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="28" ry="6" fill="none" stroke="#8E8791" stroke-width="3"/>`)}
-  function squirt(){if(!bucket)return;const u=cowEl.querySelector('.udder').getBoundingClientRect(),b=bucket.getBoundingClientRect(),sr=scene.getBoundingClientRect();S.squirt();
-    for(let j=0;j<3;j++){const m=document.createElement('div');m.className='milkd';const x=u.left-sr.left+u.width*(j%2?.7:.3),y=u.bottom-sr.top;m.style.left=x+'px';m.style.top=y+'px';scene.appendChild(m);
-      m.animate([{transform:'translate(0,0)'},{transform:`translate(${b.left-sr.left+b.width/2-x}px,${b.top-sr.top+b.height*.45-y}px)`,opacity:.6}],{duration:300,delay:j*70,easing:'ease-in'}).onfinish=()=>m.remove()}
-    level++;drawBucket();if(level>=6){const br=bucket.getBoundingClientRect();bucket.remove();bucket=null;C.full=0;C.clean=false;save();setMode(null);S.moo();talk('擠好牛奶了');toBasket('milk',br)}}
-  // 洗澡:手指擦出泡泡;擠奶:點牛
-  scene.addEventListener('pointerdown',e=>{ac();if(mode==='milk'){if(e.target.closest('.hero')||e.target.closest('.bucket'))squirt();return}
-    if(mode!=='wash'||wpid!==null)return;e.preventDefault();wpid=e.pointerId;sponge=document.createElement('div');sponge.className='sponge';sponge.innerHTML=svg(SPONGE);scene.appendChild(sponge);lastB=null;rub(e)});
-  const mv=e=>{if(e.pointerId!==wpid)return;rub(e)};
-  const up=e=>{if(e.pointerId!==wpid)return;wpid=null;sponge&&sponge.remove();sponge=null};
-  addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
-  function rub(e){const sr=scene.getBoundingClientRect(),x=e.clientX-sr.left,y=e.clientY-sr.top;if(sponge){sponge.style.left=x+'px';sponge.style.top=y+'px'}
-    const cr=cowEl.getBoundingClientRect();if(e.clientX<cr.left+cr.width*.08||e.clientX>cr.right-cr.width*.08||e.clientY<cr.top+cr.height*.15||e.clientY>cr.bottom-cr.height*.15)return;
-    if(lastB&&Math.hypot(x-lastB.x,y-lastB.y)<26)return;lastB={x,y};const s=16+Math.random()*24,b=document.createElement('div');b.className='bubble';b.style.cssText=`left:${x-s/2+(Math.random()-.5)*20}px;top:${y-s/2+(Math.random()-.5)*20}px;width:${s}px;height:${s}px`;scene.appendChild(b);bubbles.push(b);S.bubble();
-    if(bubbles.length>=20)shower()}
-  function shower(){wpid=null;sponge&&sponge.remove();sponge=null;mode='rinse';tipEl.textContent='沖沖水~';S.shower();const cr=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();
-    for(let j=0;j<40;j++)setTimeout(()=>{const r=document.createElement('div');r.className='rain';r.style.left=(cr.left-sr.left+Math.random()*cr.width)+'px';r.style.top=(cr.top-sr.top-20+Math.random()*30)+'px';scene.appendChild(r);setTimeout(()=>r.remove(),750)},j*25);
-    setTimeout(()=>{bubbles.forEach(b=>b.classList.add('go'));setTimeout(()=>{bubbles.forEach(b=>b.remove());bubbles=[]},450);C.clean=true;save();setMode(null);cowAnim('jump');S.ding();sparkAt(scene,cr.left-sr.left+cr.width/2,cr.top-sr.top+cr.height/2,6);talk('洗得好乾淨');checkGrow()},1100)}
-  cleanup=()=>{ro.disconnect();removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};
-  cowEl.addEventListener('click',()=>{if(!mode){C.grown?S.moo():S.moo();cowAnim('jump')}});
-}
+  const at=(el,fx,fy)=>{const r=el.getBoundingClientRect(),g=scene.getBoundingClientRect();return{x:r.left-g.left+r.width*fx,y:r.top-g.top+r.height*fy}};
+  function feed(){const m=at(cowEl.querySelector('.muz'),.5,.5);propMove($('pGrass'),scene,m.x-10,m.y-10,-20,1300,.7);S.tap();
+    tm.push(setTimeout(()=>{cowEl.querySelector('svg').classList.add('chew');S.munch()},450));
+    tm.push(setTimeout(()=>{const s=cowEl.querySelector('svg');s&&s.classList.remove('chew');C.full++;save();draw();busy=false;
+      if(need()!=='feed'){S.moo();talk(C.grown?'吃飽了,接下來洗澡':'吃飽了')}else talk('好吃')},1700))}
+  function wash(){const cr=at(cowEl,.5,.5),cw=cowEl.getBoundingClientRect().width,sp=$('pSponge'),r=sp.getBoundingClientRect(),g=scene.getBoundingClientRect(),
+      sx=r.left-g.left+r.width/2,sy=r.top-g.top+r.height/2,pts=[[-.3,-.05],[.1,-.1],[.3,.05],[-.1,.1],[-.35,.08],[.25,-.12]];
+    sp.animate([{transform:'none'},...pts.map(([fx,fy])=>({transform:`translate(${cr.x+fx*cw-sx}px,${cr.y+fy*cw-sy}px) rotate(${fx*40}deg)`})),{transform:'none'}],{duration:2200,easing:'ease-in-out'});
+    const bubbles=[];for(let j=0;j<22;j++)tm.push(setTimeout(()=>{const s=16+Math.random()*24,b=document.createElement('div');b.className='bubble';
+      b.style.cssText=`left:${cr.x+(Math.random()-.5)*cw*.7-s/2}px;top:${cr.y+(Math.random()-.55)*cw*.32-s/2}px;width:${s}px;height:${s}px`;scene.appendChild(b);bubbles.push(b);S.bubble()},300+j*80));
+    tm.push(setTimeout(()=>{tipEl.textContent='沖沖水~';S.shower();const c2=cowEl.getBoundingClientRect();
+      for(let j=0;j<40;j++)tm.push(setTimeout(()=>{const d=document.createElement('div');d.className='rain';d.style.left=(c2.left-g.left+Math.random()*c2.width)+'px';d.style.top=(c2.top-g.top-20+Math.random()*30)+'px';scene.appendChild(d);setTimeout(()=>d.remove(),750)},j*25));
+      tm.push(setTimeout(()=>{bubbles.forEach(b=>b.classList.add('go'));setTimeout(()=>bubbles.forEach(b=>b.remove()),450);C.clean=true;save();draw();cowAnim('jump');S.ding();sparkAt(scene,cr.x,cr.y,6);talk('洗得好乾淨');busy=false},1100))},2300))}
+  function grow(){cowAnim('growup');S.grow();tm.push(setTimeout(()=>{C.grown=true;C.full=0;C.clean=true;save();draw();S.moo();talk('小牛長大變成母牛了');const c=at(cowEl,.5,.5);sparkAt(scene,c.x,c.y,6);busy=false},700))}
+  function milk(){const u=at(cowEl.querySelector('.udder'),.5,1),pail=$('pPail');propMove(pail,scene,u.x,u.y+30,0,3400,.85);S.tap();
+    let n=0;
+    for(let j=0;j<6;j++)tm.push(setTimeout(()=>{S.squirt();n++;for(let q=0;q<3;q++){const m=document.createElement('div');m.className='milkd';const x=u.x+(q-1)*8,y=u.y;m.style.left=x+'px';m.style.top=y+'px';scene.appendChild(m);
+        m.animate([{transform:'translate(0,0)'},{transform:`translate(0,${26}px)`,opacity:.4}],{duration:260,delay:q*60,easing:'ease-in'}).onfinish=()=>m.remove()}
+      pail.innerHTML=svg(`<clipPath id="pk2"><path d="M22 34h56l-8 56H30z"/></clipPath><path d="M22 34h56l-8 56H30z" fill="#B9BEC5"/><rect clip-path="url(#pk2)" x="0" y="${90-n*9}" width="100" height="60" fill="#FFFFFF"/><path d="M22 34Q50 -4 78 34" stroke="#8E8791" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="28" ry="6" fill="none" stroke="#8E8791" stroke-width="3"/>`)},1100+j*260));
+    tm.push(setTimeout(()=>{const br=pail.getBoundingClientRect();pail.innerHTML=svg(PAIL);C.full=0;C.clean=false;save();draw();S.moo();talk('擠好牛奶了');toBasket('milk',br);busy=false},3500))}
+  scene.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(busy)return;busy=true;({feed,wash,grow,milk})[need()]()});
+  cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)}}
 
-/* ================= 雞舍 ================= */
+/* ================= 雞舍(單一點擊) ================= */
 function showCoop(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
-  sc.innerHTML=`<div class="tools"><button class="tbtn" id="tCorn" type="button">${svg(FEEDBAG)}撒飼料</button></div><div class="stats" id="hstats"></div><div class="scene" id="scene"><div class="hero bird" id="bird"></div></div>`;
+  sc.innerHTML=`<div class="steps" id="hsteps"></div><div class="scene tapscene" id="scene"><div class="hero bird" id="bird"></div><div class="prop l" id="pFeed">${svg(FEEDBAG)}</div></div>`;
   const H=G.hen,bird=$('bird'),scene=$('scene'),tm=[];let busy=false,eggEl=null;
   const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
-  function draw(){bird.innerHTML=svg(H.stage==='egg'?eggSVG(H.crack):H.stage==='chick'?CHICK:NEST+`<g transform="translate(0 -6)">${HEN}</g>`);
-    $('tCorn').hidden=H.stage==='egg';
-    $('hstats').innerHTML=H.stage==='chick'?`<span>長大 ${[0,1,2].map(i=>`<svg viewBox="0 0 24 24" class="${i<H.fed?'':'off'}">${HEART}</svg>`).join('')}</span>`:'';
-    tipEl.textContent=H.stage==='egg'?'輕輕點蛋,幫它保暖,小雞快出來!':H.stage==='chick'?'小雞餓了,撒飼料給牠吃':(eggEl?'母雞生蛋了!點雞蛋收進籃子':'撒飼料給母雞吃,牠會生蛋喔')}
+  function draw(){bird.innerHTML=svg(H.stage==='egg'?eggSVG(H.crack):H.stage==='chick'?CHICK:NEST+`<g transform="translate(0 -6)">${HEN}</g>`);$('pFeed').hidden=H.stage==='egg';
+    if(H.stage==='egg')stepChips($('hsteps'),['保暖','保暖','保暖','保暖','孵出來'],H.crack);
+    else if(H.stage==='chick')stepChips($('hsteps'),['吃飼料','吃飼料','吃飼料','長大'],H.fed);
+    else stepChips($('hsteps'),['吃飼料','生蛋','撿蛋'],eggEl?2:0);
+    tipEl.textContent=H.stage==='egg'?'點一點蛋,幫它保暖,小雞快出來!':H.stage==='chick'?'小雞餓了,點一點,撒飼料給牠吃':(eggEl?'母雞生蛋了!點一點,把蛋撿起來':'點一點,撒飼料給母雞吃,牠會生蛋喔')}
   function anim(c){bird.classList.remove('jump','wig','growup');void bird.offsetWidth;bird.classList.add(c)}
   function center(){const r=bird.getBoundingClientRect(),sr=scene.getBoundingClientRect();return{x:r.left-sr.left+r.width/2,y:r.top-sr.top+r.height/2,r,sr}}
   draw();if(H.egg)layEgg(true);
-  bird.addEventListener('click',()=>{ac();if(busy)return;
-    if(H.stage==='egg'){H.crack++;S.crack();anim('wig');if(H.crack>=5){busy=true;tm.push(setTimeout(()=>{H.stage='chick';H.crack=0;H.fed=0;save();draw();anim('growup');S.peep();talk('小雞出生了');const c=center();sparkAt(scene,c.x,c.y,6);busy=false},350))}else{save();draw()}}
-    else if(H.stage==='chick'){S.peep();anim('jump')}else{S.cluck();anim('jump')}});
-  $('tCorn').onclick=()=>{ac();if(busy)return;busy=true;S.plant();const c=center();
-    for(let j=0;j<14;j++){const f=document.createElement('div');f.className='feed';const bx=c.x+(Math.random()-.5)*c.r.width*.6,by=c.r.bottom-c.sr.top-10-Math.random()*20;f.style.left=c.x+'px';f.style.top=(c.r.top-c.sr.top)+'px';scene.appendChild(f);
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transform=`translate(${bx-c.x}px,${by-(c.r.top-c.sr.top)}px)`}));tm.push(setTimeout(()=>{f.style.opacity=0;setTimeout(()=>f.remove(),400)},1500+j*20))}
-    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s.classList.add('peck');H.stage==='chick'?S.peep():S.cluck()},500));
-    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s&&s.classList.remove('peck');busy=false;
-      if(H.stage==='chick'){H.fed++;save();draw();if(H.fed>=3){busy=true;anim('growup');S.grow();tm.push(setTimeout(()=>{H.stage='hen';H.fed=0;save();draw();S.cluck();talk('小雞長大變母雞了');const c2=center();sparkAt(scene,c2.x,c2.y,6);busy=false},600))}}
-      else if(!H.egg){H.egg=true;save();layEgg()}else{draw()}},1900))};
-  function layEgg(quiet){const c=center();eggEl=document.createElement('div');eggEl.className='egg-drop';eggEl.innerHTML=svg(ICON.egg);eggEl.style.left=(c.x+c.r.width*.3)+'px';scene.appendChild(eggEl);eggEl.style.top=Math.min(c.r.bottom-c.sr.top-c.r.height*.12,c.sr.height-eggEl.offsetHeight/2-8)+'px';scene.appendChild(eggEl);
-    if(!quiet){S.cluck();setTimeout(()=>S.pick(),300);talk('咕咕,生蛋了')}draw();
-    eggEl.onclick=()=>{const r=eggEl.getBoundingClientRect();eggEl.remove();eggEl=null;H.egg=false;save();draw();toBasket('egg',r)}}
-  cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)};
-}
+  function warm(){H.crack++;S.crack();anim('wig');save();
+    if(H.crack>=5){tm.push(setTimeout(()=>{H.stage='chick';H.crack=0;H.fed=0;save();draw();anim('growup');S.peep();talk('小雞出生了');const c=center();sparkAt(scene,c.x,c.y,6);busy=false},350))}
+    else{draw();talk(['好溫暖','蛋動了一下','裂開一點點了','快出來了'][H.crack-1]||'');tm.push(setTimeout(()=>busy=false,400))}}
+  function feed(){const c=center();propMove($('pFeed'),scene,c.x-c.r.width*.15,c.r.top-c.sr.top+c.r.height*.2,-60,1500,.7);S.plant();
+    for(let j=0;j<14;j++)tm.push(setTimeout(()=>{const f=document.createElement('div');f.className='feed';const bx=c.x+(Math.random()-.5)*c.r.width*.6,by=c.r.bottom-c.sr.top-10-Math.random()*20;f.style.left=c.x+'px';f.style.top=(c.r.top-c.sr.top+c.r.height*.3)+'px';scene.appendChild(f);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transform=`translate(${bx-c.x}px,${by-(c.r.top-c.sr.top+c.r.height*.3)}px)`}));setTimeout(()=>{f.style.opacity=0;setTimeout(()=>f.remove(),400)},1600)},450+j*30));
+    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s.classList.add('peck');H.stage==='chick'?S.peep():S.cluck()},1000));
+    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s&&s.classList.remove('peck');
+      if(H.stage==='chick'){H.fed++;save();draw();if(H.fed>=3){anim('growup');S.grow();tm.push(setTimeout(()=>{H.stage='hen';H.fed=0;save();draw();S.cluck();talk('小雞長大變母雞了');const c2=center();sparkAt(scene,c2.x,c2.y,6);busy=false},600))}else{talk('好好吃');busy=false}}
+      else{H.egg=true;save();layEgg();busy=false}},2400))}
+  function collect(){const r=eggEl.getBoundingClientRect();eggEl.remove();eggEl=null;H.egg=false;save();draw();toBasket('egg',r);talk('撿到一顆蛋');tm.push(setTimeout(()=>busy=false,500))}
+  function layEgg(quiet){const c=center();eggEl=document.createElement('div');eggEl.className='egg-drop';eggEl.innerHTML=svg(ICON.egg);eggEl.style.left=(c.x+c.r.width*.3)+'px';scene.appendChild(eggEl);eggEl.style.top=Math.min(c.r.bottom-c.sr.top-c.r.height*.12,c.sr.height-eggEl.offsetHeight/2-8)+'px';
+    if(!quiet){S.cluck();setTimeout(()=>S.pick(),300);talk('咕咕,生蛋了')}draw()}
+  scene.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(busy)return;busy=true;
+    if(H.stage==='egg')warm();else if(H.stage==='hen'&&eggEl)collect();else feed()});
+  cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)}}
 
 /* ================= 加工坊(寫實步驟,點畫面走流程) ================= */
 const KITCHEN=`<rect x="-600" y="-700" width="1400" height="818" fill="#F4EEE2"/>${[22,44,66,88].map(y=>`<rect x="-600" y="${y}" width="1400" height="1.5" fill="#E6DCCB"/>`).join('')}<rect x="-600" y="118" width="1400" height="400" fill="#C9A97A"/><rect x="-600" y="118" width="1400" height="6" fill="#D9BE8C"/>`;
