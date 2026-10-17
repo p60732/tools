@@ -1,5 +1,5 @@
 /* 幼兒遊戲大全 離線快取:第一次打開就把全部遊戲存起來,之後沒網路也能玩 */
-const VERSION = "kids-v7";
+const VERSION = "kids-v8";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
   "./games/toy-tidy.html", "./games/station-master.html", "./games/fire-station.html", "./games/shape-match.html",
@@ -17,7 +17,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   /* 網頁:有網路就拿最新版並存起來,沒網路就用存好的 */
   if (url.origin === location.origin && (req.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname.endsWith("/"))) {
-    e.respondWith(fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
+    e.respondWith(fetch(req, { cache: "no-store" }).then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
       .catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match("./index.html"))));
     return;
   }
