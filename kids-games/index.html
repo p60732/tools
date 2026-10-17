@@ -210,7 +210,7 @@ body.playing{overflow:hidden}
         <g transform="translate(150 96) scale(.36)"><ellipse cx="54" cy="66" rx="28" ry="22" fill="#FBFAF6"/><circle cx="32" cy="38" r="13" fill="#FBFAF6"/><path d="M24 26q2-8 6-6 2-6 6-2 4-2 4 4-2 6-8 6z" fill="#D8796E"/><circle cx="28" cy="36" r="2.6" fill="#4A4552"/><path d="M19 39l-8 3 8 3z" fill="#E3A06B"/></g>
         <circle cx="128" cy="128" r="9" fill="#E9C46A"/><circle cx="128" cy="128" r="6" fill="none" stroke="#D3A94A" stroke-width="1.5"/>
       </svg></span>
-      <span class="info"><span class="txt"><span class="name">快樂農場</span><span class="desc">看植物長大、養乳牛、孵小雞、開商店</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+      <span class="info"><span class="txt"><span class="name">快樂農場</span><span class="desc">種田養動物、加工坊做蛋糕、出貨訂單、商店結帳</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
     </button>
   </div>
 </main>
@@ -248,7 +248,7 @@ addEventListener('popstate',()=>closeGame(true));
 const offEl=document.getElementById('offline');
 const GAMES=[...document.querySelectorAll('.card')].map(c=>c.dataset.src);
 async function checkOffline(){try{if(!('caches' in window))return;const keys=await caches.keys();const k=keys.find(x=>x.startsWith('kids-v'));if(!k)return;const c=await caches.open(k);
-  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/17d 版';offEl.hidden=false}}catch(e){}}
+  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/17e 版';offEl.hidden=false}}catch(e){}}
 if('serviceWorker' in navigator){let hadCtl=!!navigator.serviceWorker.controller,reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!reloaded){reloaded=true;location.reload()}});addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{try{r.update()}catch(e){}return navigator.serviceWorker.ready}).then(()=>setTimeout(checkOffline,500)).catch(()=>{})});checkOffline()}
 </script>
 
