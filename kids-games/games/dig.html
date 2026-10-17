@@ -63,14 +63,21 @@ canvas.fx{pointer-events:none}
 .beach .sky::after{content:"";position:absolute;left:-10%;right:-10%;bottom:-8px;height:22px;background:radial-gradient(circle at 20px 0,transparent 16px,#F4EEE2 17px) 0 0/40px 22px repeat-x;animation:wave 6s linear infinite}
 @keyframes wave{to{transform:translateX(40px)}}
 .fossil .sky{background:linear-gradient(#EEE3CF 0 40%,#D9B48A 40% 60%,#C99B6D 60% 80%,#B98C63 80%)}
+.garden .sky{background:linear-gradient(#E3EEDF 0 55%,#A9C49A 55%)}
+.garden .sky::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:30px;background:radial-gradient(ellipse 9px 15px at 12px 15px,#8FB283 96%,transparent) 0 0/46px 30px repeat-x,radial-gradient(ellipse 9px 15px at 30px 17px,#7FA676 96%,transparent) 0 0/46px 30px repeat-x}
+.snow .sky{background:linear-gradient(#E6EEF3 0 50%,#F7F8FA 50%)}
+.snow .sky::before{content:"";position:absolute;left:0;right:0;bottom:30%;height:60%;background:radial-gradient(ellipse 120px 40px at 80px 100%,#FFFFFF 98%,transparent) 0 0/260px 100% repeat-x}
+.snow .sky::after{content:"";position:absolute;inset:0;background:radial-gradient(circle 2.5px,#fff 96%,transparent) 0 0/34px 26px,radial-gradient(circle 2px,#fff 96%,transparent) 17px 13px/34px 26px;animation:snowf 5s linear infinite;opacity:.9}
+@keyframes snowf{to{background-position:0 26px,17px 39px}}
 /* 選單 */
 .menu{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow-y:auto;touch-action:pan-y}
-.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:18px;width:min(100%,760px)}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:14px;width:min(100%,1000px)}
+@media (max-width:700px){.modes{grid-template-columns:1fr 1fr}.mode .t{padding:8px 12px 12px}.mode small{font-size:13px}}
 .mode{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border-radius:26px;overflow:hidden;box-shadow:0 5px 0 rgba(74,69,82,.14);display:flex;flex-direction:column;touch-action:manipulation}
 .mode .pic{aspect-ratio:16/10;max-width:100%;display:grid;place-items:center}
 .mode .pic svg{width:100%;height:100%}
 .mode .t{padding:12px 18px 16px;display:flex;flex-direction:column;gap:2px}
-.mode b{font-size:clamp(22px,5.5vw,28px)}
+.mode b{font-size:clamp(19px,4.6vw,26px)}
 .mode small{font-size:15px;font-weight:700;color:#6E6876}
 .mode:active{transform:translateY(3px)}
 /* 完成、收藏館 */
@@ -135,6 +142,8 @@ const S={
   brush(){const t=T();noise(t,.16,{v:.07,f:3200+Math.random()*800,q:.6,type:'highpass'})},
   find(){const t=T();[76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.1,.5,{type:'triangle',v:.13}))},
   win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.13,.6,{type:'triangle',v:.12}))},
+  soil(){const t=T();noise(t,.16,{v:.13,f:380+Math.random()*250,q:.9});noise(t+.04,.06,{v:.04,f:1500,q:2})},
+  snow(){const t=T();noise(t,.09,{v:.09,f:2600+Math.random()*900,q:1.5});noise(t+.05,.07,{v:.06,f:1900+Math.random()*600,q:1.5})},
   tap(){tone(520,T(),.08,{type:'triangle',v:.1})},
   ding(){const t=T();tone(1568,t,.35,{type:'sine',v:.12});tone(2093,t+.07,.45,{type:'sine',v:.09})}
 };
@@ -163,11 +172,31 @@ const FOSSIL=[
  ['fish','魚化石',`<path d="M10 26Q12 10 30 10H72Q90 12 90 30V72Q88 90 70 90H30Q10 88 10 70Z" fill="#C2B6A6"/><path d="M22 50Q36 34 58 40L74 30V70L58 60Q36 66 22 50Z" fill="#A89C8C"/><path d="M34 50H64" stroke="#C2B6A6" stroke-width="3"/>${[38,44,50,56].map(x=>`<path d="M${x} 42V58" stroke="#C2B6A6" stroke-width="2.5"/>`).join('')}<circle cx="30" cy="48" r="3" fill="#7E7466"/>`],
  ['egg','恐龍蛋',`<ellipse cx="50" cy="54" rx="30" ry="38" fill="#E6DCC4"/>${[[38,38,5],[60,32,4],[56,56,6],[40,64,4],[64,72,5],[46,80,3],[30,52,3]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#C9B48E"/>`).join('')}<path d="M38 26Q30 34 30 46" stroke="#F4EEE2" stroke-width="5" fill="none" stroke-linecap="round"/>`]
 ];
-const MODES={beach:{name:'海邊挖貝殼',list:BEACH,tip:'用手指在沙灘上挖一挖,找找貝殼!',done:'貝殼都找到了!'},fossil:{name:'沙地挖化石',list:FOSSIL,tip:'用刷子刷開沙土,找找化石!',done:'化石都挖出來了!'}};
+const GARDEN=[
+ ['sweetpotato','地瓜',`<path d="M14 62Q10 40 34 32Q60 24 80 36Q92 46 86 60Q78 74 52 74Q26 76 14 62Z" fill="#B8697A"/><path d="M86 52l10-4M14 58l-8 4" stroke="#9E5566" stroke-width="3" stroke-linecap="round"/><path d="M34 44q4 4 0 8M56 40q4 4 0 8M66 58q4 4 0 8" stroke="#9E5566" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M28 44Q36 36 48 36" stroke="#CF8A98" stroke-width="4" fill="none" stroke-linecap="round"/>`],
+ ['carrot','紅蘿蔔',`<path d="M50 30Q40 12 32 8M51 30Q52 10 56 3M52 30Q62 14 70 10" stroke="#7FA676" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M37 30Q51 24 65 30Q61 60 53 92Q50 96 47 92Q41 60 37 30Z" fill="#E59A5C"/><path d="M43 44h8M46 58h8M47 72h5" stroke="#CC7F45" stroke-width="3" stroke-linecap="round"/>`],
+ ['potato','馬鈴薯',`<path d="M16 52Q14 26 44 22Q74 18 84 42Q90 66 66 76Q40 84 24 72Q16 64 16 52Z" fill="#D2AE7C"/>${[[36,40],[62,34],[70,58],[44,64],[28,56]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="#B48E5E"/>`).join('')}<path d="M28 36Q36 28 48 28" stroke="#E2C499" stroke-width="4" fill="none" stroke-linecap="round"/>`],
+ ['daikon','白蘿蔔',`<path d="M48 30Q36 14 30 8M50 30Q50 10 52 2M52 30Q64 14 72 10" stroke="#8FB283" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M35 30Q50 24 65 30Q67 66 53 94Q50 97 47 94Q33 66 35 30Z" fill="#F7F4EE"/><path d="M36 30Q50 26 64 30L63 40Q50 35 37 40Z" fill="#D3E3C6"/><path d="M42 56h6M52 70h6" stroke="#E2DCD0" stroke-width="2.5" stroke-linecap="round"/>`],
+ ['onion','洋蔥',`<path d="M50 22V6" stroke="#8FB283" stroke-width="5" stroke-linecap="round"/><path d="M50 20Q54 32 72 42Q86 56 76 74Q66 88 50 88Q34 88 24 74Q14 56 28 42Q46 32 50 20Z" fill="#E8C08A"/><path d="M50 24Q42 54 46 88M50 24Q60 54 56 88M50 24Q32 52 34 84M50 24Q68 52 66 84" stroke="#D3A56C" stroke-width="2.5" fill="none"/><path d="M42 88l-4 6M50 88v7M58 88l4 6" stroke="#C9A97A" stroke-width="2.5" stroke-linecap="round"/>`],
+ ['peanut','花生',`<path d="M50 10Q70 10 70 30Q70 42 62 50Q70 58 70 72Q70 92 50 92Q30 92 30 72Q30 58 38 50Q30 42 30 30Q30 10 50 10Z" fill="#DCBF92"/>${[22,34,62,74,84].map(y=>`<path d="M36 ${y}Q50 ${y+3} 64 ${y}" stroke="#C4A472" stroke-width="2.5" fill="none"/>`).join('')}<path d="M42 16V44M58 16V44M42 56V86M58 56V86" stroke="#C4A472" stroke-width="2" fill="none"/>`],
+ ['worm','蚯蚓',`<path d="M12 66Q24 42 38 60T64 60Q74 46 84 48" stroke="#E3A3A0" stroke-width="16" fill="none" stroke-linecap="round"/>${[24,40,56].map(x=>`<path d="M${x} ${x===40?56:58}v8" stroke="#D08B88" stroke-width="2.5" stroke-linecap="round"/>`).join('')}<circle cx="82" cy="45" r="2.6" fill="${K}"/><circle cx="90" cy="47" r="2.6" fill="${K}"/><path d="M83 52q4 3 7 0" stroke="${K}" stroke-width="2" fill="none" stroke-linecap="round"/>`],
+ ['bamboo','竹筍',`<path d="M50 8Q66 40 74 86Q50 94 26 86Q34 40 50 8Z" fill="#E6D3A0"/><path d="M50 8Q60 44 62 90M50 8Q40 44 38 90" stroke="#C9B07A" stroke-width="3" fill="none"/><path d="M50 8Q56 18 58 28Q50 24 42 28Q44 18 50 8Z" fill="#B8C98E"/><path d="M27 84Q50 76 73 84" stroke="#C9B07A" stroke-width="3" fill="none"/>`]
+];
+const SNOW=[
+ ['egg','企鵝蛋',`<ellipse cx="50" cy="54" rx="28" ry="36" fill="#FBFAF6" stroke="#CFD9E0" stroke-width="3"/>${[[40,46,4],[60,40,3],[58,66,4],[42,72,3]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#E3E9EE"/>`).join('')}<path d="M36 34Q30 42 30 52" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>`],
+ ['goldegg','金色企鵝蛋',`<ellipse cx="50" cy="54" rx="28" ry="36" fill="#F0D58C" stroke="#D9B865" stroke-width="3"/><path d="M36 34Q30 42 30 52" stroke="#FBEBC0" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M80 14l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#E9C46A"/><path d="M20 76l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z" fill="#E9C46A"/>`],
+ ['chick','企鵝寶寶',`<path d="M38 88l-6 6h12zM62 88l6 6H56z" fill="#E3A06B"/><ellipse cx="50" cy="62" rx="28" ry="30" fill="#B3B5BD"/><ellipse cx="50" cy="66" rx="17" ry="20" fill="#CDCFD5"/><circle cx="50" cy="34" r="22" fill="#55505C"/><ellipse cx="41" cy="36" rx="9" ry="10" fill="#FFFFFF"/><ellipse cx="59" cy="36" rx="9" ry="10" fill="#FFFFFF"/><circle cx="42" cy="36" r="3" fill="${K}"/><circle cx="58" cy="36" r="3" fill="${K}"/><path d="M46 44h8l-4 5z" fill="#E3A06B"/>`],
+ ['fish','小魚',`<path d="M12 50Q32 26 62 40L84 26V74L62 60Q32 74 12 50Z" fill="#9DBBCB"/><path d="M22 54Q40 66 60 58" stroke="#C3D7E1" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="28" cy="46" r="4" fill="${K}"/><path d="M42 40q4 10 0 20" stroke="#86A6B8" stroke-width="3" fill="none" stroke-linecap="round"/>`],
+ ['pebble','亮晶晶石頭',`<path d="M16 60Q14 36 42 30Q72 24 84 46Q92 68 64 76Q36 82 22 72Q16 68 16 60Z" fill="#A6AEB6"/><path d="M28 46Q36 38 50 36" stroke="#C9D0D6" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M74 18l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#FFFFFF"/>`],
+ ['crystal','冰晶',`<g stroke="#9CC3DA" stroke-width="6" stroke-linecap="round">${[0,60,120].map(a=>`<path d="M50 12V88M50 26l-9-9M50 26l9-9M50 74l-9 9M50 74l9 9" transform="rotate(${a} 50 50)"/>`).join('')}</g><circle cx="50" cy="50" r="7" fill="#DCEBF3"/>`],
+ ['hat','毛線帽',`<circle cx="50" cy="16" r="11" fill="#F4EEE2"/><path d="M18 70Q16 26 50 24Q84 26 82 70Z" fill="#D88E87"/><path d="M34 30v40M50 26v44M66 30v40" stroke="#C97C76" stroke-width="3"/><rect x="14" y="64" width="72" height="18" rx="9" fill="#F4EEE2"/>`],
+ ['seal','海豹寶寶',`<path d="M10 70Q14 40 46 36Q80 34 88 60Q90 80 60 82H24Q10 82 10 70Z" fill="#F7F6F2" stroke="#DCE2E6" stroke-width="3"/><path d="M84 74l10 6-10 4z" fill="#E6E6E0"/><circle cx="34" cy="54" r="5" fill="${K}"/><circle cx="52" cy="54" r="5" fill="${K}"/><circle cx="35" cy="52" r="1.6" fill="#fff"/><circle cx="53" cy="52" r="1.6" fill="#fff"/><ellipse cx="43" cy="63" rx="4" ry="3" fill="#8E8791"/><path d="M28 64h8M50 64h8" stroke="#C9C9C9" stroke-width="1.5"/>`]
+];
+const MODES={beach:{name:'海邊挖貝殼',list:BEACH,tip:'用手指在沙灘上挖一挖,找找貝殼!',done:'貝殼都找到了!'},fossil:{name:'沙地挖化石',list:FOSSIL,tip:'用刷子刷開沙土,找找化石!',done:'化石都挖出來了!'},garden:{name:'菜園挖地瓜',list:GARDEN,tip:'用小鏟子挖開泥土,拔出蔬菜!',done:'蔬菜都收成了!',room:'菜園',unit:'土'},snow:{name:'雪地找企鵝蛋',list:SNOW,tip:'撥開厚厚的雪,找找企鵝蛋!',done:'企鵝蛋都找到了!',room:'雪地',unit:'雪',must:'egg'}};
 const svgOf=(it,extra='')=>`<svg viewBox="0 0 100 100" ${extra}>${it[2]}</svg>`;
 
 /* ================= 收藏 ================= */
-let coll={beach:[],fossil:[]};try{const c=JSON.parse(localStorage.getItem('digFound')||'null');if(c&&c.beach&&c.fossil)coll=c}catch(e){}
+let coll={beach:[],fossil:[],garden:[],snow:[]};try{const c=JSON.parse(localStorage.getItem('digFound')||'null');if(c)for(const k in coll)if(Array.isArray(c[k]))coll[k]=c[k]}catch(e){}
 const saveColl=()=>{try{localStorage.setItem('digFound',JSON.stringify(coll))}catch(e){}};
 
 /* ================= 畫面 ================= */
@@ -179,7 +208,9 @@ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a
 function showMenu(){mode=null;clearInterval(hintT);app.className='app';$('back').hidden=true;$('museum').hidden=true;$('title').textContent='挖寶沙坑';tipEl.textContent='選一個地方去挖寶';
   bodyEl.hidden=true;skyEl.hidden=true;menuEl.hidden=false;menuEl.innerHTML='';const m=document.createElement('div');m.className='modes';menuEl.appendChild(m);
   [['beach','海邊挖貝殼','貝殼、海星、小螃蟹…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#E8D2A6"/><rect width="320" height="70" fill="#DCEBF0"/><rect y="50" width="320" height="34" fill="#A9CFDC"/><path d="M0 84q20 -10 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0v8H0z" fill="#F4EEE2"/><ellipse cx="110" cy="146" rx="46" ry="22" fill="#CDB07E"/><g transform="translate(78 108) scale(.62)">${BEACH[0][2]}</g><g transform="translate(190 112) scale(.6)">${BEACH[2][2]}</g><circle cx="270" cy="30" r="16" fill="#F4DE9E"/></svg>`],
-   ['fossil','沙地挖化石','恐龍頭骨、菊石、琥珀…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#D3AE84"/><rect width="320" height="60" fill="#EEE3CF"/><path d="M0 60L60 30L120 56L190 22L260 50L320 34V80H0z" fill="#C99B6D"/><rect y="80" width="320" height="10" fill="#B98C63"/><ellipse cx="120" cy="144" rx="56" ry="26" fill="#B98C63"/><g transform="translate(84 104) scale(.72)">${FOSSIL[0][2]}</g><g transform="translate(206 112) scale(.56)">${FOSSIL[1][2]}</g></svg>`]].forEach(([k,n,d,pic])=>{
+   ['fossil','沙地挖化石','恐龍頭骨、菊石、琥珀…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#D3AE84"/><rect width="320" height="60" fill="#EEE3CF"/><path d="M0 60L60 30L120 56L190 22L260 50L320 34V80H0z" fill="#C99B6D"/><rect y="80" width="320" height="10" fill="#B98C63"/><ellipse cx="120" cy="144" rx="56" ry="26" fill="#B98C63"/><g transform="translate(84 104) scale(.72)">${FOSSIL[0][2]}</g><g transform="translate(206 112) scale(.56)">${FOSSIL[1][2]}</g></svg>`],
+   ['garden','菜園挖地瓜','地瓜、紅蘿蔔、馬鈴薯…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#9C7A5B"/><rect width="320" height="60" fill="#E3EEDF"/><rect y="56" width="320" height="16" fill="#A9C49A"/>${[40,110,180,250].map(x=>`<path d="M${x} 104q-10-24-4-34M${x} 104q2-26 10-32M${x} 104q12-20 20-24" stroke="#7FA676" stroke-width="6" fill="none" stroke-linecap="round"/><ellipse cx="${x}" cy="108" rx="22" ry="6" fill="#8A6A4D"/>`).join('')}<g transform="translate(60 120) scale(.62)">${GARDEN[1][2]}</g><g transform="translate(180 128) scale(.6)">${GARDEN[0][2]}</g></svg>`],
+   ['snow','雪地找企鵝蛋','企鵝蛋、企鵝寶寶、冰晶…',`<svg viewBox="0 0 320 200"><rect width="320" height="200" fill="#F7F8FA"/><rect width="320" height="70" fill="#E6EEF3"/><path d="M0 74Q60 40 130 66Q200 34 320 70V90H0z" fill="#FFFFFF"/><ellipse cx="110" cy="150" rx="50" ry="22" fill="#DCE7EE"/><g transform="translate(84 106) scale(.56)">${SNOW[0][2]}</g><g transform="translate(200 98) scale(.7)">${SNOW[2][2]}</g>${[[30,30],[90,18],[250,26],[290,50],[170,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="#fff"/>`).join('')}</svg>`]].forEach(([k,n,d,pic])=>{
     const b=document.createElement('button');b.type='button';b.className='mode';b.innerHTML=`<span class="pic">${pic}</span><span class="t"><b>${n}</b><small>${d}</small></span>`;b.onclick=()=>{S.tap();start(k)};m.appendChild(b)})}
 
 function start(k){mode=k;const M=MODES[k];app.className='app '+k;$('back').hidden=false;$('museum').hidden=false;$('title').textContent=M.name;tipEl.textContent=M.tip;paintCount();document.querySelectorAll('.fly,.plus').forEach(e=>e.remove());
@@ -191,26 +222,30 @@ function paintCount(){if(!mode)return;$('mcount').textContent='收藏館 '+coll[
 /* 鋪沙、藏寶 */
 let W=0,H=0,dpr=1,fctx,R=40;
 const LAYERS={beach:[['#E8D2A6',['#DCC395','#F1E0BC','#D6BC8B']],['#D8BB89',['#CBAA76','#E3C99B','#C7A672']],['#C4A57A',['#B6966A','#D1B38A','#AE8E63']],['#B5A48E',['#A69480','#C3B39E','#9E8C77']]],
+  garden:[['#9C7A5B',['#8E6E51','#AA8868','#86684C']],['#8A6A4D',['#7E6045','#977657','#765A41']],['#7A5D44',['#6E533C','#86684E','#685039']],['#6E5440',['#634B39','#7A5E48','#5C4635']]],
+  snow:[['#F7F8FA',['#FFFFFF','#EDF1F4','#E6ECF0']],['#DCE7EE',['#E8F0F4','#D0DEE7','#CAD9E3']],['#BFD4E1',['#CCDDE8','#B3CBDA','#ADC6D6']],['#A3C0D1',['#B1CAD9','#97B7CA','#90B1C5']]],
   fossil:[['#D3AE84',['#C49C70','#DEBD96','#B98C63']],['#C28D66',['#B47F59','#CF9C76','#A9754F']],['#AFA294',['#A09385','#BEB2A4','#968A7C']],['#958676',['#877868','#A39484','#7E7061']]]};
 let layers=[],NL=2,CELL=30,depth=null,dugT=null,GW=1;
 function setupField(){const r=field.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(2,devicePixelRatio||1);
   fx.width=Math.round(W*dpr);fx.height=Math.round(H*dpr);fctx=fx.getContext('2d');fctx.setTransform(dpr,0,0,dpr,0,0);
   const beach=mode==='beach';
   // 最底層:寶物躺的地方
-  deep.style.background=beach?'radial-gradient(circle at 30% 40%,#BFA680,transparent 60%),#B9A07A':'repeating-linear-gradient(170deg,#8E7F70 0 26px,#86786A 26px 52px)';
+  deep.style.background={beach:'radial-gradient(circle at 30% 40%,#BFA680,transparent 60%),#B9A07A',fossil:'repeating-linear-gradient(170deg,#8E7F70 0 26px,#86786A 26px 52px)',garden:'radial-gradient(circle at 60% 40%,#6A513D,transparent 60%),#5E4734',snow:'radial-gradient(circle at 40% 30%,#9DB9CB,transparent 60%),#88A8BD'}[mode];
   // 隨機 2~4 層沙,一層一層挖
   NL=2+Math.floor(Math.random()*3);layersEl.innerHTML='';layers=[];
   const pal=LAYERS[mode];
   for(let k=NL-1;k>=0;k--){const c=document.createElement('canvas');c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
     const [base,dot]=pal[k];g.fillStyle=base;g.fillRect(0,0,W,H);
     for(let i=0;i<W*H/(k?140:90);i++){g.fillStyle=dot[i%3];const x=Math.random()*W,y=Math.random()*H,sz=Math.random()*2.6+.8;g.beginPath();g.arc(x,y,sz,0,7);g.fill()}
-    if(k===0){if(!beach){g.strokeStyle='rgba(185,140,99,.35)';g.lineWidth=3;for(let y=30;y<H;y+=46){g.beginPath();g.moveTo(0,y);for(let x=0;x<=W;x+=40)g.lineTo(x,y+Math.sin(x/60+y)*6);g.stroke()}}
+    if(k===0&&mode==='garden'){for(let i=0;i<W*H/7000;i++){const x=Math.random()*W,y=Math.random()*H;g.strokeStyle=i%2?'#7FA676':'#8FB283';g.lineWidth=3;g.lineCap='round';g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x-4,y-8,x-7,y-12);g.moveTo(x,y);g.quadraticCurveTo(x+4,y-9,x+8,y-11);g.stroke()}}
+    else if(k===0&&mode==='snow'){for(let i=0;i<W*H/2500;i++){g.fillStyle='rgba(255,255,255,.9)';const x=Math.random()*W,y=Math.random()*H;g.beginPath();g.arc(x,y,1.2+Math.random()*1.6,0,7);g.fill()}g.strokeStyle='rgba(200,214,224,.6)';g.lineWidth=2;for(let y=50;y<H;y+=70){g.beginPath();g.moveTo(0,y);for(let x=0;x<=W;x+=50)g.lineTo(x,y+Math.sin(x/90+y)*10);g.stroke()}}
+    else if(k===0){if(!beach){g.strokeStyle='rgba(185,140,99,.35)';g.lineWidth=3;for(let y=30;y<H;y+=46){g.beginPath();g.moveTo(0,y);for(let x=0;x<=W;x+=40)g.lineTo(x,y+Math.sin(x/60+y)*6);g.stroke()}}
       else{for(let i=0;i<6;i++){g.fillStyle='rgba(255,255,255,.5)';const x=Math.random()*W,y=Math.random()*H;g.beginPath();g.ellipse(x,y,8,4,Math.random()*3,0,7);g.fill()}}}
     else{for(let i=0;i<W*H/9000;i++){g.fillStyle=dot[0];const x=Math.random()*W,y=Math.random()*H;g.beginPath();g.ellipse(x,y,6+Math.random()*8,4+Math.random()*5,Math.random()*3,0,7);g.fill()}}
     layersEl.appendChild(c);layers[k]={c,g,col:[base,...dot]}}
-  tipEl.textContent=MODES[mode].tip+' 這次有 '+NL+' 層沙喔';
+  tipEl.textContent=MODES[mode].tip+' 這次有 '+NL+' 層'+(MODES[mode].unit||'沙')+'喔';
   // 藏 5 個寶物,不重疊
-  const M=MODES[mode],pick=shuffle(M.list.slice()).slice(0,5),size=Math.max(70,Math.min(140,Math.min(W,H)*.24));R=Math.max(26,size*.36);CELL=R*.7;GW=Math.ceil(W/CELL)+1;depth=new Uint8Array(GW*(Math.ceil(H/CELL)+1));dugT=new Float64Array(depth.length);
+  const M=MODES[mode],pick=(()=>{let l=shuffle(M.list.slice()).slice(0,5);if(M.must&&!l.some(i=>i[0]===M.must))l[0]=M.list.find(i=>i[0]===M.must);return shuffle(l)})(),size=Math.max(70,Math.min(140,Math.min(W,H)*.24));R=Math.max(26,size*.36);CELL=R*.7;GW=Math.ceil(W/CELL)+1;depth=new Uint8Array(GW*(Math.ceil(H/CELL)+1));dugT=new Float64Array(depth.length);
   itemsEl.innerHTML='';items=[];found=0;tray.innerHTML='';
   pick.forEach(it=>{let x,y,ok=false;for(let t=0;t<300&&!ok;t++){x=size*.15+Math.random()*(W-size*1.3);y=size*.15+Math.random()*(H-size*1.3);ok=items.every(o=>Math.hypot(o.x-x,o.y-y)>size*1.05)}
     const el=document.createElement('div');el.className='item';el.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;transform:rotate(${Math.random()*40-20}deg)`;el.innerHTML=svgOf(it);itemsEl.appendChild(el);
@@ -228,8 +263,8 @@ function digAt(x,y){if(!depth)return;const beach=mode==='beach',now=performance.
   const L=layers[k],g=L.g;g.globalCompositeOperation='destination-out';
   for(let i=0;i<5;i++){const a=Math.random()*7,d=Math.random()*R*.35,rr=R*(.55+Math.random()*.45);g.beginPath();g.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,rr,0,7);g.fill()}
   // 噴出來的沙(顏色跟著這一層)
-  for(let i=0;i<(beach?7:5);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:L.col[i%4],s:Math.random()*4+2});
-  if(now-lastSnd>90){lastSnd=now;beach?S.dig():S.brush()}
+  for(let i=0;i<(mode==='fossil'?5:7);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:L.col[i%4],s:Math.random()*4+2});
+  if(now-lastSnd>90){lastSnd=now;({beach:S.dig,fossil:S.brush,garden:S.soil,snow:S.snow})[mode]()}
   if(now-lastCheck>100){lastCheck=now;check()}}
 field.addEventListener('pointerdown',e=>{if(digging!==null||!mode||!depth)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);digAt(lastPt.x,lastPt.y)});
 addEventListener('pointermove',e=>{if(e.pointerId!==digging)return;const p=toField(e),d=Math.hypot(p.x-lastPt.x,p.y-lastPt.y),step=R*.45;
@@ -266,7 +301,7 @@ function flyToMuseum(o,isNew){const m=$('museum'),land=()=>{o.slot.classList.add
 function done(){clearInterval(hintT);S.win();const M=MODES[mode];
   over.innerHTML=`<h2>${M.done}</h2><div class="found-row">${items.map(o=>`<div>${svgOf(o.it)}</div>`).join('')}</div><p>收藏館 ${coll[mode].length} / ${M.list.length}</p><div class="row"><button class="big w" type="button" id="toMuseum">看收藏館</button><button class="big" type="button" id="again">再挖一次</button></div>`;
   over.hidden=false;$('again').onclick=()=>{S.tap();start(mode)};$('toMuseum').onclick=()=>{S.tap();museum()}}
-function museum(){const M=MODES[mode];over.innerHTML=`<h2>${M.name.slice(-2)}收藏館</h2><p>已經收集 ${coll[mode].length} / ${M.list.length} 種${coll[mode].length===M.list.length?',全部找齊了!':''}</p><div class="grid" id="mg"></div><div class="row"><button class="big" type="button" id="closeM">回去挖寶</button></div>`;
+function museum(){const M=MODES[mode];over.innerHTML=`<h2>${M.room||M.name.slice(-2)}收藏館</h2><p>已經收集 ${coll[mode].length} / ${M.list.length} 種${coll[mode].length===M.list.length?',全部找齊了!':''}</p><div class="grid" id="mg"></div><div class="row"><button class="big" type="button" id="closeM">回去挖寶</button></div>`;
   over.hidden=false;const g=$('mg');M.list.forEach(it=>{const has=coll[mode].includes(it[0]),b=document.createElement('button');b.type='button';b.className='card'+(has?'':' no');b.innerHTML=svgOf(it)+'<span>'+(has?it[1]:'還沒找到')+'</span>';
     if(has)b.onclick=()=>{b.classList.remove('wig');void b.offsetWidth;b.classList.add('wig');S.tap();talk(it[1])};g.appendChild(b)});
   $('closeM').onclick=()=>{S.tap();over.hidden=true;if(found===items.length)start(mode)}}
