@@ -200,7 +200,11 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .fx-pour{animation:fxpour 1.3s ease-in-out;transform-origin:0% 100%}
 @keyframes fxpour{25%,80%{transform:rotate(-55deg)}}
 .fx-tilt{animation:fxtilt 1.3s ease-in-out;transform-origin:100% 100%}
-@keyframes fxtilt{25%,80%{transform:rotate(30deg) translateX(10px)}}
+@keyframes fxtilt{25%,80%{transform:translate(26px,-44px) rotate(28deg)}}
+/**/.fx-tilt4{animation:fxtilt4 1.3s ease-in-out;transform-origin:100% 100%}
+@keyframes fxtilt4{25%,80%{transform:rotate(40deg)}}
+.fx-tilt3{animation:fxtilt3 1.3s ease-in-out;transform-origin:100% 100%}
+@keyframes fxtilt3{25%,80%{transform:translate(30px,-12px) rotate(40deg)}}
 .fx-tilt2{animation:fxtilt2 1.3s ease-in-out;transform-origin:0% 100%}
 @keyframes fxtilt2{25%,80%{transform:rotate(-40deg)}}
 .fx-shake{animation:fxshake .18s ease-in-out 7 alternate;transform-origin:50% 50%}
@@ -750,12 +754,12 @@ const smoke=(x,y)=>`<g class="tool fx-puff"><rect x="${x-9}" y="${y}" width="18"
 const hive=(x,open)=>`<rect x="${x-26}" y="${open?72:62}" width="52" height="${open?46:56}" rx="3" fill="#E6D3A0"/><path d="M${x-26} 90h52" stroke="#D3BD86" stroke-width="2"/><rect x="${x-8}" y="110" width="16" height="4" rx="2" fill="#8A6A4D"/>${open?`<rect x="${x-30}" y="44" width="60" height="8" rx="3" fill="#C9A97A" transform="rotate(-24 ${x+30} 52)"/>${[-18,-9,0,9,18].map(d=>`<rect x="${x+d-2}" y="68" width="4" height="8" fill="#C9A97A"/>`).join('')}`:`<rect x="${x-30}" y="56" width="60" height="8" rx="3" fill="#C9A97A"/>`}`;
 const hexes=(x,y,w,h,col,cap)=>{let p='';for(let r=0;r<h;r++)for(let c=0;c<w;c++){const cx=x+c*7+(r%2?3.5:0),cy=y+r*6;p+=`<circle cx="${cx}" cy="${cy}" r="3.1" fill="${cap?'#F4E6B8':col}"/>`}return p};
 const frame=(x,y,cap,fx)=>`<g class="tool${fx?' fx-'+fx:''}"><rect x="${x-26}" y="${y}" width="52" height="40" rx="2" fill="#C9A97A"/><rect x="${x-22}" y="${y+4}" width="44" height="32" fill="#E9A85A"/>${hexes(x-19,y+8,6,5,'#E9A85A',cap)}<rect x="${x-30}" y="${y}" width="60" height="4" rx="2" fill="#A98467"/></g>`;
-const extractor=(x,fill,fx)=>`<rect x="${x-22}" y="70" width="44" height="48" rx="6" fill="#B9BEC5"/><ellipse cx="${x}" cy="70" rx="22" ry="5" fill="#A6AEB6"/>${fill?`<rect x="${x-20}" y="104" width="40" height="12" rx="4" fill="#E9A85A"/>`:''}<rect x="${x+20}" y="104" width="8" height="5" rx="2" fill="#8E8791"/><path d="M${x} 66V56" stroke="#8E8791" stroke-width="4" stroke-linecap="round"/><g class="tool${fx?' fx-turn':''}"><circle cx="${x}" cy="56" r="20" fill="none"/><path d="M${x} 56h16" stroke="#8E8791" stroke-width="4" stroke-linecap="round"/><path d="M${x+16} 56v-6" stroke="#D88E87" stroke-width="5" stroke-linecap="round"/></g><g class="tool${fx?' fx-turn':''}">${[-12,-4,4,12].map(d=>`<path d="M${x+d} 76v22" stroke="#A6AEB6" stroke-width="2"/>`).join('')}<circle cx="${x}" cy="88" r="16" fill="none"/></g>`;
+const extractor=(x,fill,fx)=>`<rect x="${x-22}" y="70" width="44" height="48" rx="6" fill="#B9BEC5"/><ellipse cx="${x}" cy="70" rx="22" ry="5" fill="#A6AEB6"/>${fill?`<rect x="${x-20}" y="104" width="40" height="12" rx="4" fill="#E9A85A"/>`:''}<path d="M${x+20} 72h12v6h-4" stroke="#8E8791" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M${x} 66V56" stroke="#8E8791" stroke-width="4" stroke-linecap="round"/><g class="tool${fx?' fx-turn':''}"><circle cx="${x}" cy="56" r="20" fill="none"/><path d="M${x} 56h16" stroke="#8E8791" stroke-width="4" stroke-linecap="round"/><path d="M${x+16} 56v-6" stroke="#D88E87" stroke-width="5" stroke-linecap="round"/></g><g class="tool${fx?' fx-turn':''}">${[-12,-4,4,12].map(d=>`<path d="M${x+d} 76v22" stroke="#A6AEB6" stroke-width="2"/>`).join('')}<circle cx="${x}" cy="88" r="16" fill="none"/></g>`;
 const mill=(x,grain,flour,fx)=>`<rect x="${x-30}" y="104" width="60" height="14" rx="5" fill="#A6AEB6"/>${flour?`<ellipse cx="${x}" cy="104" rx="${12+flour*10}" ry="4" fill="#FFFFFF"/>`:''}<rect x="${x-26}" y="86" width="52" height="16" rx="6" fill="#B9BEC5"/><rect x="${x-26}" y="72" width="52" height="14" rx="6" fill="#C9CED4"/><g class="tool${fx?' fx-orbit2':''}">${[-12,0,12].map(d=>`<rect x="${x+d-1}" y="75" width="2" height="8" rx="1" fill="#B5BAC0"/>`).join('')}</g><g class="tool${fx?' fx-orbit':''}"><rect x="${x+16}" y="56" width="5" height="22" rx="2" fill="#8A6A4D"/></g><ellipse cx="${x}" cy="72" rx="8" ry="3" fill="#8E8791"/>${grain?`<ellipse cx="${x}" cy="70" rx="7" ry="3" fill="#E2C26E"/>`:''}`;
 const sack=(x,full)=>full?`<g transform="translate(${x-26} 64) scale(.54)">${ICON.flour}</g>`:`<path d="M${x-18} 90Q${x} 84 ${x+18} 90L${x+20} 118H${x-20}Z" fill="#F4EEE2" stroke="#E6DCCB" stroke-width="1.5"/>`;
 const grains=(x,y,n,col='#E2C26E')=>Array.from({length:n},(_,i)=>`<ellipse cx="${x+((i*37)%40)-20}" cy="${y-((i*13)%8)}" rx="2.2" ry="1.4" fill="${col}"/>`).join('');
 const rollers=(x,fx)=>`<rect x="${x-26}" y="60" width="6" height="58" fill="#8A6A4D"/><rect x="${x+20}" y="60" width="6" height="58" fill="#8A6A4D"/><g class="tool${fx?' fx-spinR':''}"><circle cx="${x+8}" cy="80" r="11" fill="#A6AEB6"/>${[0,60,120].map(a=>`<path d="M${x+8} 70v20" stroke="#8E8791" stroke-width="1.5" transform="rotate(${a} ${x+8} 80)"/>`).join('')}</g><g class="tool${fx?' fx-spin':''}"><circle cx="${x-8}" cy="80" r="26" fill="none"/><circle cx="${x-8}" cy="80" r="11" fill="#B9BEC5"/>${[0,60,120].map(a=>`<path d="M${x-8} 70v20" stroke="#8E8791" stroke-width="1.5" transform="rotate(${a} ${x-8} 80)"/>`).join('')}<path d="M${x-8} 80h-22" stroke="#8E8791" stroke-width="4" stroke-linecap="round"/><circle cx="${x-30}" cy="80" r="4" fill="#D88E87"/></g><path d="M${x-4} 96h8l-2 8h-4z" fill="#8E8791"/>`;
-const cup=(x,col,lvl)=>`<path d="M${x-12} 98h24l-3 20h-18z" fill="#EAF2F5"/>${lvl?`<path d="M${x-11} ${118-18*lvl}h22l-${2*lvl} ${18*lvl}h-18z" fill="${col}"/>`:''}`;
+const cup=(x,col,lvl,b=118)=>`<path d="M${x-12} ${b-20}h24l-3 20h-18z" fill="#EAF2F5"/>${lvl?`<path d="M${x-11+2*(1-lvl)} ${b-18*lvl}h${22-4*(1-lvl)}l-2 ${18*lvl}h-${18-4*(1-lvl)}z" fill="${col}"/>`:''}`;
 const mortar=(x,content,fx)=>`<path d="M${x-22} 96q0 22 22 22q22 0 22-22z" fill="#C9C4CE"/><ellipse cx="${x}" cy="96" rx="22" ry="5" fill="#A6A1AC"/>${content?`<ellipse cx="${x}" cy="97" rx="18" ry="3.5" fill="${content}"/>`:''}<g class="tool${fx?' fx-'+fx:''}"><rect x="${x+2}" y="66" width="7" height="34" rx="3.5" fill="#B5AFBC" transform="rotate(20 ${x+5} 98)"/></g>`;
 const churn=(x,content,fx)=>`<path d="M${x-18} 66h36l-4 52h-28z" fill="#C9A97A"/>${[78,92,106].map(y=>`<path d="M${x-17} ${y}h34" stroke="#A98467" stroke-width="2.5"/>`).join('')}<ellipse cx="${x}" cy="66" rx="18" ry="4" fill="#A98467"/>${content?`<ellipse cx="${x}" cy="67" rx="15" ry="3" fill="${content}"/>`:''}<g class="tool${fx?' fx-'+fx:''}"><rect x="${x-2}" y="36" width="4" height="36" fill="#8A6A4D"/><circle cx="${x}" cy="36" r="4" fill="#8A6A4D"/></g>`;
 const mold=(x,fill,press,fx)=>`<rect x="${x-20}" y="86" width="40" height="32" rx="4" fill="#E6E9EC"/>${[-12,-4,4,12].map(d=>`<circle cx="${x+d}" cy="104" r="1.6" fill="#B9BEC5"/>`).join('')}${fill?`<rect x="${x-17}" y="${118-fill}" width="34" height="${fill-3}" rx="3" fill="#F7F1DC"/>`:''}${press?`<g class="tool${fx?' fx-'+fx:''}"><rect x="${x-18}" y="${76}" width="36" height="8" rx="2" fill="#C9A97A"/><rect x="${x-10}" y="62" width="20" height="14" rx="3" fill="#8E8791"/></g>`:''}`;
@@ -764,13 +768,13 @@ const clockSVG=`<circle cx="50" cy="50" r="40" fill="#FFFFFF" stroke="#C9A97A" s
 // 步驟:[名稱, 說明, 音效, 粒子 {c,x,y,n,w,up} 或 null, 等待時鐘]
 function jamRecipe(f){const fc=f==='grape'?'#9C7BB0':'#D8796E',jc=f==='grape'?'#6E4A7E':'#B8515A',nm=NAME[f];
   return {out:f==='grape'?'jamG':'jamS',shop:'果醬工廠',need:f==='grape'?{grape:2,sugar:1}:{strawberry:3,sugar:1},bg:KITCHEN,
-   steps:[['洗一洗','把'+nm+'洗乾淨','pour',{c:'#8FBCCB',x:40,y:40,n:18,w:22}],
+   steps:[['洗一洗','把'+nm+'洗乾淨','pour',{c:'#8FBCCB',x:40,y:29,tx:40,ty:100,n:18,w:3,tw:24}],
      [f==='grape'?'摘下來':'切一切',f==='grape'?'把葡萄一顆一顆摘下來':'去掉蒂頭,切成小塊',f==='grape'?'pick':'chop',null],
-     ['倒進鍋子','倒進鍋子裡','pour',{c:fc,x:84,y:76,n:10,w:10}],
-     ['加糖','加一點糖','pour',{c:'#FFFFFF',x:112,y:58,n:18,w:8}],
-     ['開火煮','開火煮滾','sizzle',{c:'#FFFFFF',x:110,y:66,n:10,w:22,up:1}],
+     ['倒進鍋子','倒進鍋子裡','pour',{c:fc,x:92,y:72,tx:108,ty:78,n:10,w:4,tw:20}],
+     ['加糖','加一點糖','pour',{c:'#FFFFFF',x:110,y:36,tx:110,ty:78,n:18,w:3,tw:20}],
+     ['開火煮','開火煮滾','sizzle',{c:'#FFFFFF',x:110,y:72,n:10,w:30,up:1}],
      ['攪一攪','慢慢攪拌,變得濃濃稠稠','stir',null],
-     ['裝進瓶子','裝進玻璃瓶','pour',{c:jc,x:170,y:70,n:12,w:6}],
+     ['裝進瓶子','裝進玻璃瓶','pour',{c:jc,x:168,y:64,tx:170,ty:86,n:12,w:2,tw:10}],
      ['蓋蓋子','蓋上蓋子','till',null]],
    draw(k,a){let p=KITCHEN;
      p+=k<=0?bowl(40,24,'#DCEBF0',fruitBits(40,100,f,0)):k<=2?board(40)+(k<=2?fruitBits(40,108,f,k===2?2:1):''):board(40);
@@ -779,23 +783,23 @@ function jamRecipe(f){const fc=f==='grape'?'#9C7BB0':'#D8796E',jc=f==='grape'?'#
      if(k>=3&&k<6)p+=fruitBits(110,76,f,f==='grape'?1:2);
      if(k>=4&&k<6)p+=[[-10,-2],[0,-4],[8,-1],[-4,1],[12,-3]].map(([dx,dy])=>`<rect x="${110+dx}" y="${76+dy}" width="2.4" height="2.4" fill="#FFFFFF"/>`).join('');
      p+=jar(170,jc,k>=7?1:0,k>=8,f==='grape'?'#E3D6EC':'#F6DCD8');
-     if(a===0)p+=`<g class="tool"><path d="M20 10h20v10h-6v8h-8v-8h-6z" fill="#B9BEC5"/></g>`;
+     if(a===0)p+=`<g class="tool"><path d="M30 10h20v10h-6v8h-8v-8h-6z" fill="#B9BEC5"/><rect x="-10" y="10" width="42" height="6" fill="#B9BEC5"/></g>`;
      if(a===1)p+=f==='grape'?`<g class="tool fx-shake"><path d="M30 80q8-10 16 0" stroke="#F2C9A8" stroke-width="6" fill="none" stroke-linecap="round"/></g>`:knife(38,94);
-     if(a===2)p=p.replace(board(40),`<g class="tool fx-tilt">${board(40)}${fruitBits(40,108,f,2)}</g>`);
+     if(a===2)p=p.replace(board(40)+fruitBits(40,108,f,2),'')+`<g class="tool fx-tilt">${board(40)}${fruitBits(40,108,f,2)}</g>`;
      if(a===3)p+=pourer(120,22,ICON.sugar);
      if(a===5)p+=spoon(106,76);
-     if(a===6)p+=ladle(150,68,jc);
+     if(a===6)p+=ladle(168,68,jc);
      if(a===7)p+=`<g class="tool fx-drop"><path d="M152 80q18-12 36 0v4h-36z" fill="${f==='grape'?'#E3D6EC':'#F6DCD8'}"/></g>`;
      return p}}}
 const RECIPES={
  jamS:jamRecipe('strawberry'),
  jamG:jamRecipe('grape'),
  butter:{out:'butter',shop:'乳品工坊',need:{milk:2},bg:KITCHEN,
-   steps:[['倒進罐子','把牛奶倒進大罐子','pour',{c:'#FFFFFF',x:70,y:62,n:14,w:6}],
+   steps:[['倒進罐子','把牛奶倒進大罐子','pour',{c:'#FFFFFF',x:72,y:50,tx:70,ty:72,n:14,w:2,tw:16}],
      ['靜置分層','放著等一等,鮮奶油會浮上來','tick',null,1],
-     ['撈鮮奶油','把上面的鮮奶油撈出來','pour',{c:'#FBF1D0',x:124,y:58,n:8,w:6}],
+     ['撈鮮奶油','把上面的鮮奶油撈進攪拌桶','pour',{c:'#FBF1D0',x:126,y:55,tx:125,ty:68,n:9,w:2,tw:16}],
      ['用力攪拌','用力攪啊攪,變成奶油','stir',null],
-     ['倒出白脫奶','把白白的白脫奶倒出來','pour',{c:'#F4F6F7',x:120,y:110,n:10,w:6}],
+     ['倒出白脫奶','把白白的白脫奶倒進杯子','pour',{c:'#F4F6F7',x:163,y:70,tx:162,ty:102,n:12,w:2,tw:12}],
      ['壓成塊','把奶油壓成一塊一塊','till',null],
      ['包起來','用紙包起來','till',null]],
    draw(k,a){let p=KITCHEN;
@@ -807,19 +811,19 @@ const RECIPES={
      if(k===6)p+=`<g transform="translate(150 82) scale(.44)">${ICON.butter.replace(/<path d="M10 60v12l22 11V71z"[^>]*\/><path d="M90 60v12l-22 11V71z"[^>]*\/>/,'')}</g>`;
      if(k>=7)p+=`<g transform="translate(150 80) scale(.46)">${ICON.butter}</g>`;
      if(a===0)p+=pourer(80,40,ICON.milk);
-     if(a===2)p+=`<g class="tool fx-lift">${ladle(76,74,'#FBF1D0').replace('class="tool fx-pour"','')}</g>`;
-     if(a===4)p=p.replace(churn(125,'#F4DE9E',''),`<g class="tool fx-tilt2">${churn(125,'#F4DE9E','')}</g>`)+cup(110,'#F4F6F7',0);
+     if(a===2)p+=ladle(126,58,'#FBF1D0');
+     if(a===4)p=p.replace(churn(125,'#F4DE9E',''),`<g class="tool fx-tilt4">${churn(125,'#F4DE9E','')}</g>`)+cup(162,'#F4F6F7',.5);
      if(a===5)p+=`<g class="tool fx-press"><rect x="158" y="84" width="28" height="8" rx="3" fill="#C9A97A"/><rect x="170" y="70" width="5" height="16" fill="#A98467"/></g>`;
      if(a===6)p+=`<g class="tool fx-drop"><rect x="150" y="92" width="44" height="24" rx="3" fill="#FFFFFF" opacity=".9"/></g>`;
      return p}},
  cheese:{out:'cheese',shop:'乳品工坊',need:{milk:2},bg:KITCHEN,
-   steps:[['倒進鍋子','把牛奶倒進鍋子','pour',{c:'#FFFFFF',x:76,y:62,n:14,w:8}],
-     ['加熱','開小火,溫溫的就好','sizzle',{c:'#FFFFFF',x:70,y:66,n:6,w:20,up:1}],
-     ['加凝乳酶','滴幾滴凝乳酶','pour',{c:'#E9DFA8',x:70,y:60,n:5,w:2}],
+   steps:[['倒進鍋子','把牛奶倒進鍋子','pour',{c:'#FFFFFF',x:72,y:47,tx:70,ty:78,n:14,w:2,tw:20}],
+     ['加熱','開小火,溫溫的就好','sizzle',{c:'#FFFFFF',x:70,y:72,n:6,w:30,up:1}],
+     ['加凝乳酶','滴幾滴凝乳酶','pour',{c:'#E9DFA8',x:70,y:58,tx:70,ty:78,n:5,w:1,tw:1,d:450}],
      ['等它凝固','等一等,牛奶變成豆花一樣','tick',null,1],
      ['切小塊','切成小方塊,讓乳清跑出來','chop',null],
-     ['撈進模具','把凝乳撈進模具','pour',{c:'#F7F1DC',x:150,y:72,n:8,w:8}],
-     ['壓一壓','壓一壓,把乳清壓出來','till',{c:'#E9EEDC',x:150,y:118,n:8,w:16}],
+     ['撈進模具','把凝乳撈進模具','pour',{c:'#F7F1DC',x:150,y:66,tx:150,ty:92,n:8,w:2,tw:20}],
+     ['壓一壓','壓一壓,把乳清壓出來','till',{c:'#E9EEDC',x:150,y:108,tx:150,ty:122,n:8,w:24,tw:30}],
      ['熟成','放一段時間,變成起司','tick',null,1]],
    draw(k,a){let p=KITCHEN;const on=k===2||a===1;
      if(k<1)p+=`<g transform="translate(14 72) scale(.46)">${ICON.milk}</g><g transform="translate(28 74) scale(.42)">${ICON.milk}</g>`;
@@ -827,18 +831,18 @@ const RECIPES={
      if(k===5)p+=[-12,-4,4,12].map(d=>`<path d="M${70+d} 72v8" stroke="#E3DCC4" stroke-width="1.2"/>`).join('')+`<path d="M46 76h48" stroke="#E3DCC4" stroke-width="1.2"/>`;
      if(k<8)p+=mold(150,k>=6?24:0,k>=6,a===6?'press':'');
      else p+=board(150)+`<g transform="translate(126 68) scale(.5)">${ICON.cheese}</g>`;
-     if(a===0)p+=pourer(96,34,ICON.milk);
+     if(a===0)p+=pourer(81,34,ICON.milk);
      if(a===2)p+=`<g class="tool fx-press"><rect x="66" y="34" width="8" height="22" rx="3" fill="#E6E9EC"/><ellipse cx="70" cy="32" rx="6" ry="4" fill="#D88E87"/></g>`;
      if(a===4)p+=knife(54,70);
-     if(a===5)p+=ladle(124,70,'#F7F1DC');
+     if(a===5)p+=ladle(151,70,'#F7F1DC');
      return p}},
  honey:{out:'honey',shop:'養蜂場',need:{},bg:YARD,
-   steps:[['噴煙','噴一點煙,讓蜜蜂安靜','pour',{c:'#D9D2C6',x:62,y:60,n:12,w:16,up:1}],
+   steps:[['噴煙','噴一點煙,讓蜜蜂安靜','pour',{c:'#D9D2C6',x:90,y:86,n:12,w:6,up:1}],
      ['打開蜂箱','輕輕打開蜂箱','till',null],
      ['拿出巢框','拿出裝滿蜂蜜的巢框','till',null],
      ['割開蜂蠟','把蜂蠟蓋子割開,蜂蜜露出來','chop',null],
      ['搖蜜機','放進搖蜜機,轉啊轉','whir',null],
-     ['裝瓶','蜂蜜流進瓶子','pour',{c:'#E9A85A',x:150,y:108,n:10,w:3}],
+     ['裝瓶','蜂蜜流進瓶子','pour',{c:'#E9A85A',x:149,y:78,tx:156,ty:88,n:14,w:1,tw:4}],
      ['蓋蓋子','蓋上蓋子','till',null]],
    draw(k,a){let p=YARD+`<g transform="translate(14 22)">${[0,1,2].map(i=>`<ellipse cx="${i*14}" cy="${(i%2)*8}" rx="3" ry="2.2" fill="#F4D77E"/>`).join('')}</g>`;
      p+=hive(45,k>=2);
@@ -846,60 +850,60 @@ const RECIPES={
      if(k>=3&&k<5)p+=frame(116,58,k===3,a===3?'':'');
      if(k>=5)p+=extractor(116,k>=5&&k<7,a===4?'spin':'');
      else if(k<3)p+=`<rect x="98" y="104" width="36" height="14" rx="3" fill="#E6E9EC"/>`;
-     p+=jar(168,'#E9A85A',k>=6?1:0,k>=7,'#E6D3A0');
+     p+=jar(156,'#E9A85A',k>=6?1:0,k>=7,'#E6D3A0');
      if(a===0)p+=smoke(66,74);
      if(a===2)p+=`<g class="tool fx-lift">${frame(45,66,true)}</g>`;
      if(a===3)p+=knife(92,62,'slide');
      if(a===4)p=p.replace(frame(116,58,false,''),'')+extractor(116,false,'spin');
-     if(a===6)p+=`<g class="tool fx-drop"><path d="M150 80q18-12 36 0v4h-36z" fill="#E6D3A0"/></g>`;
+     if(a===6)p+=`<g class="tool fx-drop"><path d="M138 80q18-12 36 0v4h-36z" fill="#E6D3A0"/></g>`;
      return p}},
  flour:{out:'flour',shop:'磨麥坊',need:{wheat:2},bg:YARD,
-   steps:[['打穀','敲一敲,麥粒掉下來','chop',{c:'#E2C26E',x:40,y:100,n:14,w:20}],
-     ['揚一揚','揚一揚,風把麥殼吹走','pour',{c:'#EFE3CC',x:40,y:84,n:16,w:20,up:1}],
-     ['倒進石磨','把麥粒倒進石磨','pour',{c:'#E2C26E',x:110,y:62,n:12,w:4}],
-     ['轉石磨','轉啊轉,磨成粉','whir',{c:'#FFFFFF',x:110,y:104,n:14,w:28}],
-     ['過篩','篩一篩,變得細細的','pour',{c:'#FFFFFF',x:110,y:84,n:16,w:16}],
-     ['裝袋','裝進麵粉袋','pour',{c:'#FFFFFF',x:170,y:80,n:12,w:8}]],
+   steps:[['打穀','敲一敲,麥粒掉下來','chop',{c:'#E2C26E',x:40,y:92,tx:40,ty:113,n:14,w:20,tw:40}],
+     ['揚一揚','揚一揚,風把麥殼吹走','pour',{c:'#EFE3CC',x:40,y:92,n:16,w:30,up:1}],
+     ['倒進石磨','把麥粒倒進石磨的洞','pour',{c:'#E2C26E',x:110,y:40,tx:110,ty:71,n:12,w:2,tw:6}],
+     ['轉石磨','轉啊轉,磨成粉','whir',{c:'#FFFFFF',x:110,y:100,tx:110,ty:106,n:14,w:52,tw:40}],
+     ['過篩','篩一篩,篩進麵粉袋','pour',{c:'#FFFFFF',x:170,y:72,tx:170,ty:92,n:16,w:26,tw:24}],
+     ['綁袋子','把袋子綁起來','till',null]],
    draw(k,a){let p=YARD+`<ellipse cx="40" cy="116" rx="34" ry="6" fill="#E6D3A0"/>`;
      if(k<1)p+=`<g transform="translate(14 64) scale(.52)">${ICON.wheat}</g>`;
      if(k===1)p+=grains(40,112,22)+`<path d="M18 110l40-6" stroke="#E6D3A0" stroke-width="3"/>`;
      if(k===2||a===1)p+=a===1?`<g class="tool fx-toss"><path d="M16 100q24 18 48 0z" fill="#C9A97A"/>${grains(40,102,14)}</g>`:`<path d="M16 108q24 14 48 0z" fill="#C9A97A"/>`+grains(40,110,14);
      p+=k<6?mill(110,k===3,k>=4&&k<5?1:k>=5?.6:0,a===3?'spin':''):mill(110,false,0,'');
-     p+=sack(170,k>=6);
+     p+=sack(170,k>=5);
      if(a===0)p+=`<g class="tool fx-chop"><rect x="34" y="52" width="6" height="40" rx="3" fill="#A98467" transform="rotate(30 37 72)"/></g>`;
-     if(a===2)p+=`<g class="tool fx-pour"><path d="M118 52q24 18 48 0z" fill="#C9A97A"/></g>`;
-     if(a===4)p+=sieve(110,70);
-     if(a===5)p+=`<g class="tool fx-pour">${bowl(148,16,'#FFFFFF').replace(/118/g,'90')}</g>`;
+     if(a===2)p+=`<g class="tool fx-pour"><path d="M104 52q24 18 48 0z" fill="#C9A97A"/>${grains(128,56,6)}</g>`;
+     if(a===4)p+=sieve(170,68);
+     if(a===5)p+=`<g class="tool fx-drop"><rect x="156" y="88" width="28" height="5" rx="2.5" fill="#C9A97A"/></g>`;
      return p}},
  sugar:{out:'sugar',shop:'製糖坊',need:{cane:2},bg:KITCHEN,
    steps:[['削皮切段','削皮,切成一段一段','chop',null],
-     ['榨汁','放進壓榨機,榨出甘蔗汁','whir',{c:'#D5E3B0',x:50,y:104,n:10,w:3}],
-     ['過濾','用布過濾,倒進鍋子','pour',{c:'#D5E3B0',x:112,y:66,n:12,w:8}],
-     ['熬煮','慢慢煮,水分不見了','sizzle',{c:'#FFFFFF',x:112,y:66,n:12,w:22,up:1}],
+     ['榨汁','放進壓榨機,榨出甘蔗汁','whir',{c:'#D5E3B0',x:50,y:100,tx:50,ty:108,n:12,w:2,tw:6}],
+     ['過濾','用布過濾,倒進鍋子','pour',{c:'#D5E3B0',x:116,y:64,tx:112,ty:78,n:12,w:2,tw:18}],
+     ['熬煮','慢慢煮,水分不見了','sizzle',{c:'#FFFFFF',x:112,y:72,n:12,w:30,up:1}],
      ['攪拌結晶','一直攪拌,變成一粒一粒的糖','stir',null],
      ['磨成糖粉','磨一磨,變成白白的糖','till',null],
      ['裝袋','裝起來','till',null]],
    draw(k,a){let p=KITCHEN;
      if(k<1)p+=board(46)+`<g transform="translate(20 70) scale(.46) rotate(-60 50 50)">${ICON.cane}</g>`;
      else if(k<2&&a!==1)p+=board(46)+[26,38,50,62].map(x=>`<rect x="${x}" y="104" width="9" height="8" rx="2" fill="#E6E2C6"/>`).join('');
-     else p+=rollers(50,a===1?'spin':'')+cup(50,'#D5E3B0',k>=2&&k<3?1:0);
+     else p+=rollers(50,a===1?'spin':'')+cup(50,'#D5E3B0',k>=2&&k<3&&a!==2?1:0);
      if(a===1)p+=[30,38].map(y=>`<rect x="44" y="${y+20}" width="12" height="9" rx="2" fill="#E6E2C6"/>`).join('');
      const on=k===4||a===3||a===4;
      p+=stove(112,on)+pot(112,112,k>=3&&k<4?'#D5E3B0':k===4?'#C9A26A':k===5?'#EFE6D2':null,on&&k<5);
      if(k>=5)p+=k<7?mortar(170,k>=6?'#FFFFFF':'#EFE6D2',a===5?'grind':''):`<g transform="translate(148 74) scale(.44)">${ICON.sugar}</g>`;
      if(k===5&&a!==5)p+=grains(112,78,10,'#F4EEDA');
      if(a===0)p+=knife(30,94);
-     if(a===2)p+=`<g class="tool fx-pour">${cup(140,'#D5E3B0',1).replace(/118/g,'82').replace(/98/g,'62')}</g>`;
+     if(a===2)p+=`<g class="tool fx-pour">${cup(140,'#D5E3B0',1,82)}</g>`;
      if(a===4)p+=spoon(108,76);
      return p}},
  cake:{out:'cake',shop:'蛋糕工坊',need:{flour:1,egg:2,sugar:1,milk:1,strawberry:1},bg:KITCHEN,
-   steps:[['秤麵粉','把麵粉放上秤,秤一秤','pour',{c:'#FFFFFF',x:36,y:86,n:14,w:8}],
-     ['過篩','用篩子篩進碗裡','pour',{c:'#FFFFFF',x:100,y:84,n:18,w:16}],
+   steps:[['秤麵粉','把麵粉放上秤,秤一秤','pour',{c:'#FFFFFF',x:36,y:62,tx:36,ty:98,n:14,w:2,tw:14}],
+     ['過篩','用篩子篩進碗裡','pour',{c:'#FFFFFF',x:100,y:70,tx:100,ty:102,n:18,w:28,tw:28}],
      ['打蛋','敲開兩顆蛋','till',null],
-     ['加糖','加入糖','pour',{c:'#FFFFFF',x:100,y:80,n:14,w:6}],
-     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:100,y:80,n:12,w:6}],
+     ['加糖','加入糖','pour',{c:'#FFFFFF',x:100,y:56,tx:100,ty:102,n:14,w:2,tw:16}],
+     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:100,y:55,tx:100,ty:102,n:12,w:2,tw:16}],
      ['攪拌','攪一攪,變成麵糊','stir',null],
-     ['倒進模具','把麵糊倒進模具','pour',{c:'#F4DE9E',x:150,y:96,n:10,w:6}],
+     ['倒進模具','把麵糊倒進模具','pour',{c:'#F4DE9E',x:146,y:82,tx:151,ty:104,n:12,w:2,tw:20}],
      ['送進烤箱','放進烤箱烤','tick',null,1],
      ['出爐','烤好了!香香的','ding',null],
      ['抹奶油','抹上白白的鮮奶油','stir',null],
@@ -915,13 +919,13 @@ const RECIPES={
      if(k<8)p+=`<rect x="134" y="102" width="34" height="16" rx="3" fill="#B9BEC5"/>`+(k>=7?`<rect x="136" y="104" width="30" height="12" rx="2" fill="#F4DE9E"/>`:'');
      if(k===8||a===7)p=p.replace(`<rect x="134" y="102" width="34" height="16" rx="3" fill="#B9BEC5"/><rect x="136" y="104" width="30" height="12" rx="2" fill="#F4DE9E"/>`,'')+oven(160,true,`<rect x="144" y="86" width="32" height="12" rx="2" fill="${a===7?'#F4DE9E':'#E3B07A'}"/>`);
      if(k>=9){p+=plate(100)+`<path d="M76 92v20q24 8 48 0V92" fill="#E9C08A"/><ellipse cx="100" cy="92" rx="24" ry="6" fill="${k>=10?'#FFFFFF':'#E3B07A'}"/>`;if(k>=10)p+=`<path d="M76 98q24 10 48 0" stroke="#FFFFFF" stroke-width="5" fill="none"/>`;if(k>=11)p+=[[84,88],[94,85],[106,85],[116,88],[100,91]].map(([x,y])=>`<g transform="translate(${x-6} ${y-9}) scale(.13)">${ICON.strawberry}</g>`).join('')}
-     if(a===0)p+=pourer(50,48,ICON.flour);
+     if(a===0)p+=pourer(31,48,ICON.flour);
      if(a===1)p+=sieve(100,66);
      if(a===2)p+=`<g class="tool fx-crack"><g transform="translate(88 54) scale(.24)">${ICON.egg}</g><g transform="translate(102 54) scale(.24)">${ICON.egg}</g></g>`;
-     if(a===3)p+=pourer(116,44,ICON.sugar);
-     if(a===4)p+=pourer(116,42,ICON.milk);
+     if(a===3)p+=pourer(110,44,ICON.sugar);
+     if(a===4)p+=pourer(109,42,ICON.milk);
      if(a===5)p+=`<g class="tool fx-stir"><path d="M96 98L110 52" stroke="#A6AEB6" stroke-width="3"/>${[-5,0,5].map(d=>`<ellipse cx="${96+d*.3}" cy="${96}" rx="${4+Math.abs(d)}" ry="9" fill="none" stroke="#B9BEC5" stroke-width="1.5"/>`).join('')}</g>`;
-     if(a===6)p=p.replace(bowl(100,24,batter,''),`<g class="tool fx-pour">${bowl(100,24,batter,'')}</g>`);
+     if(a===6)p=p.replace(bowl(100,24,batter,''),`<g class="tool fx-tilt3">${bowl(100,24,batter,'')}</g>`);
      if(a===9)p+=`<g class="tool fx-stir"><rect x="96" y="60" width="5" height="26" rx="2" fill="#8A6A4D"/><rect x="92" y="82" width="22" height="6" rx="3" fill="#C9CED4"/></g>`;
      if(a===10)p+=`<g class="tool fx-drop">${[[84,70],[100,66],[116,70]].map(([x,y])=>`<g transform="translate(${x-6} ${y-9}) scale(.14)">${ICON.strawberry}</g>`).join('')}</g>`;
      return p}}
@@ -941,9 +945,10 @@ function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').t
     tipEl.textContent=k<R.steps.length?`點一點:${R.steps[k][1]}`:''}
   draw();if(!practice)talk('來做'+NAME[R.out]);else talk('材料不夠,先練習做'+NAME[R.out]);
   const pt=(x,y)=>{const m=sv.getScreenCTM(),q=new DOMPoint(x,y).matrixTransform(m),r=mk.getBoundingClientRect();return{x:q.x-r.left,y:q.y-r.top,s:m.a}};
-  function parts(P){if(!P)return;const o=pt(P.x,P.y);for(let j=0;j<P.n;j++)tm.push(setTimeout(()=>{const d=document.createElement('div');d.className='mp';const sz=Math.max(4,o.s*2.6);
-      d.style.cssText=`left:${o.x+(Math.random()-.5)*P.w*o.s}px;top:${o.y}px;width:${sz}px;height:${sz}px;background:${P.c}`;mk.appendChild(d);
-      d.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${(Math.random()-.5)*10}px,${(P.up?-1:1)*o.s*(18+Math.random()*16)}px)`,opacity:P.up?0:.9}],{duration:600,easing:P.up?'ease-out':'ease-in'}).onfinish=()=>d.remove()},250+j*55))}
+  function parts(P){if(!P)return;const o=pt(P.x,P.y),t=P.up?{x:o.x,y:o.y-o.s*26}:pt(P.tx,P.ty);
+    for(let j=0;j<P.n;j++)tm.push(setTimeout(()=>{const d=document.createElement('div');d.className='mp';const sz=Math.max(4,o.s*2.4),sx=(Math.random()-.5)*(P.w||2)*o.s,ex=(Math.random()-.5)*(P.tw||P.w||2)*o.s*.6;
+      d.style.cssText=`left:${o.x+sx-sz/2}px;top:${o.y-sz/2}px;width:${sz}px;height:${sz}px;background:${P.c}`;mk.appendChild(d);
+      d.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${t.x-o.x+ex-sx}px,${t.y-o.y}px)`,opacity:P.up?0:1,offset:.92},{transform:`translate(${t.x-o.x+ex-sx}px,${t.y-o.y}px) scale(.3)`,opacity:0}],{duration:P.up?700:520,easing:P.up?'ease-out':'cubic-bezier(.5,0,1,1)'}).onfinish=()=>d.remove()},(P.d||300)+j*55))}
   function step(){ac();if(busy)return;
     if(done){collect();return}
     busy=true;const st=R.steps[k];draw(k);(S[st[2]]||S.tap)();parts(st[3]);
