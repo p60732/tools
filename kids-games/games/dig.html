@@ -310,7 +310,7 @@ function flyToMuseum(o,isNew){const m=$('museum'),land=()=>{o.slot.classList.add
   f.style.cssText=`left:${a.left+a.width/2-sz/2}px;top:${a.top+a.height/2-sz/2}px;width:${sz}px;height:${sz}px`;document.body.appendChild(f);o.el.style.visibility='hidden';
   const dx=b.left+22-(a.left+a.width/2),dy=b.top+b.height/2-(a.top+a.height/2),sc=Math.max(.2,30/sz),lift=Math.min(160,Math.max(80,Math.abs(dy)*.5));
   let fin=false;const end=()=>{if(fin)return;fin=true;f.remove();land()};
-  try{const an=f.animate([{transform:'translate(0,0) scale(1.18) rotate(0)'},{transform:`translate(${dx*.45}px,${dy*.45-lift}px) scale(.9) rotate(200deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(${sc}) rotate(360deg)`}],{duration:850,easing:'cubic-bezier(.45,0,.55,1)'});an.onfinish=end}catch(e){end()}
+  try{const an=f.animate([{transform:'translate(0,0) scale(1.18) perspective(400px) rotateY(0)'},{transform:`translate(${dx*.45}px,${dy*.45-lift}px) scale(.9) perspective(400px) rotateY(180deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(${sc}) perspective(400px) rotateY(360deg)`}],{duration:850,easing:'cubic-bezier(.45,0,.55,1)'});an.onfinish=end}catch(e){end()}
   setTimeout(end,1100)}
 function done(){clearInterval(hintT);S.win();const M=MODES[mode];
   over.innerHTML=`<h2>${M.done}</h2><div class="found-row">${items.map(o=>`<div>${svgOf(o.it)}</div>`).join('')}</div><p>收藏館 ${coll[mode].length} / ${M.list.length}</p><div class="row"><button class="big w" type="button" id="toMuseum">看收藏館</button><button class="big" type="button" id="again">再挖一次</button></div>`;

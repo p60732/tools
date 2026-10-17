@@ -81,8 +81,9 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 @keyframes tpop{from{transform:scale(.2) translateY(30%)}}
 .ticket.fly{transition:transform .5s,opacity .5s;transform:translateY(-60%) scale(.6);opacity:0}
 .badge{position:absolute;right:-8%;top:-8%;width:calc(var(--u)*22);height:calc(var(--u)*22);border-radius:50%;background:var(--green);border:calc(var(--u)*3) solid var(--ink);color:var(--white);font-weight:900;font-size:calc(var(--u)*14);display:grid;place-items:center}
-.target{position:absolute;width:calc(var(--u)*64);height:calc(var(--u)*20);border-radius:50%;border:calc(var(--u)*4) dashed var(--orange);animation:spin 1.6s linear infinite;z-index:1}
+.target{position:absolute;width:calc(var(--u)*64);height:calc(var(--u)*20);border-radius:50%;border:calc(var(--u)*4) dashed var(--orange);animation:tpulse 1.2s ease-in-out infinite;z-index:1}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes tpulse{50%{transform:scale(1.12);opacity:.6}}
 .zzz{position:absolute;right:-30%;top:-40%;font-weight:900;font-size:calc(var(--u)*18);color:var(--blue);-webkit-text-stroke:1px var(--ink);animation:float 1.2s ease-in-out infinite alternate}
 @keyframes float{to{transform:translateY(-30%)}}
 
