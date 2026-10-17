@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>快樂農場</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* 快樂農場:地圖選區域 → 果菜園(播種、澆水、採收)、牧場(餵草、洗澡、長大擠奶)、雞舍(孵蛋、餵飼料、收蛋)、市場(裝車出貨賺錢)。
+   扁平圖形、低刺激配色,按鈕都離底部遠一點。 */
+:root{
+  --ink:#4A4552; --bg:#EFE6D8; --white:#FFFFFF; --grass:#B9D2A8; --grass-d:#9DBE8A; --soil:#9C7A5B; --soil-d:#8A6A4D;
+  --sky:#E3EEDF; --ok:#7FB08A; --ok-d:#5E8F69; --gold:#E9C46A; --mute:#6E6876;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px calc(44px + env(safe-area-inset-bottom,0px));max-width:1300px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px}
+.ib{all:unset;cursor:pointer;flex:none;width:48px;height:48px;border-radius:50%;background:var(--white);display:grid;place-items:center;box-shadow:0 3px 0 rgba(74,69,82,.15)}
+.ib svg{width:26px;height:26px}
+h1{margin:0;font-size:clamp(20px,5.2vw,30px);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pills{margin-left:auto;display:flex;gap:8px;flex:none}
+.pill{all:unset;cursor:pointer;display:flex;align-items:center;gap:5px;background:var(--white);border-radius:999px;padding:6px 14px 6px 8px;font-weight:900;font-size:19px;box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.pill svg{width:30px;height:30px}
+.pill.bump{animation:bump .5s}
+@keyframes bump{30%{transform:scale(1.2)}60%{transform:scale(.94)}}
+.ib:active,.pill:active,.tbtn:active,.card:active,.big:active{transform:translateY(2px)}
+button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.tip{text-align:center;font-weight:700;font-size:clamp(15px,4vw,19px);color:var(--mute);min-height:1.4em}
+.stage{flex:1;min-height:0;position:relative}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px}
+/* 地圖 */
+.map{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:center;overflow-y:auto;touch-action:pan-y;padding:2px}
+.card{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border-radius:24px;overflow:hidden;box-shadow:0 5px 0 rgba(74,69,82,.14);display:flex;flex-direction:column;position:relative}
+.card .pic{aspect-ratio:16/10;max-width:100%;display:block}
+.card .pic>svg{width:100%;height:100%;display:block}
+.card b{padding:8px 14px 12px;font-size:clamp(19px,4.8vw,26px)}
+.card .dot{position:absolute;top:10px;right:10px;background:var(--gold);color:var(--ink);font-weight:900;border-radius:999px;padding:2px 10px;font-size:15px;box-shadow:0 2px 0 rgba(74,69,82,.15)}
+/* 工具列(放上方,不靠底部) */
+.tools{flex:none;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.tbtn{all:unset;box-sizing:border-box;cursor:pointer;min-width:96px;padding:8px 16px;border-radius:20px;background:var(--white);display:flex;align-items:center;gap:8px;font-weight:900;font-size:clamp(17px,4.4vw,21px);box-shadow:0 4px 0 rgba(74,69,82,.14)}
+.tbtn svg{width:40px;height:40px;flex:none}
+.tbtn.on{background:#FFF4D6;box-shadow:0 4px 0 #E3CF97}
+.tbtn[disabled]{opacity:.4;cursor:default}
+.stats{flex:none;display:flex;justify-content:center;gap:16px;font-weight:900;color:var(--mute);font-size:16px;align-items:center;flex-wrap:wrap}
+.stats span{display:flex;align-items:center;gap:4px}
+.stats svg{width:24px;height:24px}
+.stats .off{opacity:.25}
+/* 果菜園 */
+.plots{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px}
+.plot{position:relative;border-radius:24px;background:var(--sky);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;touch-action:manipulation}
+.plot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:30%;background:var(--grass);z-index:0}
+.plot svg.pv{position:relative;z-index:1;flex:1;min-height:0;width:100%;display:block}
+.plot .nm{position:absolute;left:10px;top:8px;z-index:2;background:rgba(255,255,255,.85);border-radius:999px;padding:2px 12px;font-weight:900;font-size:16px}
+.bub{position:absolute;right:8px;top:6px;z-index:3;width:54px;height:54px;border-radius:50%;background:var(--white);display:grid;place-items:center;box-shadow:0 3px 0 rgba(74,69,82,.14);animation:bob 1.6s ease-in-out infinite;pointer-events:none}
+.bub svg{width:70%;height:70%}
+@keyframes bob{50%{transform:translateY(-5px)}}
+.fruit{cursor:pointer;transform-box:fill-box;transform-origin:center;animation:popin .5s cubic-bezier(.3,1.6,.5,1) backwards}
+@keyframes popin{from{transform:scale(0)}}
+.pv.grow{animation:grow .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes grow{0%{transform:scale(.9,.8);transform-origin:50% 100%}100%{transform:none}}
+.act{position:absolute;z-index:4;width:44%;aspect-ratio:1;left:28%;top:6%;pointer-events:none}
+.act svg{width:100%;height:100%;overflow:visible}
+.act.seed svg{animation:shake .25s ease-in-out 3 alternate}
+@keyframes shake{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+.act.water svg{transform-origin:70% 60%;animation:pour .9s ease-in-out forwards}
+@keyframes pour{0%{transform:rotate(0)}30%,80%{transform:rotate(-32deg)}100%{transform:rotate(0)}}
+.drop{position:absolute;z-index:4;width:8px;height:12px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#8FBCCB;pointer-events:none;animation:fall .6s ease-in forwards}
+@keyframes fall{to{transform:translateY(90px);opacity:0}}
+.seedf{position:absolute;z-index:4;width:9px;height:7px;border-radius:50%;background:#B48E5E;pointer-events:none;animation:fall .5s ease-in forwards}
+/* 牧場、雞舍 */
+.scene{flex:1;min-height:0;position:relative;touch-action:none;border-radius:26px;overflow:hidden;background:linear-gradient(var(--sky) 0 42%,var(--grass) 42%)}
+.scene .fence{position:absolute;left:0;right:0;top:30%;height:16%;opacity:.8}
+.scene .fence svg{width:100%;height:100%}
+.hero{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);touch-action:none;cursor:pointer}
+.hero svg{width:100%;height:100%;display:block;overflow:visible}
+.cow{width:min(96%,calc(var(--sh,400px)*1.15));aspect-ratio:200/150}
+.bird{width:min(60%,calc(var(--sh,400px)*.75));aspect-ratio:1}
+.hero.jump{animation:jump .5s}
+@keyframes jump{40%{transform:translateX(-50%) translateY(-12%)}}
+.hero.wig{animation:wig .4s}
+@keyframes wig{25%{transform:translateX(-50%) rotate(-5deg)}75%{transform:translateX(-50%) rotate(5deg)}}
+.hero.growup{animation:bigger 1.2s ease-in-out}
+@keyframes bigger{30%{transform:translateX(-50%) scale(.85)}60%{transform:translateX(-50%) scale(1.12)}}
+.chew .muz{animation:chew .25s ease-in-out 6 alternate}
+@keyframes chew{to{transform:translateY(3px)}}
+.peck .headg{animation:peck .22s ease-in-out 6 alternate;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes peck{to{transform:rotate(-28deg) translateY(10px)}}
+.bubble{position:absolute;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 22%,rgba(255,255,255,.75) 23% 60%,rgba(220,235,242,.85) 61%);box-shadow:inset 0 0 0 2px rgba(169,207,220,.6);pointer-events:none;animation:popin .3s}
+.bubble.go{transition:transform .4s,opacity .4s;transform:scale(1.4);opacity:0}
+.sponge{position:absolute;z-index:8;width:70px;height:56px;margin:-28px 0 0 -35px;pointer-events:none}
+.rain{position:absolute;z-index:7;pointer-events:none;width:6px;height:16px;border-radius:3px;background:#8FBCCB;animation:rain .7s linear forwards}
+@keyframes rain{from{transform:translateY(-40px)}to{transform:translateY(260px);opacity:.2}}
+.spark{position:absolute;z-index:9;width:36px;height:36px;margin:-18px 0 0 -18px;pointer-events:none;animation:spark 1s ease-out forwards}
+.spark svg{width:100%;height:100%}
+@keyframes spark{0%{transform:scale(.2);opacity:0}40%{transform:scale(1.1) rotate(30deg);opacity:1}100%{transform:scale(.6) rotate(60deg);opacity:0}}
+.bucket{position:absolute;z-index:5;width:80px;height:80px;margin-left:-40px;pointer-events:auto;cursor:pointer;animation:popin .4s}
+.bucket svg{width:100%;height:100%}
+.milkd{position:absolute;z-index:6;width:8px;height:14px;border-radius:50%;background:#FFFFFF;box-shadow:0 0 0 1.5px #DCE2E6;pointer-events:none}
+.egg-drop{position:absolute;z-index:5;width:clamp(70px,12vmin,110px);aspect-ratio:1;transform:translate(-50%,-50%);cursor:pointer;animation:eggpop .6s cubic-bezier(.3,1.6,.5,1)}
+.egg-drop svg{width:100%;height:100%}
+@keyframes eggpop{from{transform:translate(-90%,-120%) scale(.2)}}
+.feed{position:absolute;z-index:4;width:12px;height:9px;border-radius:50%;background:#C9A26A;pointer-events:none;transition:transform .5s cubic-bezier(.3,.8,.5,1),opacity .4s}
+/* 市場 */
+.market{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.shelf{flex:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
+.goods{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border-radius:20px;padding:8px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;box-shadow:0 4px 0 rgba(74,69,82,.12);position:relative}
+.goods svg{width:56px;height:56px}
+.goods .n{font-size:20px}
+.goods .pr{display:flex;align-items:center;gap:2px;font-size:14px;color:var(--mute)}
+.goods .pr svg{width:18px;height:18px}
+.goods.zero{opacity:.35;cursor:default}
+.road{flex:1;min-height:150px;position:relative;border-radius:26px;overflow:hidden;background:linear-gradient(var(--sky) 0 62%,#C9C2B6 62% 66%,#D9D2C6 66%)}
+.truck{position:absolute;left:4%;bottom:6%;width:min(70%,440px);aspect-ratio:200/120;transition:transform 1.2s ease-in}
+.truck svg{width:100%;height:100%;display:block}
+.truck.away{transform:translateX(160%)}
+.truck.back{transition:transform 1s ease-out}
+.cargo{position:absolute;left:6%;top:12%;width:52%;height:44%;display:flex;flex-wrap:wrap-reverse;align-content:flex-start;gap:0;overflow:hidden}
+.cargo svg{width:22%;aspect-ratio:1;margin:-2%}
+.go{position:absolute;right:4%;top:10%;}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:22px;padding:12px 26px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+.big.w{background:var(--white);color:var(--ink);box-shadow:0 5px 0 #D9D2C6}
+.big[disabled]{opacity:.4;cursor:default}
+.empty{text-align:center;font-weight:700;color:var(--mute);padding:10px}
+/* 飛到籃子 */
+.fly{position:fixed;z-index:30;pointer-events:none;filter:drop-shadow(0 5px 0 rgba(74,69,82,.16))}
+.fly svg{width:100%;height:100%;display:block;overflow:visible}
+.plus{position:fixed;z-index:31;pointer-events:none;font-weight:900;font-size:22px;color:var(--ok-d);animation:plus 1.1s ease-out forwards}
+@keyframes plus{0%{opacity:0;transform:translateY(6px)}20%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+.coinf{position:fixed;z-index:32;width:34px;height:34px;pointer-events:none}
+.coinf svg{width:100%;height:100%}
+@media (orientation:landscape) and (min-width:800px){
+  .plots{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr}
+  .map{grid-template-columns:repeat(2,min(46%,calc((100vh - 190px)*.62)));justify-content:center}
+  .market{flex-direction:row}
+  .shelf{width:min(42%,420px);grid-template-columns:repeat(2,1fr);align-content:center}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <button class="ib" id="back" type="button" aria-label="回到農場地圖" hidden><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#4A4552" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h1 id="title">快樂農場</h1>
+    <div class="pills">
+      <button class="pill" id="coinP" type="button" aria-label="金幣"><svg viewBox="0 0 30 30" id="coinIc"></svg><span id="coinN">0</span></button>
+      <button class="pill" id="basketP" type="button" aria-label="籃子,去市場"><svg viewBox="0 0 30 30" id="basketIc"></svg><span id="basketN">0</span></button>
+    </div>
+  </header>
+  <div class="tip" id="tip"></div>
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+/* ================= 聲音 ================= */
+let ctx=null,out=null;
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.7;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(t,d,{v=.1,f=900,q=1,type='bandpass'}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(out);s.start(t)}catch(e){}}
+const T=()=>ac().currentTime,N=m=>440*Math.pow(2,(m-69)/12);
+const S={
+  tap(){tone(520,T(),.08,{type:'triangle',v:.1})},
+  plant(){const t=T();noise(t,.12,{v:.1,f:500,q:.8});tone(300,t+.05,.12,{type:'triangle',v:.08,to:200})},
+  water(){const t=T();for(let i=0;i<6;i++)noise(t+i*.1,.12,{v:.06,f:1800+Math.random()*900,q:3})},
+  grow(){const t=T();[60,64,67,72].forEach((m,i)=>tone(N(m),t+i*.08,.3,{type:'triangle',v:.1}))},
+  ripe(){const t=T();[72,76,79,84].forEach((m,i)=>tone(N(m),t+i*.09,.4,{type:'sine',v:.11}))},
+  pick(){const t=T();tone(700,t,.1,{type:'sine',v:.14,to:1300})},
+  ding(){const t=T();tone(1568,t,.3,{v:.1});tone(2093,t+.07,.4,{v:.08})},
+  munch(){const t=T();for(let i=0;i<5;i++)noise(t+i*.16,.08,{v:.1,f:900+Math.random()*400,q:1.2})},
+  moo(){const t=T();tone(150,t,.9,{type:'sawtooth',v:.07,to:110});tone(152,t,.9,{type:'triangle',v:.08,to:118})},
+  bubble(){tone(600+Math.random()*700,T(),.07,{type:'sine',v:.07,to:1400})},
+  shower(){const t=T();noise(t,1.1,{v:.08,f:3000,q:.5,type:'highpass'})},
+  squirt(){const t=T();noise(t,.12,{v:.08,f:2400,q:2});tone(900,t,.08,{v:.04,to:500})},
+  crack(){const t=T();noise(t,.05,{v:.16,f:2500,q:2});noise(t+.06,.04,{v:.1,f:3200,q:2})},
+  peep(){const t=T();tone(2200,t,.08,{v:.08,to:2700});tone(2300,t+.13,.08,{v:.08,to:2800})},
+  cluck(){const t=T();[0,.14,.26].forEach(d=>tone(420,t+d,.09,{type:'square',v:.04,to:300}))},
+  coin(){const t=T();tone(N(88),t,.12,{type:'square',v:.05});tone(N(93),t+.08,.25,{type:'square',v:.05})},
+  truck(){const t=T();tone(330,t,.18,{type:'square',v:.05});tone(330,t+.25,.3,{type:'square',v:.05});noise(t+.3,1,{v:.05,f:160,q:.7})},
+  win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(N(m),t+i*.12,.5,{type:'triangle',v:.11}))},
+  no(){const t=T();tone(300,t,.15,{type:'triangle',v:.08,to:240})}
+};
+function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
+
+/* ================= 圖案 ================= */
+const K='#4A4552';
+const ICON={
+ tomato:`<circle cx="50" cy="58" r="34" fill="#D9776B"/><path d="M50 22l6 10 12-2-8 9 6 9-12-4-8 8-2-10-12-2 10-6z" fill="#7FA676"/><path d="M30 50Q32 40 42 36" stroke="#EBA59C" stroke-width="6" fill="none" stroke-linecap="round"/>`,
+ strawberry:`<path d="M50 94Q14 62 20 38Q50 22 80 38Q86 62 50 94Z" fill="#D8796E"/>${[[36,44],[50,40],[64,44],[42,58],[58,58],[50,72],[34,70],[66,70]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="2" ry="3" fill="#F4E3B0"/>`).join('')}<path d="M30 34Q40 22 50 30Q60 22 70 34Q60 38 50 34Q40 38 30 34Z" fill="#7FA676"/>`,
+ apple:`<path d="M50 30Q66 18 80 32Q92 50 80 74Q70 92 50 84Q30 92 20 74Q8 50 20 32Q34 18 50 30Z" fill="#D86F68"/><path d="M50 30Q50 18 56 10" stroke="#8A6A4D" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M56 18Q70 8 76 18Q66 26 56 18Z" fill="#7FA676"/><path d="M28 44Q30 36 38 34" stroke="#E9A19B" stroke-width="6" fill="none" stroke-linecap="round"/>`,
+ grape:`<path d="M50 20V8" stroke="#8A6A4D" stroke-width="5" stroke-linecap="round"/><path d="M52 14Q66 2 76 14Q64 22 52 14Z" fill="#7FA676"/>${[[36,30],[52,30],[68,30],[28,46],[44,46],[60,46],[76,46],[36,62],[52,62],[68,62],[44,78],[60,78],[52,92]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="#9C7BB0"/><circle cx="${x-3}" cy="${y-3}" r="2.5" fill="#BBA2CB"/>`).join('')}`,
+ milk:`<rect x="30" y="30" width="40" height="62" rx="10" fill="#FFFFFF" stroke="#DCE2E6" stroke-width="3"/><path d="M38 30V20h24v10" fill="#FFFFFF" stroke="#DCE2E6" stroke-width="3"/><rect x="36" y="10" width="28" height="12" rx="4" fill="#8FBCCB"/><rect x="30" y="52" width="40" height="22" fill="#A9CFDC"/><path d="M42 62q8-8 16 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+ egg:`<ellipse cx="50" cy="54" rx="28" ry="36" fill="#FBF3E4" stroke="#E6D7BF" stroke-width="3"/><path d="M36 34Q30 42 30 52" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>`
+};
+const NAME={tomato:'番茄',strawberry:'草莓',apple:'蘋果',grape:'葡萄',milk:'牛奶',egg:'雞蛋'};
+const PRICE={tomato:2,strawberry:3,apple:3,grape:4,milk:5,egg:2};
+const ORDER=['tomato','strawberry','apple','grape','milk','egg'];
+const svg=(inner,vb='0 0 100 100')=>`<svg viewBox="${vb}">${inner}</svg>`;
+const COIN=`<circle cx="15" cy="15" r="12" fill="#E9C46A"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#D3A94A" stroke-width="2"/><path d="M15 10v10M12 12.5h5a2 2 0 0 1 0 4h-4" stroke="#B88A2E" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+const BASKET=`<path d="M8 12Q15 2 22 12" stroke="#A98467" stroke-width="2.5" fill="none"/><path d="M3 12h24l-3 14H6z" fill="#C9A97A"/><path d="M5 17h20M6 21h18M11 12v14M19 12v14" stroke="#A98467" stroke-width="1.5"/>`;
+const SEEDBAG=`<path d="M26 30h48l6 60H20z" fill="#D9BE8C"/><path d="M26 30l6-12h36l6 12" fill="#C9A97A"/><circle cx="50" cy="62" r="14" fill="#F4EEE2"/><path d="M50 70V58M50 60q-8-8-12-2 6 6 12 2zM50 60q8-8 12-2-6 6-12 2z" stroke="#7FA676" stroke-width="3" fill="#8FB283"/>`;
+const CAN=`<path d="M30 40h40v42Q70 90 62 90H38Q30 90 30 82z" fill="#8FBCCB"/><path d="M70 50L94 30" stroke="#8FBCCB" stroke-width="8" stroke-linecap="round"/><rect x="88" y="22" width="12" height="14" rx="3" fill="#7AA9BA" transform="rotate(-40 94 29)"/><path d="M36 40Q50 18 64 40" stroke="#7AA9BA" stroke-width="6" fill="none"/><rect x="36" y="56" width="28" height="6" rx="3" fill="#B5D6E1"/>`;
+const DROP=`<path d="M50 12Q76 46 76 62a26 26 0 0 1-52 0Q24 46 50 12Z" fill="#8FBCCB"/><path d="M38 62q0 10 10 14" stroke="#CFE4EC" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+const HAND=`<path d="M30 56V36a6 6 0 0 1 12 0v14V26a6 6 0 0 1 12 0v24V30a6 6 0 0 1 12 0v22-12a6 6 0 0 1 12 0v22Q78 86 56 88H48Q36 88 30 72Z" fill="#F2C9A8"/>`;
+const CLOCK=`${[[30,40],[62,30],[50,64],[74,60],[36,72]].map(([x,y],i)=>`<path d="M${x} ${y-10}l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="${i%2?'#E9C46A':'#F4DE9E'}"/>`).join('')}`;
+const GRASS=`<path d="M50 90Q30 60 22 30M50 90Q44 54 46 16M50 90Q58 56 70 24M50 90Q66 66 82 46M50 90Q36 70 16 58" stroke="#7FA676" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M34 82h32" stroke="#C9A97A" stroke-width="10" stroke-linecap="round"/>`;
+const SPONGE=`<rect x="12" y="24" width="76" height="52" rx="16" fill="#F4DE9E"/><rect x="12" y="24" width="76" height="16" rx="8" fill="#9DCB9A"/>${[[30,56],[50,62],[70,54],[40,48],[62,46]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.5" fill="#E3C97E"/>`).join('')}`;
+const PAIL=`<path d="M22 34h56l-8 56H30z" fill="#B9BEC5"/><path d="M22 34Q50 -4 78 34" stroke="#8E8791" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="28" ry="6" fill="#8E8791"/>`;
+const FEEDBAG=`<path d="M28 26h44l8 64H20z" fill="#E6D3A0"/><path d="M28 26Q50 14 72 26" fill="#D3BD86"/><path d="M40 52h20M44 62h12" stroke="#C4A472" stroke-width="4" stroke-linecap="round"/>${[[38,20],[50,16],[62,20],[46,10],[56,12]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.5" fill="#C9A26A"/>`).join('')}`;
+const STAR=`<path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z" fill="#F4DE9E"/>`;
+const HEART=`<path d="M12 21C4 15 2 11 2 8a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 3-2 7-10 13z" fill="#D88E87"/>`;
+const ic=(k,x,y,s)=>`<g transform="translate(${x-s/2} ${y-s/2}) scale(${s/100})">${ICON[k]}</g>`;
+
+/* 作物 */
+const CROPS={
+ tomato:{name:'番茄',per:false,pos:[[36,46],[62,40],[42,64],[64,60]],size:17},
+ strawberry:{name:'草莓',per:false,pos:[[26,84],[46,88],[68,86],[56,74]],size:15},
+ apple:{name:'蘋果樹',per:true,pos:[[32,34],[56,22],[70,44],[44,50],[50,36]],size:15},
+ grape:{name:'葡萄',per:true,pos:[[26,52],[50,54],[74,52]],size:20}
+};
+const SOIL=`<ellipse cx="50" cy="100" rx="46" ry="10" fill="#8A6A4D"/><ellipse cx="50" cy="98" rx="40" ry="7" fill="#9C7A5B"/>`;
+function plantSVG(c,st){
+  if(st===0)return SOIL;
+  if(st===1)return SOIL+`<ellipse cx="50" cy="94" rx="16" ry="6" fill="#8A6A4D"/><circle cx="44" cy="92" r="2" fill="#C9A26A"/><circle cx="54" cy="91" r="2" fill="#C9A26A"/>`;
+  if(st===2)return SOIL+`<path d="M50 98V80" stroke="#7FA676" stroke-width="4" stroke-linecap="round"/><ellipse cx="42" cy="78" rx="9" ry="5" fill="#8FB283" transform="rotate(-25 42 78)"/><ellipse cx="58" cy="76" rx="9" ry="5" fill="#8FB283" transform="rotate(25 58 76)"/>`;
+  let p=SOIL;
+  if(c==='tomato')p+=`<rect x="48" y="16" width="4" height="84" rx="2" fill="#C9A97A"/><path d="M50 98Q46 70 50 50Q54 34 50 20" stroke="#7FA676" stroke-width="5" fill="none"/>${[[38,78,-30],[62,72,30],[36,56,-30],[64,50,30],[40,34,-30],[60,28,30]].map(([x,y,r])=>`<ellipse cx="${x}" cy="${y}" rx="13" ry="7" fill="${r<0?'#8FB283':'#7FA676'}" transform="rotate(${r} ${x} ${y})"/>`).join('')}`;
+  if(c==='strawberry')p+=[[-60,'#7FA676'],[-30,'#8FB283'],[0,'#7FA676'],[30,'#8FB283'],[60,'#7FA676']].map(([r,f])=>`<g transform="rotate(${r} 50 96)"><path d="M50 96V70" stroke="#7FA676" stroke-width="3"/><circle cx="44" cy="66" r="7" fill="${f}"/><circle cx="56" cy="66" r="7" fill="${f}"/><circle cx="50" cy="60" r="8" fill="${f}"/></g>`).join('');
+  if(c==='apple')p+=`<path d="M45 100V60Q46 52 40 46M55 100V60Q54 52 62 46" stroke="#A98467" stroke-width="10" fill="none" stroke-linecap="round"/><rect x="44" y="56" width="12" height="44" fill="#A98467"/><circle cx="50" cy="34" r="27" fill="#8FB283"/><circle cx="28" cy="44" r="18" fill="#7FA676"/><circle cx="72" cy="44" r="18" fill="#7FA676"/><circle cx="40" cy="22" r="14" fill="#9DBE8A"/>`;
+  if(c==='grape')p+=`<rect x="12" y="34" width="5" height="66" fill="#A98467"/><rect x="83" y="34" width="5" height="66" fill="#A98467"/><rect x="8" y="34" width="84" height="6" rx="3" fill="#C9A97A"/><path d="M50 100Q42 80 52 64Q60 50 50 38" stroke="#8A6A4D" stroke-width="5" fill="none"/>${[18,34,50,66,82].map((x,i)=>`<path d="M${x} 30q-8-10 0-16 8 6 0 16z" fill="${i%2?'#7FA676':'#8FB283'}"/><path d="M${x+4} 38q8 2 8 10-8 0-8-10z" fill="${i%2?'#8FB283':'#7FA676'}"/>`).join('')}`;
+  const C=CROPS[c];
+  if(st===4)p+=C.pos.map(([x,y])=>`<g transform="translate(${x} ${y})">${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="-4" rx="2.6" ry="4" fill="#FFFFFF" transform="rotate(${a})"/>`).join('')}<circle r="2.4" fill="#F4DE9E"/></g>`).join('');
+  return p}
+
+/* 牛 */
+function cowSVG(grown,dirty){
+  const legs=[52,72,124,144].map(x=>`<rect x="${x}" y="96" width="13" height="38" rx="5" fill="#EDEAE4"/><rect x="${x}" y="128" width="13" height="8" rx="3" fill="#8E8791"/>`).join('');
+  const body=`<path d="M160 74Q176 86 172 108" stroke="#EDEAE4" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="172" cy="110" rx="5" ry="8" fill="#6E6876"/>${legs}<ellipse cx="100" cy="82" rx="64" ry="34" fill="#FBFAF6"/><ellipse cx="86" cy="70" rx="17" ry="12" fill="#6E6876"/><ellipse cx="130" cy="92" rx="13" ry="10" fill="#6E6876"/><ellipse cx="146" cy="66" rx="9" ry="7" fill="#6E6876"/>`
+    +(grown?`<g class="udder"><ellipse cx="120" cy="114" rx="15" ry="9" fill="#F2B9B4"/><rect x="110" y="118" width="5" height="9" rx="2.5" fill="#E8A29C"/><rect x="125" y="118" width="5" height="9" rx="2.5" fill="#E8A29C"/></g>`:'');
+  const head=`<g class="headg"><ellipse cx="18" cy="44" rx="13" ry="7" fill="#EDEAE4" transform="rotate(-20 18 44)"/><ellipse cx="62" cy="44" rx="13" ry="7" fill="#EDEAE4" transform="rotate(20 62 44)"/><ellipse cx="18" cy="44" rx="7" ry="3.5" fill="#F2B9B4" transform="rotate(-20 18 44)"/><ellipse cx="62" cy="44" rx="7" ry="3.5" fill="#F2B9B4" transform="rotate(20 62 44)"/>`
+    +(grown?`<path d="M30 36q-4-12 2-16M50 36q4-12-2-16" stroke="#E6D3A0" stroke-width="6" stroke-linecap="round" fill="none"/>`:'')
+    +`<ellipse cx="40" cy="58" rx="24" ry="26" fill="#FBFAF6"/><ellipse cx="50" cy="46" rx="9" ry="8" fill="#6E6876"/><circle cx="31" cy="56" r="4.5" fill="${K}"/><circle cx="49" cy="56" r="4.5" fill="${K}"/><circle cx="32.5" cy="54.5" r="1.5" fill="#fff"/><circle cx="50.5" cy="54.5" r="1.5" fill="#fff"/><g class="muz"><ellipse cx="40" cy="76" rx="19" ry="12" fill="#F2B9B4"/><ellipse cx="33" cy="74" rx="3" ry="4" fill="#D88E87"/><ellipse cx="47" cy="74" rx="3" ry="4" fill="#D88E87"/><path d="M34 82q6 4 12 0" stroke="#D88E87" stroke-width="2.5" fill="none" stroke-linecap="round"/></g></g>`;
+  const mud=dirty?`<g fill="#A98467" opacity=".75"><ellipse cx="66" cy="96" rx="10" ry="6"/><ellipse cx="108" cy="70" rx="7" ry="5"/><ellipse cx="150" cy="96" rx="8" ry="5"/><circle cx="58" cy="128" r="5"/><circle cx="148" cy="126" r="5"/><ellipse cx="28" cy="70" rx="5" ry="4"/></g>`:'';
+  if(grown)return `<g>${body}${mud}${head}</g>`;
+  return `<g transform="translate(30 38) scale(.7)">${body}${mud}<g transform="translate(40 80) scale(1.25) translate(-40 -80)">${head}</g></g>`}
+
+/* 雞 */
+function eggSVG(cr){const lines=['M40 40l6 6-4 6 6 4','M58 34l-4 8 6 4-4 6','M34 60l8 2 2 8 8-2','M62 58l-6 6 4 6-6 4','M44 76l6-4 6 4 6-4'].slice(0,cr).map(d=>`<path d="${d}" stroke="#B9A88E" stroke-width="2.5" fill="none" stroke-linecap="round"/>`).join('');
+  return `${NEST}<ellipse cx="50" cy="56" rx="22" ry="28" fill="#FBF3E4" stroke="#E6D7BF" stroke-width="2.5"/><path d="M38 40Q34 46 34 54" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>${lines}`}
+const NEST=`<ellipse cx="50" cy="82" rx="40" ry="12" fill="#C9A97A"/><ellipse cx="50" cy="78" rx="34" ry="8" fill="#D9BE8C"/>${[[20,80,30,74],[70,74,82,80],[32,86,46,82],[56,86,70,84],[40,74,52,76]].map(([a,b,c,d])=>`<path d="M${a} ${b}L${c} ${d}" stroke="#B89A6C" stroke-width="2.5" stroke-linecap="round"/>`).join('')}`;
+const CHICK=`<path d="M42 86v6M58 86v6M38 92h8M54 92h8" stroke="#E3A06B" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="66" r="22" fill="#F4D77E"/><path d="M60 66q10-4 12 6-8 4-12-6z" fill="#EBC660"/><g class="headg"><circle cx="46" cy="40" r="16" fill="#F4D77E"/><circle cx="40" cy="38" r="3" fill="${K}"/><circle cx="41" cy="37" r="1" fill="#fff"/><path d="M28 42l-8 2 8 3z" fill="#E3A06B"/><path d="M46 24q2-6 6-6M46 24q-2-6-6-5" stroke="#EBC660" stroke-width="3" fill="none" stroke-linecap="round"/></g>`;
+const HEN=`<path d="M44 86v8M58 86v8M40 94h8M54 94h8" stroke="#E3A06B" stroke-width="3" stroke-linecap="round"/><path d="M72 60Q92 40 86 26Q80 40 74 46Q86 30 76 22Q74 40 68 48z" fill="#EDEAE4"/><ellipse cx="54" cy="66" rx="28" ry="22" fill="#FBFAF6"/><path d="M56 66q14-6 18 6-12 8-18-6z" fill="#EDEAE4"/><g class="headg"><path d="M26 40Q28 60 40 64L46 48z" fill="#FBFAF6"/><circle cx="32" cy="38" r="13" fill="#FBFAF6"/><path d="M24 26q2-8 6-6 2-6 6-2 4-2 4 4-2 6-8 6z" fill="#D8796E"/><circle cx="28" cy="36" r="2.6" fill="${K}"/><path d="M19 39l-8 3 8 3z" fill="#E3A06B"/><path d="M22 46q-2 6 2 8 4-2 2-8z" fill="#D8796E"/></g>`;
+
+/* ================= 存檔 ================= */
+const DEF={coins:0,inv:{tomato:0,strawberry:0,apple:0,grape:0,milk:0,egg:0},plots:[{c:'tomato',st:0},{c:'strawberry',st:0},{c:'apple',st:0},{c:'grape',st:0}],
+  cow:{grown:false,full:0,clean:false},hen:{stage:'egg',crack:0,fed:0,egg:false}};
+let G=JSON.parse(JSON.stringify(DEF));
+try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv&&s.plots){G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen)}}catch(e){}
+const save=()=>{try{localStorage.setItem('farmState',JSON.stringify(G))}catch(e){}};
+
+/* ================= 共用 ================= */
+const $=id=>document.getElementById(id);
+const stage=$('stage'),tipEl=$('tip');
+$('coinIc').innerHTML=COIN;$('basketIc').innerHTML=BASKET;
+const total=()=>ORDER.reduce((a,k)=>a+G.inv[k],0);
+function paint(){$('coinN').textContent=G.coins;$('basketN').textContent=total()}
+function bump(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
+function plusAt(el,txt){const r=el.getBoundingClientRect(),p=document.createElement('div');p.className='plus';p.textContent=txt;p.style.left=(r.right-30)+'px';p.style.top=(r.bottom+2)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1200)}
+function sparkAt(host,x,y,n=4){for(let i=0;i<n;i++){const s=document.createElement('div');s.className='spark';s.innerHTML=svg(i%2?HEART:STAR,'0 0 24 24');s.style.left=(x+(Math.random()-.5)*90)+'px';s.style.top=(y+(Math.random()-.5)*70)+'px';s.style.animationDelay=(i*.08)+'s';host.appendChild(s);setTimeout(()=>s.remove(),1300)}}
+// 東西飛進籃子(或任何目標)
+function fly(inner,fromRect,toEl,cb,size){const sz=size||Math.max(44,Math.min(90,fromRect.width)),f=document.createElement('div');f.className='fly';f.innerHTML=svg(inner);
+  const sx=fromRect.left+fromRect.width/2,sy=fromRect.top+fromRect.height/2;f.style.cssText=`left:${sx-sz/2}px;top:${sy-sz/2}px;width:${sz}px;height:${sz}px`;document.body.appendChild(f);
+  const b=toEl.getBoundingClientRect(),dx=b.left+b.width/2-sx,dy=b.top+b.height/2-sy,lift=Math.min(150,Math.max(60,Math.abs(dy)*.45));let fin=false;const end=()=>{if(fin)return;fin=true;f.remove();cb&&cb()};
+  try{const an=f.animate([{transform:'translate(0,0) scale(1)'},{transform:`translate(${dx*.4}px,${dy*.4-lift}px) scale(1.15) rotate(160deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(.35) rotate(360deg)`}],{duration:800,easing:'cubic-bezier(.45,0,.55,1)'});an.onfinish=end}catch(e){end()}setTimeout(end,1000)}
+function toBasket(k,rect){fly(ICON[k],rect,$('basketP'),()=>{G.inv[k]++;save();paint();S.ding();bump($('basketP'));plusAt($('basketP'),'+1')})}
+
+/* ================= 畫面切換 ================= */
+let screen='map',cleanup=null;
+const AREAS=[['garden','果菜園'],['barn','牧場'],['coop','雞舍'],['market','市場出貨']];
+function go(k){if(cleanup){cleanup();cleanup=null}screen=k;stage.innerHTML='';$('back').hidden=k==='map';$('title').textContent=k==='map'?'快樂農場':AREAS.find(a=>a[0]===k)[1];
+  ({map:showMap,garden:showGarden,barn:showBarn,coop:showCoop,market:showMarket})[k]();paint()}
+$('back').onclick=()=>{S.tap();go('map')};
+$('basketP').onclick=()=>{S.tap();if(screen!=='market')go('market')};
+$('coinP').onclick=()=>{S.coin();bump($('coinP'));talk('你有 '+G.coins+' 塊錢')};
+
+/* 地圖 */
+function showMap(){tipEl.textContent='要去哪裡工作呢?';const m=document.createElement('div');m.className='screen map';stage.appendChild(m);
+  const pics={
+   garden:`<rect width="320" height="200" fill="#E3EEDF"/><rect y="120" width="320" height="80" fill="#B9D2A8"/>${[50,130,210,280].map((x,i)=>`<svg x="${x-40}" y="40" width="80" height="140" viewBox="0 0 100 110">${plantSVG(['tomato','strawberry','apple','grape'][i],3)}${CROPS[['tomato','strawberry','apple','grape'][i]].pos.map(([a,b])=>ic(['tomato','strawberry','apple','grape'][i],a,b,CROPS[['tomato','strawberry','apple','grape'][i]].size)).join('')}</svg>`).join('')}`,
+   barn:`<rect width="320" height="200" fill="#E3EEDF"/><rect y="100" width="320" height="100" fill="#B9D2A8"/><path d="M220 40l50-26 50 26v70h-100z" fill="#D88E87"/><rect x="250" y="66" width="40" height="44" fill="#F4EEE2"/><svg x="30" y="60" width="190" height="142" viewBox="0 0 200 150">${cowSVG(true,false)}</svg>`,
+   coop:`<rect width="320" height="200" fill="#E3EEDF"/><rect y="110" width="320" height="90" fill="#B9D2A8"/><path d="M20 70l50-30 50 30v60H20z" fill="#C9A97A"/><rect x="56" y="92" width="28" height="38" rx="14" fill="#8A6A4D"/><svg x="150" y="56" width="120" height="120" viewBox="0 0 100 100">${HEN}</svg><svg x="250" y="120" width="60" height="60" viewBox="0 0 100 100">${CHICK}</svg>`,
+   market:`<rect width="320" height="200" fill="#E3EEDF"/><rect y="140" width="320" height="60" fill="#D9D2C6"/><svg x="40" y="40" width="240" height="144" viewBox="0 0 200 120">${TRUCK}</svg>`};
+  const badge={garden:()=>G.plots.filter(p=>p.st===5).length?'可以採了':'',barn:()=>G.cow.grown&&G.cow.full>=2&&G.cow.clean?'可以擠奶':'',coop:()=>G.hen.egg?'有蛋':'',market:()=>total()?total()+' 件':''};
+  AREAS.forEach(([k,n])=>{const b=document.createElement('button');b.type='button';b.className='card';const d=badge[k]();b.innerHTML=`<span class="pic">${svg(pics[k],'0 0 320 200')}</span><b>${n}</b>${d?`<span class="dot">${d}</span>`:''}`;b.onclick=()=>{S.tap();go(k)};m.appendChild(b)})}
+
+/* ================= 果菜園 ================= */
+function showGarden(){tipEl.textContent='點一點菜圃:播種、澆水,等果實成熟再採下來!';
+  const sc=document.createElement('div');sc.className='screen';sc.innerHTML='<div class="plots" id="plots"></div>';stage.appendChild(sc);
+  const box=$('plots'),timers=[];
+  G.plots.forEach((P,i)=>{const d=document.createElement('div');d.className='plot';d.setAttribute('role','button');d.setAttribute('aria-label',CROPS[P.c].name);box.appendChild(d);d.addEventListener('pointerdown',e=>{e.preventDefault();ac();tapPlot(i,d,e)});drawPlot(i,d)});
+  cleanup=()=>timers.forEach(clearTimeout);
+  function need(P){return P.st===0?'seed':P.st<=3?'water':P.st===4?'wait':'pick'}
+  function drawPlot(i,d,anim){const P=G.plots[i],C=CROPS[P.c];
+    if(P.st===5&&!P.left)P.left=C.pos.map((_,k)=>k);
+    let inner=plantSVG(P.c,P.st);
+    if(P.st===5)inner+=P.left.map(k=>{const [x,y]=C.pos[k];return `<g class="fruit" data-k="${k}" style="animation-delay:${k*.08}s"><circle cx="${x}" cy="${y}" r="${C.size*.75}" fill="transparent"/>${ic(P.c,x,y,C.size)}</g>`}).join('');
+    const icon={seed:SEEDBAG,water:DROP,wait:CLOCK,pick:BASKET.replace(/viewBox[^>]*/,'')}[need(P)];
+    d.innerHTML=`<span class="nm">${C.name}</span><svg class="pv${anim?' grow':''}" viewBox="0 0 100 110" preserveAspectRatio="xMidYMax meet">${inner}</svg><div class="bub">${need(P)==='pick'?svg(BASKET,'0 0 30 30'):svg(icon)}</div>`;
+    if(P.st===4&&!d._t){d._t=setTimeout(()=>{d._t=0;P.st=5;P.left=C.pos.map((_,k)=>k);save();drawPlot(i,d,true);S.ripe();talk(NAME[P.c==='apple'?'apple':P.c]+'成熟了')},1800);timers.push(d._t)}}
+  function tapPlot(i,d,e){const P=G.plots[i];if(d._busy)return;
+    const f=e.target.closest&&e.target.closest('.fruit');
+    if(P.st===5){if(!f){S.no();return}const k=+f.dataset.k;const r=f.getBoundingClientRect();P.left=P.left.filter(x=>x!==k);f.remove();S.pick();toBasket(P.c,r);
+      if(!P.left.length){delete P.left;P.st=CROPS[P.c].per?3:0;save();setTimeout(()=>drawPlot(i,d,true),400)}else save();return}
+    const n=need(P);
+    if(n==='wait'){d.querySelector('.pv').classList.remove('grow');void d.offsetWidth;d.querySelector('.pv').classList.add('grow');return}
+    d._busy=true;const a=document.createElement('div');a.className='act '+n;a.innerHTML=svg(n==='seed'?SEEDBAG:CAN);d.appendChild(a);
+    const r=d.getBoundingClientRect();
+    if(n==='seed'){S.plant();for(let j=0;j<8;j++)setTimeout(()=>{const s=document.createElement('div');s.className='seedf';s.style.left=(r.width*(.42+Math.random()*.16))+'px';s.style.top=(r.height*.4)+'px';d.appendChild(s);setTimeout(()=>s.remove(),600)},j*60)}
+    else{S.water();for(let j=0;j<14;j++)setTimeout(()=>{const s=document.createElement('div');s.className='drop';s.style.left=(r.width*(.3+Math.random()*.25))+'px';s.style.top=(r.height*.38)+'px';d.appendChild(s);setTimeout(()=>s.remove(),700)},250+j*40)}
+    setTimeout(()=>{a.remove();d._busy=false;P.st++;save();drawPlot(i,d,true);if(n==='water')S.grow();else talk('種下'+CROPS[P.c].name)},n==='seed'?800:1000)}
+}
+
+/* ================= 牧場 ================= */
+function showBarn(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
+  sc.innerHTML=`<div class="tools"><button class="tbtn" id="tFeed" type="button">${svg(GRASS)}餵草</button><button class="tbtn" id="tWash" type="button">${svg(SPONGE)}洗澡</button><button class="tbtn" id="tMilk" type="button">${svg(PAIL)}擠奶</button></div>
+  <div class="stats" id="cstats"></div><div class="scene" id="scene"><div class="fence">${svg(`${[...Array(11)].map((_,i)=>`<rect x="${i*30+4}" y="4" width="10" height="56" rx="4" fill="#F4EEE2"/>`).join('')}<rect y="16" width="320" height="8" fill="#F4EEE2"/><rect y="40" width="320" height="8" fill="#F4EEE2"/>`,'0 0 320 60')}</div><div class="hero cow" id="cow"></div></div>`;
+  const C=G.cow,cowEl=$('cow'),scene=$('scene');let mode=null,bubbles=[],wpid=null,lastB=null,sponge=null,level=0,bucket=null;
+  const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
+  function draw(){cowEl.innerHTML=svg(cowSVG(C.grown,!C.clean),'0 0 200 150');$('tMilk').hidden=!C.grown;
+    $('cstats').innerHTML=`<span>肚子 ${[0,1,2].map(i=>`<svg viewBox="0 0 100 100" class="${i<C.full?'':'off'}">${GRASS}</svg>`).join('')}</span><span>乾淨 <svg viewBox="0 0 24 24" class="${C.clean?'':'off'}">${STAR}</svg></span>`;
+    tipEl.textContent=mode==='wash'?'用手指在牛身上擦一擦,搓出泡泡!':mode==='milk'?'點牛的身體擠牛奶,裝滿桶子!':
+      !C.grown?(C.full<3?'小牛肚子餓了,餵牠吃草':!C.clean?'小牛身上髒髒的,幫牠洗澡':'小牛長大囉'):
+      (C.full<2?'母牛要吃飽才有牛奶,餵牠吃草':!C.clean?'幫母牛洗乾淨,就可以擠奶了':'母牛準備好了,來擠牛奶!');
+    $('tMilk').classList.toggle('on',C.grown&&C.full>=2&&C.clean)}
+  draw();
+  function setMode(m){mode=m;['tWash','tMilk'].forEach(id=>$(id).classList.toggle('on',(id==='tWash'&&m==='wash')||(id==='tMilk'&&m==='milk')));if(m!=='milk'&&bucket){bucket.remove();bucket=null}draw()}
+  function cowAnim(c){cowEl.classList.remove('jump','wig','growup');void cowEl.offsetWidth;cowEl.classList.add(c)}
+  function checkGrow(){if(!C.grown&&C.full>=3&&C.clean){setTimeout(()=>{cowAnim('growup');S.grow();setTimeout(()=>{C.grown=true;C.full=0;C.clean=true;save();draw();S.moo();talk('小牛長大變成母牛了');const r=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();sparkAt(scene,r.left-sr.left+r.width/2,r.top-sr.top+r.height/2,6)},600)},700)}}
+  $('tFeed').onclick=()=>{ac();setMode(null);if(C.full>=3){cowAnim('wig');S.no();talk('吃飽了');return}
+    const mz=cowEl.querySelector('.muz'),br=$('tFeed').getBoundingClientRect();
+    fly(GRASS,br,mz,()=>{C.full++;save();cowEl.querySelector('svg').classList.add('chew');S.munch();setTimeout(()=>{const s=cowEl.querySelector('svg');s&&s.classList.remove('chew')},1600);draw();if(C.full===(C.grown?2:3))setTimeout(()=>{S.moo()},900);checkGrow()},64)};
+  $('tWash').onclick=()=>{ac();if(C.clean){cowAnim('jump');S.ding();talk('已經很乾淨了');const r=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();sparkAt(scene,r.left-sr.left+r.width/2,r.top-sr.top+r.height/3);return}S.tap();setMode(mode==='wash'?null:'wash')};
+  $('tMilk').onclick=()=>{ac();if(!(C.full>=2&&C.clean)){S.no();cowAnim('wig');talk(C.full<2?'母牛肚子餓了':'母牛髒髒的');return}if(mode==='milk')return;setMode('milk');S.tap();
+    const u=cowEl.querySelector('.udder').getBoundingClientRect(),sr=scene.getBoundingClientRect();level=0;bucket=document.createElement('div');bucket.className='bucket';
+    bucket.style.left=(u.left-sr.left+u.width/2)+'px';bucket.style.top=(Math.min(sr.height-84,u.bottom-sr.top+4))+'px';scene.appendChild(bucket);drawBucket()};
+  function drawBucket(){bucket.innerHTML=svg(`<path d="M22 34h56l-8 56H30z" fill="#B9BEC5"/><clipPath id="bk"><path d="M22 34h56l-8 56H30z"/></clipPath><rect clip-path="url(#bk)" x="0" y="${90-level*9.3}" width="100" height="60" fill="#FFFFFF"/><path d="M22 34Q50 -4 78 34" stroke="#8E8791" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="28" ry="6" fill="none" stroke="#8E8791" stroke-width="3"/>`)}
+  function squirt(){if(!bucket)return;const u=cowEl.querySelector('.udder').getBoundingClientRect(),b=bucket.getBoundingClientRect(),sr=scene.getBoundingClientRect();S.squirt();
+    for(let j=0;j<3;j++){const m=document.createElement('div');m.className='milkd';const x=u.left-sr.left+u.width*(j%2?.7:.3),y=u.bottom-sr.top;m.style.left=x+'px';m.style.top=y+'px';scene.appendChild(m);
+      m.animate([{transform:'translate(0,0)'},{transform:`translate(${b.left-sr.left+b.width/2-x}px,${b.top-sr.top+b.height*.45-y}px)`,opacity:.6}],{duration:300,delay:j*70,easing:'ease-in'}).onfinish=()=>m.remove()}
+    level++;drawBucket();if(level>=6){const br=bucket.getBoundingClientRect();bucket.remove();bucket=null;C.full=0;C.clean=false;save();setMode(null);S.moo();talk('擠好牛奶了');toBasket('milk',br)}}
+  // 洗澡:手指擦出泡泡;擠奶:點牛
+  scene.addEventListener('pointerdown',e=>{ac();if(mode==='milk'){if(e.target.closest('.hero')||e.target.closest('.bucket'))squirt();return}
+    if(mode!=='wash'||wpid!==null)return;e.preventDefault();wpid=e.pointerId;sponge=document.createElement('div');sponge.className='sponge';sponge.innerHTML=svg(SPONGE);scene.appendChild(sponge);lastB=null;rub(e)});
+  const mv=e=>{if(e.pointerId!==wpid)return;rub(e)};
+  const up=e=>{if(e.pointerId!==wpid)return;wpid=null;sponge&&sponge.remove();sponge=null};
+  addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+  function rub(e){const sr=scene.getBoundingClientRect(),x=e.clientX-sr.left,y=e.clientY-sr.top;if(sponge){sponge.style.left=x+'px';sponge.style.top=y+'px'}
+    const cr=cowEl.getBoundingClientRect();if(e.clientX<cr.left+cr.width*.08||e.clientX>cr.right-cr.width*.08||e.clientY<cr.top+cr.height*.15||e.clientY>cr.bottom-cr.height*.15)return;
+    if(lastB&&Math.hypot(x-lastB.x,y-lastB.y)<26)return;lastB={x,y};const s=16+Math.random()*24,b=document.createElement('div');b.className='bubble';b.style.cssText=`left:${x-s/2+(Math.random()-.5)*20}px;top:${y-s/2+(Math.random()-.5)*20}px;width:${s}px;height:${s}px`;scene.appendChild(b);bubbles.push(b);S.bubble();
+    if(bubbles.length>=20)shower()}
+  function shower(){wpid=null;sponge&&sponge.remove();sponge=null;mode='rinse';tipEl.textContent='沖沖水~';S.shower();const cr=cowEl.getBoundingClientRect(),sr=scene.getBoundingClientRect();
+    for(let j=0;j<40;j++)setTimeout(()=>{const r=document.createElement('div');r.className='rain';r.style.left=(cr.left-sr.left+Math.random()*cr.width)+'px';r.style.top=(cr.top-sr.top-20+Math.random()*30)+'px';scene.appendChild(r);setTimeout(()=>r.remove(),750)},j*25);
+    setTimeout(()=>{bubbles.forEach(b=>b.classList.add('go'));setTimeout(()=>{bubbles.forEach(b=>b.remove());bubbles=[]},450);C.clean=true;save();setMode(null);cowAnim('jump');S.ding();sparkAt(scene,cr.left-sr.left+cr.width/2,cr.top-sr.top+cr.height/2,6);talk('洗得好乾淨');checkGrow()},1100)}
+  cleanup=()=>{ro.disconnect();removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};
+  cowEl.addEventListener('click',()=>{if(!mode){C.grown?S.moo():S.moo();cowAnim('jump')}});
+}
+
+/* ================= 雞舍 ================= */
+function showCoop(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
+  sc.innerHTML=`<div class="tools"><button class="tbtn" id="tCorn" type="button">${svg(FEEDBAG)}撒飼料</button></div><div class="stats" id="hstats"></div><div class="scene" id="scene"><div class="hero bird" id="bird"></div></div>`;
+  const H=G.hen,bird=$('bird'),scene=$('scene'),tm=[];let busy=false,eggEl=null;
+  const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
+  function draw(){bird.innerHTML=svg(H.stage==='egg'?eggSVG(H.crack):H.stage==='chick'?CHICK:NEST+`<g transform="translate(0 -6)">${HEN}</g>`);
+    $('tCorn').hidden=H.stage==='egg';
+    $('hstats').innerHTML=H.stage==='chick'?`<span>長大 ${[0,1,2].map(i=>`<svg viewBox="0 0 24 24" class="${i<H.fed?'':'off'}">${HEART}</svg>`).join('')}</span>`:'';
+    tipEl.textContent=H.stage==='egg'?'輕輕點蛋,幫它保暖,小雞快出來!':H.stage==='chick'?'小雞餓了,撒飼料給牠吃':(eggEl?'母雞生蛋了!點雞蛋收進籃子':'撒飼料給母雞吃,牠會生蛋喔')}
+  function anim(c){bird.classList.remove('jump','wig','growup');void bird.offsetWidth;bird.classList.add(c)}
+  function center(){const r=bird.getBoundingClientRect(),sr=scene.getBoundingClientRect();return{x:r.left-sr.left+r.width/2,y:r.top-sr.top+r.height/2,r,sr}}
+  draw();if(H.egg)layEgg(true);
+  bird.addEventListener('click',()=>{ac();if(busy)return;
+    if(H.stage==='egg'){H.crack++;S.crack();anim('wig');if(H.crack>=5){busy=true;tm.push(setTimeout(()=>{H.stage='chick';H.crack=0;H.fed=0;save();draw();anim('growup');S.peep();talk('小雞出生了');const c=center();sparkAt(scene,c.x,c.y,6);busy=false},350))}else{save();draw()}}
+    else if(H.stage==='chick'){S.peep();anim('jump')}else{S.cluck();anim('jump')}});
+  $('tCorn').onclick=()=>{ac();if(busy)return;busy=true;S.plant();const c=center();
+    for(let j=0;j<14;j++){const f=document.createElement('div');f.className='feed';const bx=c.x+(Math.random()-.5)*c.r.width*.6,by=c.r.bottom-c.sr.top-10-Math.random()*20;f.style.left=c.x+'px';f.style.top=(c.r.top-c.sr.top)+'px';scene.appendChild(f);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transform=`translate(${bx-c.x}px,${by-(c.r.top-c.sr.top)}px)`}));tm.push(setTimeout(()=>{f.style.opacity=0;setTimeout(()=>f.remove(),400)},1500+j*20))}
+    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s.classList.add('peck');H.stage==='chick'?S.peep():S.cluck()},500));
+    tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s&&s.classList.remove('peck');busy=false;
+      if(H.stage==='chick'){H.fed++;save();draw();if(H.fed>=3){busy=true;anim('growup');S.grow();tm.push(setTimeout(()=>{H.stage='hen';H.fed=0;save();draw();S.cluck();talk('小雞長大變母雞了');const c2=center();sparkAt(scene,c2.x,c2.y,6);busy=false},600))}}
+      else if(!H.egg){H.egg=true;save();layEgg()}else{draw()}},1900))};
+  function layEgg(quiet){const c=center();eggEl=document.createElement('div');eggEl.className='egg-drop';eggEl.innerHTML=svg(ICON.egg);eggEl.style.left=(c.x+c.r.width*.3)+'px';scene.appendChild(eggEl);eggEl.style.top=Math.min(c.r.bottom-c.sr.top-c.r.height*.12,c.sr.height-eggEl.offsetHeight/2-8)+'px';scene.appendChild(eggEl);
+    if(!quiet){S.cluck();setTimeout(()=>S.pick(),300);talk('咕咕,生蛋了')}draw();
+    eggEl.onclick=()=>{const r=eggEl.getBoundingClientRect();eggEl.remove();eggEl=null;H.egg=false;save();draw();toBasket('egg',r)}}
+  cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)};
+}
+
+/* ================= 市場 ================= */
+const TRUCK=`<rect x="8" y="40" width="112" height="52" rx="6" fill="#C9A97A"/><path d="M8 54h112M8 70h112" stroke="#B89A6C" stroke-width="3"/><rect x="120" y="30" width="46" height="62" rx="10" fill="#D88E87"/><path d="M166 56h18q8 0 10 10v26h-28z" fill="#D88E87"/><rect x="132" y="38" width="26" height="22" rx="5" fill="#DCEBF0"/><rect x="4" y="88" width="190" height="10" rx="5" fill="#8E8791"/><circle cx="44" cy="100" r="14" fill="#55505C"/><circle cx="44" cy="100" r="6" fill="#B9BEC5"/><circle cx="154" cy="100" r="14" fill="#55505C"/><circle cx="154" cy="100" r="6" fill="#B9BEC5"/><rect x="186" y="70" width="8" height="8" rx="2" fill="#F4DE9E"/>`;
+function showMarket(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
+  sc.innerHTML=`<div class="market"><div class="shelf" id="shelf"></div><div class="road" id="road"><div class="truck" id="truck">${svg(TRUCK,'0 0 200 120')}<div class="cargo" id="cargo"></div></div><div class="go"><button class="big" id="ship" type="button">出貨!</button></div></div></div>`;
+  let cargo=[],busy=false;const tm=[];
+  function draw(){const sh=$('shelf');sh.innerHTML='';
+    ORDER.forEach(k=>{const n=G.inv[k],b=document.createElement('button');b.type='button';b.className='goods'+(n?'':' zero');b.innerHTML=`${svg(ICON[k])}<span>${NAME[k]}</span><span class="n">×${n}</span><span class="pr">${svg(COIN,'0 0 30 30')}${PRICE[k]}</span>`;
+      b.onclick=()=>{ac();if(busy)return;if(!G.inv[k]){S.no();return}G.inv[k]--;save();paint();S.pick();const r=b.querySelector('svg').getBoundingClientRect();draw();
+        fly(ICON[k],r,$('cargo'),()=>{cargo.push(k);drawCargo();S.plant()},56)};sh.appendChild(b)});
+    $('ship').disabled=!cargo.length;
+    tipEl.textContent=cargo.length?'東西裝好了,按「出貨!」賣掉賺錢':total()?'點農產品,把它們裝上卡車':'籃子空空的,先去農場收成吧!'}
+  function drawCargo(){$('cargo').innerHTML=cargo.slice(-24).map(k=>svg(ICON[k])).join('');$('ship').disabled=!cargo.length||busy;tipEl.textContent='東西裝好了,按「出貨!」賣掉賺錢'}
+  draw();
+  $('ship').onclick=()=>{ac();if(busy||!cargo.length)return;busy=true;$('ship').disabled=true;const earn=cargo.reduce((a,k)=>a+PRICE[k],0);S.truck();tipEl.textContent='卡車出發囉~';
+    const t=$('truck');t.classList.remove('back');t.classList.add('away');
+    tm.push(setTimeout(()=>{cargo=[];drawCargo();t.style.transition='none';t.classList.remove('away');t.style.transform='translateX(-120%)';void t.offsetWidth;t.style.transition='';t.classList.add('back');t.style.transform='';
+      tm.push(setTimeout(()=>{t.classList.remove('back');talk('賣掉了,賺到 '+earn+' 塊錢');const rr=t.getBoundingClientRect(),n=Math.min(earn,12);let got=0;
+        for(let j=0;j<n;j++)tm.push(setTimeout(()=>{const c=document.createElement('div');c.className='coinf';c.innerHTML=svg(COIN,'0 0 30 30');const sx=rr.left+rr.width*(.2+Math.random()*.5),sy=rr.top+rr.height*.3;c.style.left=sx+'px';c.style.top=sy+'px';document.body.appendChild(c);
+          const p=$('coinP').getBoundingClientRect();c.animate([{transform:'translate(0,0)'},{transform:`translate(${(p.left+20-sx)*.4}px,${(p.top-sy)*.4-80}px)`,offset:.4},{transform:`translate(${p.left+8-sx}px,${p.top+4-sy}px) scale(.7)`}],{duration:700,easing:'ease-in-out'}).onfinish=()=>{c.remove();S.coin();bump($('coinP'));
+            got++;const add=got===n?earn-Math.floor(earn/n)*(n-1):Math.floor(earn/n);G.coins+=add;save();paint();if(got===n){plusAt($('coinP'),'+'+earn);S.win();busy=false;draw()}}},j*110))},1000))},1300))};
+  cleanup=()=>tm.forEach(clearTimeout);
+}
+
+go('map');
+</script>
+</body>
+</html>

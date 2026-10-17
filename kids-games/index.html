@@ -38,7 +38,7 @@ h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blu
 .card:focus-visible{outline:5px dashed var(--ink);outline-offset:5px}
 .pic{aspect-ratio:4/3;max-width:100%;border-bottom:5px solid var(--ink);display:grid;place-items:center}
 .pic svg{width:86%;height:86%}
-.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c11 .pic{background:#E8D2A6}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
+.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c11 .pic{background:#E8D2A6}.c12 .pic{background:#E3EEDF}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
 .info{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .info .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .name{font-size:clamp(24px,6vw,30px);font-weight:900}
@@ -200,6 +200,18 @@ body.playing{overflow:hidden}
       </svg></span>
       <span class="info"><span class="txt"><span class="name">挖寶沙坑</span><span class="desc">海邊貝殼、化石、菜園地瓜、雪地企鵝蛋</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
     </button>
+    <button class="card c12" type="button" data-src="games/farm.html" data-name="快樂農場">
+      <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect width="200" height="150" fill="#E3EEDF"/><rect y="88" width="200" height="62" fill="#B9D2A8"/>
+        <path d="M128 40l34-20 34 20v54h-68z" fill="#D88E87"/><rect x="150" y="60" width="24" height="34" fill="#F4EEE2"/>
+        <rect x="20" y="70" width="5" height="40" rx="2" fill="#C9A97A"/><path d="M22 110Q19 88 22 74" stroke="#7FA676" stroke-width="3" fill="none"/>
+        <ellipse cx="14" cy="88" rx="7" ry="4" fill="#8FB283"/><ellipse cx="30" cy="80" rx="7" ry="4" fill="#7FA676"/><circle cx="16" cy="78" r="5" fill="#D9776B"/><circle cx="29" cy="92" r="5" fill="#D9776B"/>
+        <g transform="translate(34 66) scale(.5)"><path d="M160 74Q176 86 172 108" stroke="#EDEAE4" stroke-width="5" fill="none"/><rect x="52" y="96" width="13" height="38" rx="5" fill="#EDEAE4"/><rect x="72" y="96" width="13" height="38" rx="5" fill="#EDEAE4"/><rect x="124" y="96" width="13" height="38" rx="5" fill="#EDEAE4"/><rect x="144" y="96" width="13" height="38" rx="5" fill="#EDEAE4"/><ellipse cx="100" cy="82" rx="64" ry="34" fill="#FBFAF6"/><ellipse cx="86" cy="70" rx="17" ry="12" fill="#6E6876"/><ellipse cx="130" cy="92" rx="13" ry="10" fill="#6E6876"/><ellipse cx="40" cy="58" rx="24" ry="26" fill="#FBFAF6"/><circle cx="31" cy="56" r="4.5" fill="#4A4552"/><circle cx="49" cy="56" r="4.5" fill="#4A4552"/><ellipse cx="40" cy="76" rx="19" ry="12" fill="#F2B9B4"/></g>
+        <g transform="translate(150 96) scale(.36)"><ellipse cx="54" cy="66" rx="28" ry="22" fill="#FBFAF6"/><circle cx="32" cy="38" r="13" fill="#FBFAF6"/><path d="M24 26q2-8 6-6 2-6 6-2 4-2 4 4-2 6-8 6z" fill="#D8796E"/><circle cx="28" cy="36" r="2.6" fill="#4A4552"/><path d="M19 39l-8 3 8 3z" fill="#E3A06B"/></g>
+        <circle cx="128" cy="128" r="9" fill="#E9C46A"/><circle cx="128" cy="128" r="6" fill="none" stroke="#D3A94A" stroke-width="1.5"/>
+      </svg></span>
+      <span class="info"><span class="txt"><span class="name">快樂農場</span><span class="desc">種水果、養乳牛、孵小雞、出貨賺錢</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+    </button>
   </div>
 </main>
 
@@ -236,7 +248,7 @@ addEventListener('popstate',()=>closeGame(true));
 const offEl=document.getElementById('offline');
 const GAMES=[...document.querySelectorAll('.card')].map(c=>c.dataset.src);
 async function checkOffline(){try{if(!('caches' in window))return;const keys=await caches.keys();const k=keys.find(x=>x.startsWith('kids-v'));if(!k)return;const c=await caches.open(k);
-  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/17b 版';offEl.hidden=false}}catch(e){}}
+  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/17c 版';offEl.hidden=false}}catch(e){}}
 if('serviceWorker' in navigator){let hadCtl=!!navigator.serviceWorker.controller,reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!reloaded){reloaded=true;location.reload()}});addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{try{r.update()}catch(e){}return navigator.serviceWorker.ready}).then(()=>setTimeout(checkOffline,500)).catch(()=>{})});checkOffline()}
 </script>
 

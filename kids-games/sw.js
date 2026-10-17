@@ -1,9 +1,9 @@
 /* 幼兒遊戲大全 離線快取:第一次打開就把全部遊戲存起來,之後沒網路也能玩 */
-const VERSION = "kids-v9";
+const VERSION = "kids-v10";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
   "./games/toy-tidy.html", "./games/station-master.html", "./games/fire-station.html", "./games/shape-match.html",
-  "./games/size-match.html", "./games/abc.html", "./games/zhuyin.html", "./games/rail.html", "./games/montessori.html", "./games/passcode.html", "./games/dig.html"
+  "./games/size-match.html", "./games/abc.html", "./games/zhuyin.html", "./games/rail.html", "./games/montessori.html", "./games/passcode.html", "./games/dig.html", "./games/farm.html"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

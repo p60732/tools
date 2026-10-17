@@ -44,6 +44,11 @@ h1{margin:0;font-size:clamp(22px,5.5vw,32px);font-weight:900;white-space:nowrap}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .field{cursor:pointer}
 #layers,#layers canvas{pointer-events:none}
+.tool{position:absolute;z-index:6;pointer-events:none;width:var(--ts,96px);height:var(--ts,96px);margin:calc(var(--ts,96px)*-.86) 0 0 calc(var(--ts,96px)*-.14);opacity:0;transition:opacity .15s;filter:drop-shadow(0 5px 0 rgba(74,69,82,.16))}
+.tool svg{width:100%;height:100%;display:block;overflow:visible;transform-origin:14% 86%}
+.tool.on{opacity:1}
+.tool.on svg{animation:scoop .32s ease-in-out infinite alternate}
+@keyframes scoop{from{transform:rotate(-14deg) translate(4px,-6px)}to{transform:rotate(12deg) translate(-2px,4px)}}
 .fly{position:fixed;z-index:30;pointer-events:none;filter:drop-shadow(0 6px 0 rgba(74,69,82,.18))}
 .fly svg{width:100%;height:100%;display:block;overflow:visible}
 .pill.bump{animation:bump .5s}
@@ -122,6 +127,7 @@ canvas.fx{pointer-events:none}
       <div class="deep" id="deep"></div>
       <div id="items"></div>
       <div id="layers"></div>
+      <div class="tool" id="tool"></div>
       <canvas class="fx" id="fx"></canvas>
     </div>
   </div>
@@ -221,6 +227,11 @@ function paintCount(){if(!mode)return;$('mcount').textContent='收藏館 '+coll[
 
 /* 鋪沙、藏寶 */
 let W=0,H=0,dpr=1,fctx,R=40;
+const TOOLS={
+ beach:`<svg viewBox="0 0 100 100"><path d="M86 12L48 50" stroke="#E3A06B" stroke-width="10" stroke-linecap="round"/><circle cx="88" cy="10" r="8" fill="#E3A06B"/><path d="M50 42Q62 56 50 66L30 88Q14 98 6 90Q-2 82 10 68L32 48Q42 36 50 42Z" fill="#8FBCCB"/><path d="M40 56L22 76" stroke="#B5D6E1" stroke-width="5" stroke-linecap="round"/></svg>`,
+ fossil:`<svg viewBox="0 0 100 100"><path d="M88 10L50 48" stroke="#C99B6D" stroke-width="11" stroke-linecap="round"/><path d="M50 38L62 50L46 66L34 54Z" fill="#A6AEB6"/><path d="M38 50L50 62L28 90Q18 96 10 88Q4 80 10 72Z" fill="#E9C46A"/><path d="M30 66L18 82M38 72L26 88M24 62L14 74" stroke="#D3A94A" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+ garden:`<svg viewBox="0 0 100 100"><path d="M90 8L56 42" stroke="#7FA676" stroke-width="12" stroke-linecap="round"/><path d="M58 34L66 42L58 50L50 42Z" fill="#8E8791"/><path d="M52 40Q62 50 54 60L14 94Q8 96 6 90L36 46Q44 34 52 40Z" fill="#B9BEC5"/><path d="M44 50L20 84" stroke="#D6DADF" stroke-width="4" stroke-linecap="round"/></svg>`,
+ snow:`<svg viewBox="0 0 100 100"><path d="M90 6L52 50" stroke="#D88E87" stroke-width="10" stroke-linecap="round"/><path d="M80 4h18" stroke="#D88E87" stroke-width="9" stroke-linecap="round" transform="rotate(-40 89 4)"/><path d="M56 40L30 98L-4 72Z" fill="#A9CFDC" transform="rotate(8 26 70)"/><path d="M44 58L14 76" stroke="#CFE4EC" stroke-width="5" stroke-linecap="round"/></svg>`};
 const LAYERS={beach:[['#E8D2A6',['#DCC395','#F1E0BC','#D6BC8B']],['#D8BB89',['#CBAA76','#E3C99B','#C7A672']],['#C4A57A',['#B6966A','#D1B38A','#AE8E63']],['#B5A48E',['#A69480','#C3B39E','#9E8C77']]],
   garden:[['#9C7A5B',['#8E6E51','#AA8868','#86684C']],['#8A6A4D',['#7E6045','#977657','#765A41']],['#7A5D44',['#6E533C','#86684E','#685039']],['#6E5440',['#634B39','#7A5E48','#5C4635']]],
   snow:[['#F7F8FA',['#FFFFFF','#EDF1F4','#E6ECF0']],['#DCE7EE',['#E8F0F4','#D0DEE7','#CAD9E3']],['#BFD4E1',['#CCDDE8','#B3CBDA','#ADC6D6']],['#A3C0D1',['#B1CAD9','#97B7CA','#90B1C5']]],
@@ -266,10 +277,13 @@ function digAt(x,y){if(!depth)return;const beach=mode==='beach',now=performance.
   for(let i=0;i<(mode==='fossil'?5:7);i++)parts.push({x,y,vx:(Math.random()-.5)*7,vy:-Math.random()*7-2,life:1,c:L.col[i%4],s:Math.random()*4+2});
   if(now-lastSnd>90){lastSnd=now;({beach:S.dig,fossil:S.brush,garden:S.soil,snow:S.snow})[mode]()}
   if(now-lastCheck>100){lastCheck=now;check()}}
-field.addEventListener('pointerdown',e=>{if(digging!==null||!mode||!depth)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);digAt(lastPt.x,lastPt.y)});
-addEventListener('pointermove',e=>{if(e.pointerId!==digging)return;const p=toField(e),d=Math.hypot(p.x-lastPt.x,p.y-lastPt.y),step=R*.45;
+const toolEl=$('tool');let toolHide=0;
+function toolAt(p){toolEl.style.left=p.x+'px';toolEl.style.top=p.y+'px'}
+field.addEventListener('pointerdown',e=>{if(digging!==null||!mode||!depth)return;e.preventDefault();ac();digging=e.pointerId;lastPt=toField(e);
+  if(toolEl.dataset.m!==mode){toolEl.innerHTML=TOOLS[mode];toolEl.dataset.m=mode}toolEl.style.setProperty('--ts',Math.max(80,Math.min(130,R*2.6))+'px');clearTimeout(toolHide);toolAt(lastPt);toolEl.classList.add('on');digAt(lastPt.x,lastPt.y)});
+addEventListener('pointermove',e=>{if(e.pointerId!==digging)return;const p=toField(e);toolAt(p);const d=Math.hypot(p.x-lastPt.x,p.y-lastPt.y),step=R*.45;
   for(let s=step;s<=d;s+=step){const k=s/d;digAt(lastPt.x+(p.x-lastPt.x)*k,lastPt.y+(p.y-lastPt.y)*k)}if(d>=step)lastPt=p});
-const endDig=e=>{if(e.pointerId!==digging)return;digging=null;check()};
+const endDig=e=>{if(e.pointerId!==digging)return;digging=null;check();toolHide=setTimeout(()=>toolEl.classList.remove('on'),250)};
 addEventListener('pointerup',endDig);addEventListener('pointercancel',endDig);
 
 /* 寶物露出一半以上就算找到 */
