@@ -178,6 +178,8 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .spk .price{display:flex;align-items:center;gap:4px;font-weight:900;font-size:20px}
 .spk .price svg{width:26px;height:26px}
 .spk.wg{animation:wig .4s}
+.spk.soldout{opacity:.55}
+.spk .price.so{color:#C97C76;font-size:18px}
 .big.gotoseed{position:absolute;left:50%;top:40%;transform:translateX(-50%);z-index:9}
 /* 加工坊 */
 .works .wcard{flex-direction:row;align-items:center;gap:6px;padding:8px}
@@ -203,6 +205,16 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 @keyframes fxtilt{25%,80%{transform:translate(26px,-44px) rotate(28deg)}}
 /**/.fx-tilt4{animation:fxtilt4 1.3s ease-in-out;transform-origin:100% 100%}
 @keyframes fxtilt4{25%,80%{transform:rotate(40deg)}}
+.fx-tiltHi{animation:fxtiltHi 1.3s ease-in-out;transform-origin:100% 100%}
+@keyframes fxtiltHi{25%,80%{transform:translate(30px,-64px) rotate(28deg)}}
+.fx-flipcake{animation:fxflip 1.1s ease-in-out;transform-origin:50% 50%}
+@keyframes fxflip{25%{transform:translateY(-30px) scaleY(.2)}50%{transform:translateY(-40px) scaleY(-1)}75%{transform:translateY(-20px) scaleY(.2)}100%{transform:none}}
+.fx-slide2{animation:fxslide2 1.2s ease-in-out forwards}
+@keyframes fxslide2{40%{transform:translate(20px,-30px)}100%{transform:translate(58px,-2px)}}
+.fx-knead{animation:fxknead .3s ease-in-out 4 alternate;transform-origin:50% 100%}
+@keyframes fxknead{to{transform:scale(1.25,.7)}}
+.fx-turnover{animation:fxturnover 1.3s ease-in-out forwards;transform-origin:50% 50%}
+@keyframes fxturnover{40%{transform:translate(10px,-34px) rotate(180deg)}100%{transform:translate(40px,-2px) rotate(180deg)}}
 .fx-tilt3{animation:fxtilt3 1.3s ease-in-out;transform-origin:100% 100%}
 @keyframes fxtilt3{25%,80%{transform:translate(30px,-12px) rotate(40deg)}}
 .fx-tilt2{animation:fxtilt2 1.3s ease-in-out;transform-origin:0% 100%}
@@ -432,9 +444,18 @@ Object.assign(ICON,{
  sugar:`<path d="M20 40l30-14 30 14-30 14z" fill="#FFFFFF"/><path d="M20 40v26l30 14V54z" fill="#F1EEE8"/><path d="M80 40v26L50 80V54z" fill="#E3DED5"/><path d="M8 72l18-8 18 8-18 8z" fill="#FFFFFF"/><path d="M8 72v14l18 8V80z" fill="#F1EEE8"/><path d="M44 72v14l-18 8V80z" fill="#E3DED5"/>${[[38,40],[56,36],[64,44]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.6" fill="#E3DED5"/>`).join('')}`,
  cake:`<path d="M16 54v24q34 16 68 0V54" fill="#F2D6B0"/><path d="M16 66q34 14 68 0" stroke="#FFFFFF" stroke-width="5" fill="none"/><ellipse cx="50" cy="54" rx="34" ry="13" fill="#FFFFFF"/>${[[30,50],[44,46],[58,46],[70,51],[50,56]].map(([x,y])=>`<g transform="translate(${x-7} ${y-10}) scale(.14)">${ICON.strawberry}</g>`).join('')}<path d="M16 78q34 16 68 0" stroke="#E9CBA0" stroke-width="3" fill="none"/>`
 });
-const NAME={tomato:'番茄',strawberry:'草莓',apple:'蘋果',grape:'葡萄',wheat:'小麥',cane:'甘蔗',milk:'牛奶',egg:'雞蛋',honey:'蜂蜜',jamS:'草莓果醬',jamG:'葡萄果醬',butter:'奶油',cheese:'起司',flour:'麵粉',sugar:'糖',cake:'蛋糕'};
-const PRICE={tomato:2,strawberry:3,apple:3,grape:4,wheat:2,cane:2,milk:5,egg:2,honey:8,jamS:10,jamG:10,butter:9,cheese:10,flour:6,sugar:6,cake:25};
-const ORDER=['tomato','strawberry','apple','grape','wheat','cane','milk','egg','honey','jamS','jamG','butter','cheese','flour','sugar','cake'];
+Object.assign(ICON,{
+ ketchup:`<path d="M38 28h24v8q10 6 10 20v32q0 6-6 6H34q-6 0-6-6V56q0-14 10-20z" fill="#C9483E"/><rect x="40" y="12" width="20" height="18" rx="4" fill="#FFFFFF"/><rect x="46" y="6" width="8" height="8" rx="2" fill="#F4EEE2"/><rect x="32" y="56" width="36" height="24" rx="5" fill="#F4EEE2"/><g transform="translate(41 58) scale(.18)">${ICON.tomato}</g><path d="M34 44q-2 12 0 24" stroke="#D9776B" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+ smilk:`<path d="M58 92L70 8" stroke="#D88E87" stroke-width="5" stroke-linecap="round"/><path d="M28 30h44l-6 62H34z" fill="#EAF2F5"/><path d="M30 42h40l-5 50H35z" fill="#F2B9C6"/><g transform="translate(54 18) scale(.24)">${ICON.strawberry}</g><path d="M34 46l3 40" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".8"/>`,
+ pancake:`<ellipse cx="50" cy="86" rx="40" ry="8" fill="#FFFFFF" stroke="#E6DCCB" stroke-width="2"/>${[76,64,52].map(y=>`<ellipse cx="50" cy="${y+4}" rx="32" ry="8" fill="#D9A55E"/><ellipse cx="50" cy="${y}" rx="32" ry="8" fill="#E9C08A"/>`).join('')}<path d="M30 50q20 10 40 0v8q-4 10-6 2-6 6-12 0-6 8-10 0-8 6-12-2z" fill="#E9A85A"/><rect x="44" y="40" width="14" height="9" rx="2" fill="#FBEBB5"/>`,
+ pudding:`<ellipse cx="50" cy="86" rx="40" ry="8" fill="#FFFFFF" stroke="#E6DCCB" stroke-width="2"/><path d="M24 84l6-46q20-10 40 0l6 46z" fill="#F4D77E"/><path d="M30 38q20-12 40 0l-2 8q-18-8-36 0z" fill="#C98A3E"/><path d="M32 46q-2 6 2 10M66 46q2 6-2 12" stroke="#C98A3E" stroke-width="4" stroke-linecap="round"/><path d="M34 60l-3 18" stroke="#FBEBB5" stroke-width="5" stroke-linecap="round"/>`,
+ bread:`<path d="M12 82V54q0-22 22-22h32q22 0 22 22v28z" fill="#D9A55E"/><path d="M12 82h76v6H12z" fill="#C98E4A"/><path d="M24 50q8-10 16 0M42 46q8-10 16 0M60 50q8-10 16 0" stroke="#E9C08A" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+ pizza:`<circle cx="50" cy="52" r="40" fill="#E9C08A"/><circle cx="50" cy="52" r="33" fill="#C9483E"/>${[[36,40],[62,38],[44,62],[66,62],[52,50],[30,56]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="8" ry="5" fill="#F4D77E"/>`).join('')}${[[40,30],[60,48],[38,70],[70,72]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5" fill="#D9776B"/>`).join('')}<path d="M50 19v66M17 52h66" stroke="#D9A55E" stroke-width="1.5"/>`,
+ pie:`<path d="M10 62h80l-8 24H18z" fill="#E6D3A0"/><path d="M12 62q38-24 76 0z" fill="#E3B07A"/>${[28,40,52,64,76].map(x=>`<path d="M${x} ${62-Math.max(0,14-Math.abs(x-52)*.5)}v${Math.max(0,14-Math.abs(x-52)*.5)}" stroke="#F2D6B0" stroke-width="5"/>`).join('')}<path d="M20 56q30-8 60 0" stroke="#F2D6B0" stroke-width="5" fill="none"/><path d="M10 62h80" stroke="#D3BD86" stroke-width="4"/>`
+});
+const NAME={tomato:'番茄',strawberry:'草莓',apple:'蘋果',grape:'葡萄',wheat:'小麥',cane:'甘蔗',milk:'牛奶',egg:'雞蛋',honey:'蜂蜜',jamS:'草莓果醬',jamG:'葡萄果醬',butter:'奶油',cheese:'起司',flour:'麵粉',sugar:'糖',cake:'蛋糕',ketchup:'番茄醬',smilk:'草莓牛奶',pancake:'鬆餅',pudding:'布丁',bread:'麵包',pizza:'披薩',pie:'蘋果派'};
+const PRICE={tomato:2,strawberry:3,apple:3,grape:4,wheat:2,cane:2,milk:5,egg:2,honey:8,jamS:10,jamG:10,butter:9,cheese:10,flour:6,sugar:6,cake:25,ketchup:9,smilk:9,pancake:14,pudding:12,bread:14,pizza:18,pie:18};
+const ORDER=['tomato','strawberry','apple','grape','wheat','cane','milk','egg','honey','jamS','jamG','butter','cheese','flour','sugar','cake','ketchup','smilk','pancake','pudding','bread','pizza','pie'];
 const ZERO=()=>Object.fromEntries(ORDER.map(k=>[k,0]));
 const svg=(inner,vb='0 0 100 100')=>`<svg viewBox="${vb}">${inner}</svg>`;
 const COIN=`<circle cx="15" cy="15" r="12" fill="#E9C46A"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#D3A94A" stroke-width="2"/><path d="M15 10v10M12 12.5h5a2 2 0 0 1 0 4h-4" stroke="#B88A2E" stroke-width="2" fill="none" stroke-linecap="round"/>`;
@@ -472,10 +493,10 @@ const CHICK=`<path d="M42 86v6M58 86v6M38 92h8M54 92h8" stroke="#E3A06B" stroke-
 const HEN=`<path d="M44 86v8M58 86v8M40 94h8M54 94h8" stroke="#E3A06B" stroke-width="3" stroke-linecap="round"/><path d="M72 60Q92 40 86 26Q80 40 74 46Q86 30 76 22Q74 40 68 48z" fill="#EDEAE4"/><ellipse cx="54" cy="66" rx="28" ry="22" fill="#FBFAF6"/><path d="M56 66q14-6 18 6-12 8-18-6z" fill="#EDEAE4"/><g class="headg"><path d="M26 40Q28 60 40 64L46 48z" fill="#FBFAF6"/><circle cx="32" cy="38" r="13" fill="#FBFAF6"/><path d="M24 26q2-8 6-6 2-6 6-2 4-2 4 4-2 6-8 6z" fill="#D8796E"/><circle cx="28" cy="36" r="2.6" fill="${K}"/><path d="M19 39l-8 3 8 3z" fill="#E3A06B"/><path d="M22 46q-2 6 2 8 4-2 2-8z" fill="#D8796E"/></g>`;
 
 /* ================= 存檔 ================= */
-const DEF={coins:0,inv:ZERO(),stock:ZERO(),shelf:[null,null,null,null],orders:[],seeds:{tomato:2,strawberry:2,apple:1,grape:1,wheat:2,cane:1},crops:{tomato:{st:0},strawberry:{st:0},apple:{st:0},grape:{st:0},wheat:{st:0},cane:{st:0}},
+const DEF={coins:0,inv:ZERO(),stock:ZERO(),shelf:[null,null,null,null],orders:[],seeds:{tomato:2,strawberry:2,wheat:2},seedLv:{apple:1,grape:1,cane:1},crops:{tomato:{st:0},strawberry:{st:0},apple:{st:0},grape:{st:0},wheat:{st:0},cane:{st:0}},
   cow:{grown:false,full:0,clean:false},hen:{stage:'egg',crack:0,fed:0,egg:false}};
 let G=JSON.parse(JSON.stringify(DEF));
-try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv){delete s.plots;G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.stock=Object.assign({},DEF.stock,s.stock);G.seeds=Object.assign({},DEF.seeds,s.seeds);G.crops=Object.assign({},DEF.crops,s.crops);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen);if(!Array.isArray(G.shelf)||G.shelf.length!==4)G.shelf=[null,null,null,null]}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv){delete s.plots;G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.stock=Object.assign({},DEF.stock,s.stock);G.seeds=Object.assign({},DEF.seeds,s.seeds);if(!s.seedLv){G.seedLv={};for(const c of ['apple','grape','cane'])G.seedLv[c]=Math.min(3,Math.max((s.seeds&&s.seeds[c])||0,s.crops&&s.crops[c]&&s.crops[c].st>0?1:0))}else G.seedLv=Object.assign({},DEF.seedLv,s.seedLv);G.crops=Object.assign({},DEF.crops,s.crops);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen);if(!Array.isArray(G.shelf)||G.shelf.length!==4)G.shelf=[null,null,null,null]}}catch(e){}
 const save=()=>{try{localStorage.setItem('farmState',JSON.stringify(G))}catch(e){}};
 
 /* ================= 共用 ================= */
@@ -492,7 +513,7 @@ function fly(inner,fromRect,toEl,cb,size){const sz=size||Math.max(44,Math.min(90
   const sx=fromRect.left+fromRect.width/2,sy=fromRect.top+fromRect.height/2;f.style.cssText=`left:${sx-sz/2}px;top:${sy-sz/2}px;width:${sz}px;height:${sz}px`;document.body.appendChild(f);
   const b=toEl.getBoundingClientRect(),dx=b.left+b.width/2-sx,dy=b.top+b.height/2-sy,lift=Math.min(150,Math.max(60,Math.abs(dy)*.45));let fin=false;const end=()=>{if(fin)return;fin=true;f.remove();cb&&cb()};
   try{const an=f.animate([{transform:'translate(0,0) scale(1) perspective(400px) rotateY(0)'},{transform:`translate(${dx*.4}px,${dy*.4-lift}px) scale(1.15) perspective(400px) rotateY(180deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(.35) perspective(400px) rotateY(360deg)`}],{duration:800,easing:'cubic-bezier(.45,0,.55,1)'});an.onfinish=end}catch(e){end()}setTimeout(end,1000)}
-function toBasket(k,rect){fly(ICON[k],rect,$('basketP'),()=>{G.inv[k]++;save();paint();S.ding();bump($('basketP'));plusAt($('basketP'),'+1')})}
+function toBasket(k,rect,n=1){fly(ICON[k],rect,$('basketP'),()=>{G.inv[k]+=n;save();paint();S.ding();bump($('basketP'));plusAt($('basketP'),'+'+n)})}
 
 /* ================= 畫面切換 ================= */
 let screen='map',cleanup=null;
@@ -533,6 +554,8 @@ for(const k of ['tomato','strawberry','apple','grape'])CROPS[k].back=CROPS[k].pe
 const STEP=['種子','發芽','小苗','長大','茂盛','開花','結果','成熟'];
 const stepsOf=c=>CROPS[c].steps||STEP;
 const SEEDP={tomato:1,strawberry:2,apple:5,grape:5,wheat:1,cane:3};
+const PER=c=>!!CROPS[c].back;
+const hasSeed=c=>PER(c)?(G.seedLv[c]||0)>0:(G.seeds[c]||0)>0;
 const packet=c=>`<path d="M18 10h64v80H18z" fill="#F4EEE2"/><path d="M18 10h64v14H18z" fill="#D9BE8C"/><path d="M18 24l8-4 8 4 8-4 8 4 8-4 8 4 8-4 8 4" stroke="#C9A97A" stroke-width="2" fill="none"/><rect x="26" y="32" width="48" height="48" rx="8" fill="#E3EEDF"/>${ic(c==='wheat'?'wheat':c==='cane'?'cane':c,50,56,40)}`;
 const tLeaf=(x,y,a,s)=>`<g transform="translate(${x} ${y}) rotate(${a}) scale(${s})"><path d="M0 0H34" stroke="${GR3}" stroke-width="2.4"/>${[[9,-1],[9,1],[21,-1],[21,1]].map(([lx,sd])=>`<ellipse cx="${lx}" cy="${sd*6}" rx="6.5" ry="3.6" fill="${sd<0?GR:GR2}" transform="rotate(${sd*25} ${lx} ${sd*6})"/>`).join('')}<ellipse cx="35" cy="0" rx="7.5" ry="4.2" fill="${GR}"/></g>`;
 const sLeaf=(x,y,a,s)=>`<g transform="translate(${x} ${y}) rotate(${a}) scale(${s})"><path d="M0 0Q-2 -16 0 -30" stroke="${GR3}" stroke-width="2.4" fill="none"/>${[[-32,GR],[0,GR2],[32,GR]].map(([r,f])=>`<g transform="translate(0 -30) rotate(${r})"><ellipse cx="0" cy="-11" rx="7.5" ry="11" fill="${f}"/><path d="M0 -2V-20" stroke="${GR3}" stroke-width="1.2"/></g>`).join('')}</g>`;
@@ -615,22 +638,23 @@ function showGarden(){tipEl.textContent='要種什麼呢?選一種植物,沒種�
   const shop=document.createElement('button');shop.type='button';shop.className='card';shop.innerHTML=`<span class="pic">${svg(`<rect width="260" height="182" fill="#F4EEE2"/><path d="M20 70L36 36h188l16 34z" fill="#7FB08A"/><path d="M36 36l-16 34h26l14-34zM96 36l-6 34h26l4-34zM156 36l4 34h26l-6-34zM210 36l14 34h16l-16-34z" fill="#F4EEE2" opacity=".6"/><rect x="28" y="70" width="204" height="90" fill="#E6DCCB"/>${['tomato','strawberry','wheat','apple'].map((c,i)=>`<svg x="${38+i*48}" y="84" width="46" height="62" viewBox="10 4 80 92">${packet(c)}</svg>`).join('')}`,'0 0 260 182')}</span><b>種子店</b>`;
   shop.onclick=()=>{S.tap();go('seeds')};m.appendChild(shop);
   Object.keys(CROPS).forEach(c=>{const P=G.crops[c],b=document.createElement('button');b.type='button';b.className='card';
-    b.innerHTML=`<span class="pic">${svg(cropSVG(c,8),'-30 10 260 182')}</span><b>${CROPS[c].name}</b><span class="seedn">${svg(packet(c))}×${G.seeds[c]||0}</span>${P.st?`<span class="dot">${P.st===8?'可以採了':stepsOf(c)[P.st-1]}</span>`:''}`;
+    b.innerHTML=`<span class="pic">${svg(cropSVG(c,8),'-30 10 260 182')}</span><b>${CROPS[c].name}</b><span class="seedn">${svg(packet(c))}${PER(c)?(G.seedLv[c]?'產量×'+G.seedLv[c]:'還沒買'):'×'+(G.seeds[c]||0)}</span>${P.st?`<span class="dot">${P.st===8?'可以採了':stepsOf(c)[P.st-1]}</span>`:''}`;
     b.onclick=()=>{S.tap();go('plant',c)};m.appendChild(b)})}
 function showSeeds(){$('title').textContent='種子店';tipEl.textContent='用金幣買種子,點一下買一包';
   const m=document.createElement('div');m.className='screen map seeds';stage.appendChild(m);
   Object.keys(CROPS).forEach(c=>{const b=document.createElement('button');b.type='button';b.className='card spk';
-    const paint1=()=>{b.innerHTML=`<span class="pk">${svg(packet(c))}</span><b>${CROPS[c].name}${CROPS[c].back?'<small>種一次會一直長</small>':''}</b><span class="price">${svg(COIN,'0 0 30 30')}${SEEDP[c]}</span><span class="dot">有 ${G.seeds[c]||0} 包</span>`};paint1();
-    b.onclick=()=>{ac();if(G.coins<SEEDP[c]){S.no();talk('金幣不夠,去賣東西賺錢吧');tipEl.textContent='金幣不夠,去商店賣東西賺錢吧';b.classList.remove('wg');void b.offsetWidth;b.classList.add('wg');return}
+    const lv=()=>G.seedLv[c]||0,sold=()=>PER(c)&&lv()>=3;
+    const paint1=()=>{b.classList.toggle('soldout',sold());b.innerHTML=`<span class="pk">${svg(packet(c))}</span><b>${CROPS[c].name}${PER(c)?'<small>種一次會一直長,多買一包產量變多</small>':''}</b>${sold()?'<span class="price so">售罄</span>':`<span class="price">${svg(COIN,'0 0 30 30')}${SEEDP[c]}</span>`}<span class="dot">${PER(c)?(lv()?'產量 ×'+lv():'還沒買'):'有 '+(G.seeds[c]||0)+' 包'}</span>`};paint1();
+    b.onclick=()=>{ac();if(sold()){S.no();talk(CROPS[c].name+'已經買滿三包了');tipEl.textContent=CROPS[c].name+'已經買滿了(最多三包)';return}if(G.coins<SEEDP[c]){S.no();talk('金幣不夠,去賣東西賺錢吧');tipEl.textContent='金幣不夠,去商店賣東西賺錢吧';b.classList.remove('wg');void b.offsetWidth;b.classList.add('wg');return}
       G.coins-=SEEDP[c];save();paint();S.coin();const pr=$('coinP').getBoundingClientRect();
-      fly(COIN.replace(/<circle cx="15" cy="15" r="12"/,'<circle cx="15" cy="15" r="12"'),pr,b,()=>{G.seeds[c]=(G.seeds[c]||0)+1;save();paint1();S.ding();talk('買了一包'+CROPS[c].name+'種子')},40)};m.appendChild(b)})}
+      fly(COIN,pr,b,()=>{if(PER(c)){G.seedLv[c]=lv()+1;talk(lv()===1?'買了'+CROPS[c].name+',種一次就會一直長':CROPS[c].name+'產量變成 '+lv()+' 倍')}else{G.seeds[c]=(G.seeds[c]||0)+1;talk('買了一包'+CROPS[c].name+'種子')}save();paint1();S.ding()},40)};m.appendChild(b)})}
 function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.name;
   if(P.st===8&&(!Array.isArray(P.left)||!P.left.length))P.left=C.pos.map((_,k)=>k);save();
   const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
   sc.innerHTML=`<div class="steps" id="steps"></div><div class="gscene" id="gs"><div class="sun" id="sun">${svg(SUN)}</div><svg class="plant" id="pl" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet"></svg>
     <div class="prop bag" id="bag">${svg(SEEDBAG)}</div><div class="prop can" id="can">${svg(CANSVG)}</div><div class="bee" id="bee" hidden>${svg(BEE,'0 0 90 70')}</div><div class="warm" id="warm"></div></div>`;
   const gs=$('gs'),pl=$('pl'),tm=[];let busy=false;
-  function hint(){const st=P.st;if(st===0&&!(G.seeds[c]>0)){tipEl.textContent='沒有'+C.name+'種子了,去種子店買';return}if(C.tip&&C.tip[st]){tipEl.textContent=C.tip[st];return}tipEl.textContent=st===0?'點一點泥土,把種子種下去':st<=4?'點一點植物,幫它澆水':st===5?'再澆一次水,讓它開花':st===6?'開花了!點一點,請蜜蜂來授粉':st===7?'點一點,曬曬太陽,讓果實'+C.ripeWord:'成熟了!點一點採下來'}
+  function hint(){const st=P.st;if(st===0&&!hasSeed(c)){tipEl.textContent='沒有'+C.name+'種子了,去種子店買';return}if(C.tip&&C.tip[st]){tipEl.textContent=C.tip[st];return}tipEl.textContent=st===0?'點一點泥土,把種子種下去':st<=4?'點一點植物,幫它澆水':st===5?'再澆一次水,讓它開花':st===6?'開花了!點一點,請蜜蜂來授粉':st===7?'點一點,曬曬太陽,讓果實'+C.ripeWord:'成熟了!點一點採下來'}
   function draw(anim){pl.innerHTML=cropSVG(c,P.st,P.left);pl.classList.remove('grow');if(anim){void pl.getBoundingClientRect();pl.classList.add('grow')}
     $('steps').innerHTML=stepsOf(c).map((n,i)=>`<span class="${i+1<P.st?'done':i+1===P.st?'now':''}">${n}</span>`).join('');hint()}
   draw();
@@ -643,8 +667,8 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
   function act(e){ac();if(busy)return;const st=P.st;
     if(st===8)return pick(e);
     busy=true;const base=pt(100,166),top=pt(100,st>=5?60:st>=4?100:140);
-    if(st===0&&!(G.seeds[c]>0)){busy=false;S.no();talk('沒有種子了,去種子店買');tipEl.textContent='沒有'+C.name+'種子了!';if(!$('toSeeds')){const t=document.createElement('button');t.type='button';t.id='toSeeds';t.className='big w gotoseed';t.textContent='去種子店買種子';t.onclick=ev=>{ev.stopPropagation();S.tap();go('seeds')};t.addEventListener('pointerdown',ev=>ev.stopPropagation());gs.appendChild(t)}return}
-    if(st===0){G.seeds[c]--;save();moveTo($('bag'),base.x+30,base.y-70,-70,1300);S.plant();particles('seedf',base.x-14,base.x+10,base.y-50,9,450,50);tm.push(setTimeout(()=>{busy=false;advance(SAY[1])},1250))}
+    if(st===0&&!hasSeed(c)){busy=false;S.no();talk('沒有種子了,去種子店買');tipEl.textContent='沒有'+C.name+'種子了!';if(!$('toSeeds')){const t=document.createElement('button');t.type='button';t.id='toSeeds';t.className='big w gotoseed';t.textContent='去種子店買種子';t.onclick=ev=>{ev.stopPropagation();S.tap();go('seeds')};t.addEventListener('pointerdown',ev=>ev.stopPropagation());gs.appendChild(t)}return}
+    if(st===0){if(!PER(c))G.seeds[c]--;save();moveTo($('bag'),base.x+30,base.y-70,-70,1300);S.plant();particles('seedf',base.x-14,base.x+10,base.y-50,9,450,50);tm.push(setTimeout(()=>{busy=false;advance(SAY[1])},1250))}
     else if(st<=5){moveTo($('can'),top.x+70,top.y-40,-38,1500);S.water();particles('drop',top.x-30,top.x+30,top.y-20,18,500,35);tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1450))}
     else if(st===6&&C.a6==='wind'){pl.classList.add('windy');S.wind();const g=gs.getBoundingClientRect();for(let j=0;j<10;j++)tm.push(setTimeout(()=>{const w=document.createElement('div');w.className='gust';w.style.top=(g.height*(.15+Math.random()*.4))+'px';gs.appendChild(w);setTimeout(()=>w.remove(),1000)},j*120));tm.push(setTimeout(()=>{pl.classList.remove('windy');busy=false;advance(SAY[7])},1700))}
     else if(st===6&&C.a6==='sun'||st===7){const s=$('sun'),w=$('warm');s.classList.remove('shine');w.classList.remove('on');void s.offsetWidth;s.classList.add('shine');w.classList.add('on');S.sun();tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1500))}
@@ -654,7 +678,7 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
     else if(st===7){const s=$('sun'),w=$('warm');s.classList.remove('shine');w.classList.remove('on');void s.offsetWidth;s.classList.add('shine');w.classList.add('on');S.sun();tm.push(setTimeout(()=>{busy=false;advance(SAY[8])},1500))}}
   function pick(e){if(!P.left||!P.left.length){P.left=C.pos.map((_,k)=>k);draw();}const m=pl.getScreenCTM().inverse(),q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m);
     let best=P.left[0],bd=1e9;P.left.forEach(k=>{const [x,y]=C.pos[k],d=Math.hypot(x-q.x,y-q.y);if(d<bd){bd=d;best=k}});
-    const el=pl.querySelector(`.fruit[data-k="${best}"]`),r=el.getBoundingClientRect();P.left=P.left.filter(k=>k!==best);el.remove();S.pick();toBasket(c,r);if(c==='wheat'||c==='cane')S.chop();
+    const el=pl.querySelector(`.fruit[data-k="${best}"]`),r=el.getBoundingClientRect();P.left=P.left.filter(k=>k!==best);el.remove();S.pick();toBasket(c,r,PER(c)?Math.max(1,G.seedLv[c]||1):1);if(c==='wheat'||c==='cane')S.chop();
     if(!P.left.length){busy=true;delete P.left;P.st=C.back;save();tm.push(setTimeout(()=>{busy=false;draw(true);talk(C.back===5?'採完了,'+C.name+'會再開花結果':C.back?'砍完了,甘蔗會從根部再長出來':'採完了,再種一次吧')},700))}else save()}
   gs.addEventListener('pointerdown',e=>{e.preventDefault();act(e)});
   cleanup=()=>tm.forEach(clearTimeout);
@@ -931,6 +955,180 @@ const RECIPES={
      return p}}
 };
 const WORK_ORDER=['jamS','jamG','butter','cheese','honey','flour','sugar','cake'];
+/* ---- 新產品(參考 Cooking Mama 的料理步驟) ---- */
+const eggsCrack=(x,n=2)=>`<g class="tool fx-crack">${Array.from({length:n},(_,i)=>`<g transform="translate(${x-12+i*14} 54) scale(.24)">${ICON.egg}</g>`).join('')}</g>`;
+const yolks=(x,n=2)=>Array.from({length:n},(_,i)=>`<circle cx="${x-6+i*11}" cy="${103+(i%2)}" r="4" fill="#F2C14E"/>`).join('');
+const whisk=x=>`<g class="tool fx-stir"><path d="M${x-4} 98L${x+10} 52" stroke="#A6AEB6" stroke-width="3"/>${[-5,0,5].map(d=>`<ellipse cx="${x-4+d*.3}" cy="96" rx="${4+Math.abs(d)}" ry="9" fill="none" stroke="#B9BEC5" stroke-width="1.5"/>`).join('')}</g>`;
+const faucet=x=>`<g class="tool"><path d="M${x-10} 10h20v10h-6v8h-8v-8h-6z" fill="#B9BEC5"/><rect x="-60" y="10" width="${x+50}" height="6" fill="#B9BEC5"/></g>`;
+const blender=(x,col,lvl,fx='')=>`<rect x="${x-15}" y="104" width="30" height="14" rx="4" fill="#D88E87"/><circle cx="${x}" cy="111" r="3" fill="#F4EEE2"/><g class="tool${fx?' fx-'+fx:''}"><path d="M${x-12} 76h24l-2 28h-20z" fill="#EAF2F5" opacity=".95"/>${lvl?`<path d="M${x-11+.1} ${104-26*lvl}h${22-1.4*(1-lvl)}l-${1.8*lvl} ${26*lvl}h-${19}z" fill="${col}"/>`:''}<rect x="${x-9}" y="80" width="3" height="20" rx="1.5" fill="#FFFFFF" opacity=".8"/><rect x="${x-13}" y="72" width="26" height="5" rx="2" fill="#8E8791"/></g>`;
+const glass=(x,col,lvl,straw)=>`${straw?`<path d="M${x+2} 118L${x+8} 72" stroke="#D88E87" stroke-width="3" stroke-linecap="round"/>`:''}<path d="M${x-10} 84h20l-2 34h-16z" fill="#EAF2F5" opacity=".95"/>${lvl?`<path d="M${x-9} ${117-30*lvl}h18l-${1.6*lvl} ${30*lvl}h-${14.8+1.6*(1-lvl)}z" fill="${col}"/>`:''}<rect x="${x-7}" y="88" width="2.5" height="24" rx="1.2" fill="#FFFFFF" opacity=".8"/>`;
+const fryPan=x=>`<rect x="${x+24}" y="102" width="28" height="5" rx="2.5" fill="#6E6876"/><path d="M${x-28} 102h56l-4 9h-48z" fill="#55505C"/>`;
+const cake1=(x,y,s=1)=>`<ellipse cx="${x}" cy="${y+2}" rx="${18*s}" ry="${4.5*s}" fill="#D9A55E"/><ellipse cx="${x}" cy="${y}" rx="${18*s}" ry="${4.5*s}" fill="#E9C08A"/>`;
+const ramekin=(x,col)=>`<path d="M${x-11} 102h22l-2 16h-18z" fill="#FFFFFF" stroke="#E6DCCB" stroke-width="1.5"/>${col?`<ellipse cx="${x}" cy="103" rx="10" ry="2.4" fill="${col}"/>`:''}`;
+const dough=(x,y,w,h,fx='')=>`<g class="tool${fx?' fx-'+fx:''}"><ellipse cx="${x}" cy="${y}" rx="${w}" ry="${h}" fill="#F4E6C8"/><ellipse cx="${x-w*.3}" cy="${y-h*.35}" rx="${w*.3}" ry="${h*.25}" fill="#FBF3E2"/></g>`;
+const loafPan=(x,inner)=>`${inner||''}<path d="M${x-22} 98h44l-3 20h-38z" fill="#A6AEB6"/>`;
+const pieDish=(x,inner)=>`${inner||''}<path d="M${x-28} 102h56l-6 16h-44z" fill="#E6D3A0"/><path d="M${x-28} 102h56" stroke="#D3BD86" stroke-width="3"/>`;
+const halves=(x,y,kind)=>[[-14,0],[-4,-3],[6,0],[15,-2],[-9,-7],[2,-8],[11,-7]].map(([dx,dy])=>kind==='tomato'?`<path d="M${x+dx-5} ${y+dy}a5 5 0 0 1 10 0z" fill="#D9776B"/><circle cx="${x+dx-2}" cy="${y+dy-1.5}" r=".9" fill="#F4DE9E"/><circle cx="${x+dx+2}" cy="${y+dy-1.5}" r=".9" fill="#F4DE9E"/>`:`<path d="M${x+dx-5} ${y+dy}a5 4 0 0 1 10 0z" fill="#FBF1D0" stroke="#D86F68" stroke-width="1"/>`).join('');
+const wholes=(x,y,k,n=4)=>[[-14,0],[-4,-3],[6,0],[15,-2],[0,-9]].slice(0,n).map(([dx,dy])=>`<g transform="translate(${x+dx-7} ${y+dy-12}) scale(.14)">${ICON[k]}</g>`).join('');
+
+Object.assign(RECIPES,{
+ ketchup:{out:'ketchup',shop:'調味工坊',need:{tomato:3,sugar:1},bg:KITCHEN,
+   steps:[['洗一洗','把番茄洗乾淨','pour',{c:'#8FBCCB',x:40,y:29,tx:40,ty:100,n:18,w:3,tw:24}],
+     ['切一切','把番茄切成小塊','chop',null],
+     ['倒進鍋子','倒進鍋子裡','pour',{c:'#D9776B',x:92,y:72,tx:108,ty:78,n:10,w:4,tw:20}],
+     ['開火煮','開火煮到軟軟的','sizzle',{c:'#FFFFFF',x:110,y:72,n:10,w:30,up:1}],
+     ['加糖','加一點糖','pour',{c:'#FFFFFF',x:110,y:36,tx:110,ty:78,n:16,w:3,tw:20}],
+     ['攪一攪','攪拌,煮成濃濃的番茄醬','stir',null],
+     ['裝瓶','裝進瓶子','pour',{c:'#B8483E',x:168,y:64,tx:170,ty:86,n:12,w:2,tw:10}],
+     ['蓋蓋子','蓋上蓋子','till',null]],
+   draw(k,a){let p=KITCHEN;
+     p+=k<=0?bowl(40,24,'#DCEBF0',wholes(40,100,'tomato')):k<=2?board(40)+(k===1?wholes(40,110,'tomato'):halves(40,108,'tomato')):board(40);
+     const on=(k>=4&&k<7)||a===3||a===5;p+=stove(110,on)+pot(110,112,k>=6?'#B8483E':k>=3?'#D9776B':null,on);
+     if(k>=3&&k<6)p+=halves(110,76,'tomato');
+     p+=jar(170,'#B8483E',k>=7?1:0,k>=8,'#F6DCD8');
+     if(a===0)p+=faucet(40);
+     if(a===1)p+=knife(38,94);
+     if(a===2)p=p.replace(board(40)+halves(40,108,'tomato'),'')+`<g class="tool fx-tilt">${board(40)}${halves(40,108,'tomato')}</g>`;
+     if(a===4)p+=pourer(120,22,ICON.sugar);
+     if(a===5)p+=spoon(106,76);
+     if(a===6)p+=ladle(168,68,'#B8483E');
+     if(a===7)p+=`<g class="tool fx-drop"><path d="M152 80q18-12 36 0v4h-36z" fill="#F6DCD8"/></g>`;
+     return p}},
+ smilk:{out:'smilk',shop:'飲料吧',need:{strawberry:2,milk:1},bg:KITCHEN,
+   steps:[['洗一洗','把草莓洗乾淨','pour',{c:'#8FBCCB',x:40,y:29,tx:40,ty:100,n:18,w:3,tw:24}],
+     ['去蒂切塊','去掉蒂頭,切一切','chop',null],
+     ['放進果汁機','把草莓放進果汁機','pour',{c:'#D8796E',x:96,y:54,tx:110,ty:82,n:10,w:4,tw:14}],
+     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:110,y:51,tx:110,ty:84,n:14,w:2,tw:14}],
+     ['打一打','按下開關,嗡嗡嗡打成草莓牛奶','whir',null],
+     ['倒進杯子','倒進杯子裡','pour',{c:'#F2B9C6',x:160,y:64,tx:164,ty:90,n:14,w:2,tw:10}],
+     ['插吸管','插上吸管,好了!','till',null]],
+   draw(k,a){let p=KITCHEN;
+     p+=k<=0?bowl(40,24,'#DCEBF0',wholes(40,100,'strawberry')):k<=2?board(40)+(k===1?wholes(40,110,'strawberry'):fruitBits(40,108,'strawberry',2)):board(40);
+     const col=k>=5?'#F2B9C6':k>=4?'#F4D6D6':'#E9A7A0',lvl=k>=6?.15:k>=4?.85:k>=3?.4:0;
+     p+=a===5?blender(110,col,.85,'tilt3'):blender(110,col,lvl,a===4?'shake':'');
+     if(k>=3&&k<5)p+=`<g>${[[-6,96],[2,98],[7,95]].map(([dx,y])=>`<path d="M${110+dx-4} ${y}a4 4 0 0 1 8 0z" fill="#D8796E"/>`).join('')}</g>`;
+     p+=glass(164,'#F2B9C6',k>=6?.85:0,k>=7);
+     if(a===0)p+=faucet(40);
+     if(a===1)p+=knife(38,94);
+     if(a===2)p=p.replace(board(40)+fruitBits(40,108,'strawberry',2),'')+`<g class="tool fx-tiltHi">${board(40)}${fruitBits(40,108,'strawberry',2)}</g>`;
+     if(a===3)p+=pourer(119,40,ICON.milk);
+     if(a===6)p+=`<g class="tool fx-drop"><path d="M166 118L172 72" stroke="#D88E87" stroke-width="3" stroke-linecap="round"/></g>`;
+     return p}},
+ pancake:{out:'pancake',shop:'點心坊',need:{flour:1,egg:1,milk:1,honey:1},bg:KITCHEN,
+   steps:[['倒麵粉','把麵粉倒進碗裡','pour',{c:'#FFFFFF',x:46,y:69,tx:46,ty:101,n:16,w:2,tw:20}],
+     ['打蛋','敲開一顆蛋','till',null],
+     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:46,y:62,tx:46,ty:101,n:12,w:2,tw:16}],
+     ['攪拌','攪一攪,變成麵糊','stir',null],
+     ['熱鍋','開火把平底鍋熱一熱','sizzle',{c:'#FFFFFF',x:118,y:100,n:6,w:30,up:1}],
+     ['倒麵糊','舀一匙麵糊倒進鍋子','pour',{c:'#F4DE9E',x:118,y:66,tx:118,ty:101,n:10,w:2,tw:10}],
+     ['翻面','咻!翻一面','till',null],
+     ['放到盤子','放到盤子上,疊起來','till',null],
+     ['淋蜂蜜','淋上香香的蜂蜜','pour',{c:'#E9A85A',x:176,y:70,tx:176,ty:96,n:14,w:2,tw:16}]],
+   draw(k,a){let p=KITCHEN;const batter=k>=4?'#F4DE9E':k>=3?'#F7EBC5':k>=1?'#FFFFFF':null;
+     p+=bowl(46,24,batter,k===2||k===3?yolks(46,1):'');
+     const on=(k>=5&&k<8)||a===4;p+=stove(118,on)+fryPan(118);
+     if(k===6||a===6)p+=`<g class="tool${a===6?' fx-flipcake':''}">${cake1(118,99)}</g>`;
+     if(k===7&&a!==7)p+=cake1(118,99).replace('#E9C08A','#E3B07A');
+     if(a===7)p+=`<g class="tool fx-slide2">${cake1(118,99)}</g>`;
+     p+=plate(176);if(k>=8)p+=cake1(176,110)+cake1(176,104)+cake1(176,98);
+     if(k>=9)p+=`<path d="M164 96q12 6 24 0v6q-12 4-24 0z" fill="#E9A85A" opacity=".85"/>`;
+     if(a===0)p+=pourer(41,58,ICON.flour);
+     if(a===1)p+=eggsCrack(46,1);
+     if(a===2)p+=pourer(55,52,ICON.milk);
+     if(a===3)p+=whisk(46);
+     if(a===5)p+=ladle(118,72,'#F4DE9E');
+     if(a===8)p+=pourer(183,60,ICON.honey);
+     return p}},
+ pudding:{out:'pudding',shop:'點心坊',need:{egg:2,milk:1,sugar:1},bg:KITCHEN,
+   steps:[['打蛋','敲開兩顆蛋','till',null],
+     ['加糖','加入糖','pour',{c:'#FFFFFF',x:50,y:61,tx:50,ty:101,n:14,w:2,tw:16}],
+     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:50,y:60,tx:50,ty:101,n:12,w:2,tw:16}],
+     ['攪拌','攪一攪,變成蛋奶液','stir',null],
+     ['過篩','篩進小杯子裡,變得滑滑的','pour',{c:'#F6E7B8',x:120,y:74,tx:120,ty:104,n:18,w:30,tw:40}],
+     ['蒸一蒸','蓋上蒸籠,蒸一蒸','sizzle',{c:'#FFFFFF',x:120,y:80,n:12,w:40,up:1}],
+     ['放涼','放涼,變成布丁','tick',null,1],
+     ['倒扣','倒扣在盤子上','till',null]],
+   draw(k,a){let p=KITCHEN;
+     if(k<5)p+=bowl(50,24,k>=4?'#F6E7B8':k>=1?'#F6E7B8':null,k>=1&&k<4?yolks(50):'');
+     if(k<8){p+=ramekin(108,k>=5?'#F6E7B8':null)+ramekin(132,k>=5?'#F6E7B8':null);
+       if(k===6||a===5)p+=`<g class="tool${a===5?' fx-drop':''}"><path d="M94 104q0-20 26-20t26 20z" fill="#D9BE8C"/><path d="M98 96h44M96 101h48" stroke="#C9A97A" stroke-width="2"/></g>`;
+       if(k>=7)p+=`<ellipse cx="108" cy="103" rx="10" ry="2.4" fill="#C98A3E"/><ellipse cx="132" cy="103" rx="10" ry="2.4" fill="#C98A3E"/>`}
+     if(k>=8||a===7){p+=plate(172);if(k>=8)p+=`<path d="M160 115l3-15q9-5 18 0l3 15z" fill="#F4D77E"/><path d="M163 100q9-6 18 0l-1 4q-8-3-16 0z" fill="#C98A3E"/>`}
+     if(a===0)p+=eggsCrack(50);
+     if(a===1)p+=pourer(59,52,ICON.sugar);
+     if(a===2)p+=pourer(59,50,ICON.milk);
+     if(a===3)p+=whisk(50);
+     if(a===4)p+=sieve(120,70);
+     if(a===7)p+=`<g class="tool fx-turnover">${ramekin(132,'#C98A3E')}</g>`;
+     return p}},
+ bread:{out:'bread',shop:'麵包坊',need:{flour:2,butter:1,milk:1},bg:KITCHEN,
+   steps:[['倒麵粉','把麵粉倒進碗裡','pour',{c:'#FFFFFF',x:50,y:69,tx:50,ty:101,n:16,w:2,tw:20}],
+     ['倒牛奶','倒進牛奶','pour',{c:'#FFFFFF',x:50,y:60,tx:50,ty:101,n:12,w:2,tw:16}],
+     ['加奶油','放一塊奶油','till',null],
+     ['揉麵團','用力揉一揉,變成麵團','till',null],
+     ['發酵','等一等,麵團會長大','tick',null,1],
+     ['放進模具','放進吐司模','till',null],
+     ['烤一烤','送進烤箱烤','tick',null,1],
+     ['出爐','烤好了,香香的麵包','ding',null]],
+   draw(k,a){let p=KITCHEN;
+     if(k<3)p+=bowl(50,24,k>=1?'#FFFFFF':null,k>=2?'':'');
+     if(k>=3&&k<6||a===3)p+=board(56)+dough(56,104,k>=5?20:15,k>=5?9:7,a===3?'knead':'');
+     if((k===6&&a!==6)||a===5)p+=loafPan(120,a===5?'':`<ellipse cx="120" cy="98" rx="20" ry="7" fill="#F4E6C8"/>`);
+     if(k>=7||a===6)p+=oven(160,a===6,a===6?`<path d="M142 98h36l-2 6h-32z" fill="#A6AEB6"/><ellipse cx="160" cy="94" rx="16" ry="6" fill="#E3B07A"/>`:'');
+     if(k>=8)p+=board(96)+`<path d="M74 110v-12q0-10 10-10h24q10 0 10 10v12z" fill="#D9A55E"/><path d="M78 96q6-6 12 0M92 94q6-6 12 0M104 96q5-5 10 0" stroke="#E9C08A" stroke-width="3" fill="none"/>`;
+     if(a===0)p+=pourer(45,58,ICON.flour);
+     if(a===1)p+=pourer(59,50,ICON.milk);
+     if(a===2)p+=`<g class="tool fx-drop"><g transform="translate(36 78) scale(.28)">${ICON.butter}</g></g>`;
+     if(a===5)p+=`<g class="tool fx-drop">${dough(120,94,18,7)}</g>`;
+     return p}},
+ pizza:{out:'pizza',shop:'披薩屋',need:{flour:1,tomato:1,cheese:1},bg:KITCHEN,
+   steps:[['揉麵團','揉一揉麵團','till',null],
+     ['擀平','用擀麵棍擀成圓圓的餅皮','till',null],
+     ['抹番茄醬','抹上番茄醬','stir',null],
+     ['撒起司','撒上滿滿的起司','pour',{c:'#F4D77E',x:64,y:62,tx:64,ty:104,n:20,w:30,tw:44}],
+     ['放番茄片','放上番茄片','till',null],
+     ['烤一烤','送進烤箱烤','tick',null,1],
+     ['切開','烤好了!切成一片一片','chop',null]],
+   draw(k,a){let p=KITCHEN+board(64);
+     const flat=k>=2||a===1;
+     if(!flat)p+=dough(64,104,14,7,a===0?'knead':'');
+     else if(k<5||(k===5&&a!==5)){p+=`<ellipse cx="64" cy="108" rx="28" ry="6" fill="#F4E6C8"/>`;
+       if(k>=3||a===2)p+=`<ellipse cx="64" cy="107" rx="23" ry="4.5" fill="#C9483E"/>`;
+       if(k>=4)p+=[[-14,-1],[-4,1],[6,-1],[14,1],[0,-2],[-9,1],[10,0]].map(([dx,dy])=>`<ellipse cx="${64+dx}" cy="${107+dy}" rx="3.5" ry="1.4" fill="#F4D77E"/>`).join('');
+       if(k>=5)p+=[[-12,0],[2,-1],[13,1]].map(([dx,dy])=>`<ellipse cx="${64+dx}" cy="${106+dy}" rx="4" ry="1.8" fill="#D9776B"/>`).join('')}
+     p+=oven(160,a===5,a===5?`<ellipse cx="160" cy="96" rx="22" ry="5" fill="#E9B97A"/>`:'');
+     if(k>=6)p+=`<g transform="translate(36 80) scale(.56)">${ICON.pizza}</g>`;
+     if(k>=7)p+=`<path d="M44 106l40 4M64 98v20M46 114l36-12" stroke="#C9A97A" stroke-width="1.5"/>`;
+     if(a===1)p+=`<g class="tool fx-slide"><rect x="38" y="96" width="44" height="7" rx="3.5" fill="#D9BE8C"/><rect x="30" y="97.5" width="10" height="4" rx="2" fill="#A98467"/><rect x="80" y="97.5" width="10" height="4" rx="2" fill="#A98467"/></g>`;
+     if(a===2)p+=spoon(60,104);
+     if(a===3)p+=`<g class="tool fx-shake"><rect x="54" y="40" width="20" height="18" rx="3" fill="#C9CED4"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<circle cx="${58+c*6}" cy="${44+r*5}" r="1.2" fill="#8E8791"/>`).join('')).join('')}<rect x="60" y="34" width="8" height="7" rx="2" fill="#8A6A4D"/></g>`;
+     if(a===4)p+=`<g class="tool fx-drop">${[[-12,0],[2,-1],[13,1]].map(([dx,dy])=>`<ellipse cx="${64+dx}" cy="${106+dy}" rx="4" ry="1.8" fill="#D9776B"/>`).join('')}</g>`;
+     if(a===6)p+=knife(48,96);
+     return p}},
+ pie:{out:'pie',shop:'點心坊',need:{apple:2,flour:1,butter:1,sugar:1},bg:KITCHEN,
+   steps:[['切蘋果','削皮,切成小片','chop',null],
+     ['鋪派皮','把派皮鋪進烤盤','till',null],
+     ['放蘋果','把蘋果放進去','pour',{c:'#FBF1D0',x:96,y:54,tx:112,ty:102,n:10,w:4,tw:30}],
+     ['撒糖','撒上糖','pour',{c:'#FFFFFF',x:110,y:53,tx:112,ty:100,n:14,w:3,tw:30}],
+     ['蓋格子','蓋上格子派皮','till',null],
+     ['烤一烤','送進烤箱烤','tick',null,1],
+     ['出爐','烤好了!','ding',null]],
+   draw(k,a){let p=KITCHEN;
+     if(k<3)p+=board(40)+(k===0?wholes(40,110,'apple',3):halves(40,108,'apple'));else p+=board(40);
+     const filling=k>=3?`<path d="M88 102q24-10 48 0z" fill="#F4E3B0"/>`:'';
+     const lattice=k>=5?[96,106,116,126].map(x=>`<path d="M${x} 96v8" stroke="#E9C08A" stroke-width="3"/>`).join('')+`<path d="M88 99h48" stroke="#E9C08A" stroke-width="3"/>`:'';
+     if(k<6&&a!==5)p+=pieDish(112,k>=2||a===1?`<path d="M86 102h52" stroke="#F4E6C8" stroke-width="4"/>`+filling+lattice:'');
+     p+=oven(170,a===5,a===5?`<path d="M152 96h36l-4 8h-28z" fill="#E6D3A0"/><path d="M154 96q16-6 32 0" fill="#E3B07A"/>`:'');
+     if(k>=7)p+=plate(112)+`<g transform="translate(88 72) scale(.48)">${ICON.pie}</g>`;
+     if(a===0)p+=knife(38,94);
+     if(a===1)p=p.replace(`<path d="M86 102h52" stroke="#F4E6C8" stroke-width="4"/>`,'')+`<g class="tool fx-drop"><path d="M86 102h52" stroke="#F4E6C8" stroke-width="4"/></g>`;
+     if(a===2)p=p.replace(board(40)+halves(40,108,'apple'),'')+`<g class="tool fx-tiltHi">${board(40)}${halves(40,108,'apple')}</g>`;
+     if(a===3)p+=pourer(120,44,ICON.sugar);
+     if(a===4)p+=`<g class="tool fx-drop">${[96,106,116,126].map(x=>`<path d="M${x} 96v8" stroke="#E9C08A" stroke-width="3"/>`).join('')}<path d="M88 99h48" stroke="#E9C08A" stroke-width="3"/></g>`;
+     return p}}
+});
+WORK_ORDER.push('ketchup','smilk','pancake','pudding','bread','pizza','pie');
+
 const haveAll=need=>Object.keys(need).every(k=>G.inv[k]>=need[k]);
 function showWork(){tipEl.textContent='要做什麼呢?材料不夠也可以先練習';const m=document.createElement('div');m.className='screen map works';stage.appendChild(m);
   WORK_ORDER.forEach(id=>{const R=RECIPES[id],ok=haveAll(R.need),b=document.createElement('button');b.type='button';b.className='card wcard';
@@ -957,9 +1155,10 @@ function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').t
       if(k>=R.steps.length){done=true;finish()}else{S.grow();talk(st[0]+'好了')}},st[4]?1700:1400))}
   function finish(){S.win();const m=$('made');m.hidden=false;m.innerHTML=`${svg(ICON[R.out])}<b>${NAME[R.out]}做好了!</b><small>${practice?'練習完成!收集材料就能真的做喔':'點一下收進籃子'}</small>`;
     const r=mk.getBoundingClientRect();sparkAt(mk,r.width/2,r.height/2,8);talk(NAME[R.out]+'做好了'+(practice?',練習完成':''))}
-  function collect(){busy=true;if(practice){S.tap();go('work');return}const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work'),900))}
+  let got=false;
+  function collect(){busy=true;if(practice){S.tap();go('work');return}got=true;const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work'),900))}
   mk.addEventListener('pointerdown',e=>{e.preventDefault();step()});
-  cleanup=()=>tm.forEach(clearTimeout)}
+  cleanup=()=>{tm.forEach(clearTimeout);if(practice||got)return;if(done)G.inv[R.out]++;else Object.keys(R.need).forEach(k=>G.inv[k]+=R.need[k]);save();paint()}}
 
 /* ================= 出貨:訂單(外送打包、商店進貨) ================= */
 const TRUCK=`<rect x="8" y="40" width="112" height="52" rx="6" fill="#C9A97A"/><path d="M8 54h112M8 70h112" stroke="#B89A6C" stroke-width="3"/><rect x="120" y="30" width="46" height="62" rx="10" fill="#D88E87"/><path d="M166 56h18q8 0 10 10v26h-28z" fill="#D88E87"/><rect x="132" y="38" width="26" height="22" rx="5" fill="#DCEBF0"/><rect x="4" y="88" width="190" height="10" rx="5" fill="#8E8791"/><circle cx="44" cy="100" r="14" fill="#55505C"/><circle cx="44" cy="100" r="6" fill="#B9BEC5"/><circle cx="154" cy="100" r="14" fill="#55505C"/><circle cx="154" cy="100" r="6" fill="#B9BEC5"/><rect x="186" y="70" width="8" height="8" rx="2" fill="#F4DE9E"/>`;
@@ -991,21 +1190,21 @@ function showShip(arg){ensureOrders();const sc=document.createElement('div');sc.
 function showPack(id){const free=id==='free';const o=free?{id:'free',type:'store',who:'自己進貨',items:{}}:G.orders.find(x=>x.id===id);if(!o){go('ship');return}$('title').textContent=o.type==='store'?'商店進貨':'外送打包';
   const need=Object.assign({},o.items),sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
   sc.innerHTML=`<div class="packtop"><div class="ochip" id="ochip"></div></div><div class="packscene" id="ps"><div class="pbox" id="pbox">${svg(o.type==='store'?CRATE:BOXO)}<div class="pin" id="pin"></div></div><div class="ptruck" id="ptruck" hidden>${svg(TRUCK,'0 0 200 120')}</div></div><div class="prow" id="prow"></div>`;
-  const tm=[];let busy=false,packed=[],inflight=0;
+  const tm=[];let busy=false,packed=[],inflight=0,taken=[],sealing=false,finished=false;
   function chip(){if(free){$('ochip').innerHTML=`<b>放進木箱:${packed.length+inflight} 件</b>`+(packed.length?`<button class="big" id="sendF" type="button">送到商店</button>`:'');const sb=$('sendF');if(sb)sb.onclick=()=>{ac();if(busy||inflight)return;seal()};return}$('ochip').innerHTML=`<b>${o.who}</b>`+Object.keys(o.items).map(k=>`<span class="oi${need[k]?'':' ok'}">${svg(ICON[k])}<b>${o.items[k]-need[k]}/${o.items[k]}</b></span>`).join('')}
   function row(){const r=$('prow');r.innerHTML='';(free?ORDER.filter(k=>G.inv[k]>0):Object.keys(o.items)).forEach(k=>{const b=document.createElement('button');b.type='button';b.className='goods'+(free||need[k]?' want':' zero');b.innerHTML=`${svg(ICON[k])}<span>${NAME[k]}</span><span class="n">×${G.inv[k]}</span>`;
-    b.onclick=()=>{ac();if(busy)return;if(!free&&!need[k]||!G.inv[k]){S.no();return}G.inv[k]--;if(!free)need[k]--;inflight++;save();paint();S.pick();const rr=b.querySelector('svg').getBoundingClientRect();row();chip();
+    b.onclick=()=>{ac();if(busy)return;if(!free&&!need[k]||!G.inv[k]){S.no();return}G.inv[k]--;if(!free)need[k]--;inflight++;taken.push(k);save();paint();S.pick();const rr=b.querySelector('svg').getBoundingClientRect();row();chip();
       fly(ICON[k],rr,$('pbox'),()=>{inflight--;packed.push(k);$('pin').innerHTML=packed.slice(-8).map(x=>svg(ICON[x])).join('');S.plant();chip();if(!free&&Object.values(need).every(v=>!v))seal()},60)};r.appendChild(b)})}
   chip();row();tipEl.textContent=free?'點籃子裡的東西放進木箱,好了按「送到商店」':'點商品,裝進'+(o.type==='store'?'木箱':'紙箱');
-  function seal(){busy=true;tipEl.textContent='裝好了!封箱出貨';if(free){const sb=$('sendF');if(sb)sb.remove();}const bx=$('pbox');
+  function seal(){busy=true;sealing=true;tipEl.textContent='裝好了!封箱出貨';if(free){const sb=$('sendF');if(sb)sb.remove();}const bx=$('pbox');
     tm.push(setTimeout(()=>{bx.innerHTML=svg(o.type==='store'?CRATE+`<rect x="12" y="32" width="76" height="8" rx="2" fill="#B89A6C"/>`:BOXC);S.chop();talk('封箱好了');
       tm.push(setTimeout(()=>{const t=$('ptruck');t.hidden=false;S.truck();t.animate([{transform:'translateX(-120%)'},{transform:'translateX(0)'}],{duration:900,easing:'ease-out'}).onfinish=()=>{
         const br=bx.getBoundingClientRect();bx.style.visibility='hidden';fly(o.type==='store'?CRATE:BOXC,br,t,()=>{
           t.animate([{transform:'translateX(0)'},{transform:'translateX(160%)'}],{duration:1100,easing:'ease-in'}).onfinish=()=>{t.hidden=true;
-            G.orders=G.orders.filter(x=>x.id!==o.id);
+            if(finished)return;finished=true;G.orders=G.orders.filter(x=>x.id!==o.id);
             if(o.type==='store'){if(free)packed.forEach(k=>G.stock[k]++);else Object.keys(o.items).forEach(k=>G.stock[k]+=o.items[k]);save();S.win();talk('送到商店倉庫了');tipEl.textContent='送到商店了!可以去商店擺貨';tm.push(setTimeout(()=>go('ship'),1600))}
             else{talk(o.who+'收到了,給你 '+o.pay+' 塊錢');coinRain(t.getBoundingClientRect().width?$('ps').getBoundingClientRect():br,o.pay,()=>{});tm.push(setTimeout(()=>go('ship'),2200))}}},80)}},700))},600))}
-  cleanup=()=>{tm.forEach(clearTimeout);if(free&&!busy&&packed.length){packed.forEach(k=>G.inv[k]++);save()}}}
+  cleanup=()=>{tm.forEach(clearTimeout);if(!sealing){taken.forEach(k=>G.inv[k]++);save();paint();return}if(!finished){finished=true;G.orders=G.orders.filter(x=>x.id!==o.id);if(o.type==='store')(free?taken:Object.keys(o.items).flatMap(k=>Array(o.items[k]).fill(k))).forEach(k=>G.stock[k]++);else G.coins+=o.pay;save();paint()}}}
 
 /* ================= 商店:客人自己選、刷條碼結帳 ================= */
 const CN=['零','一','兩','三','四','五','六'];
@@ -1050,8 +1249,8 @@ function showShop(){const me={};shopTok=me;const sc=document.createElement('div'
       const want=1+Math.floor(Math.random()*3);
       for(let n=0;n<want;n++){const idx=G.shelf.map((s,i)=>s?i:-1).filter(i=>i>=0);if(!idx.length)break;const i=idx[Math.floor(Math.random()*idx.length)],s=G.shelf[i];
         await new Promise(r=>tm.push(setTimeout(r,700)));if(shopTok!==me)return;
-        const rr=$('rack').children[i].getBoundingClientRect();s.n--;const k=s.k;if(!s.n)G.shelf[i]=null;save();drawRack();S.pick();
-        await new Promise(r=>fly(ICON[k],rr,custEl,r,48));cust.items.push(k)}
+        const rr=$('rack').children[i].getBoundingClientRect();s.n--;const k=s.k;if(!s.n)G.shelf[i]=null;cust.items.push(k);save();drawRack();S.pick();
+        await new Promise(r=>fly(ICON[k],rr,custEl,r,48));if(shopTok!==me)return}
       if(!cust.items.length){leave();return}
       talk('我要買這些');await new Promise(r=>tm.push(setTimeout(r,500)));if(shopTok!==me)return;
       const co=$('co'),fr=$('floor').getBoundingClientRect(),cr=co.getBoundingClientRect();await place(cr.left-fr.left-cw*.7,1000);
@@ -1074,7 +1273,7 @@ function showShop(){const me={};shopTok=me;const sc=document.createElement('div'
     tm.push(setTimeout(()=>{$('reg').classList.remove('open');$('regn').textContent='0';const br=$('bagz').getBoundingClientRect();fly(BAG,br,custEl,()=>leave(),50)},1400))};
   function leave(){const cw=custEl.clientWidth||100;place(-cw-40,1100).then(()=>{custEl.innerHTML='';cust=null;nextAt=performance.now()+1800;tip()})}
   const loop=setInterval(()=>{if(!cust&&performance.now()>nextAt&&G.shelf.some(Boolean))spawn()},400);
-  cleanup=()=>{clearInterval(loop);tm.forEach(clearTimeout)}}
+  cleanup=()=>{clearInterval(loop);tm.forEach(clearTimeout);if(cust&&cust.phase!=='bye'&&cust.items.length){cust.items.forEach(k=>G.stock[k]++);save()}cust=null;shopTok=null}}
 function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
 function coinRain(rr,earn,done){const n=Math.min(earn,10);let got=0;
   for(let j=0;j<n;j++)setTimeout(()=>{const c=document.createElement('div');c.className='coinf';c.innerHTML=svg(COIN,'0 0 30 30');const sx=rr.left+rr.width*(.2+Math.random()*.6),sy=rr.top+rr.height*.3;c.style.left=sx+'px';c.style.top=sy+'px';document.body.appendChild(c);
