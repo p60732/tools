@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OOXX</title>
+<style>
+/* OOXX 井字遊戲:跟電腦玩(簡單/厲害)或跟大人一起玩。連成一條線就贏。 */
+:root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--mute:#6E6876;--o:#D88E87;--o-d:#B86F68;--x:#6F9FC0;--x-d:#517F9F;--ok:#7FB08A;--ok-d:#5E8F69;--line:#D9CDB8;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(44px + env(safe-area-inset-bottom,0px))}
+header{width:100%;max-width:1100px;display:flex;align-items:center;gap:8px}
+h1{margin:0;font-size:clamp(22px,5vw,30px);font-weight:900}
+.pill{all:unset;cursor:pointer;margin-left:auto;background:var(--white);border-radius:999px;padding:8px 16px;font-weight:900;font-size:17px;box-shadow:0 3px 0 rgba(74,69,82,.15)}
+.pill:active,.cell:active,.mode:active,.big:active{transform:translateY(2px)}
+.main{flex:1;min-height:0;width:100%;max-width:1100px;display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,36px)}
+.side{display:flex;flex-direction:column;gap:12px;align-items:stretch;flex:none}
+.who{display:flex;align-items:center;gap:10px;background:var(--white);border-radius:22px;padding:10px 16px;font-weight:900;font-size:clamp(17px,4vw,22px);box-shadow:0 4px 0 rgba(74,69,82,.12);border:4px solid transparent;transition:border-color .2s,transform .2s;min-width:150px}
+.who svg{width:44px;height:44px;flex:none}
+.who .sc{margin-left:auto;font-size:clamp(24px,6vw,32px)}
+.who.on{transform:scale(1.06)}
+.who.o.on{border-color:var(--o)}.who.x.on{border-color:var(--x)}
+.board{position:relative;aspect-ratio:1;height:min(100%,calc(100vw - 32px));max-height:620px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:clamp(8px,1.6vw,14px);background:var(--line);border-radius:28px;padding:clamp(8px,1.6vw,14px);box-sizing:border-box}
+.cell{all:unset;box-sizing:border-box;cursor:pointer;background:var(--white);border-radius:20px;display:grid;place-items:center;box-shadow:inset 0 -5px 0 rgba(74,69,82,.07)}
+.cell svg{width:72%;height:72%;overflow:visible}
+.cell .mk{stroke-linecap:round;fill:none;stroke-width:15}
+.cell .mk.o{stroke:var(--o)}.cell .mk.x{stroke:var(--x)}
+.cell .mk path,.cell .mk circle{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw .35s ease-out forwards}
+.cell .mk path+path{animation-delay:.18s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.cell.win{animation:pop .5s ease-in-out 3;background:#FBF3DF}
+@keyframes pop{50%{transform:scale(1.08)}}
+.cell.hint{animation:hint 1.2s ease-in-out infinite}
+@keyframes hint{50%{background:#F6EEDD}}
+.board.lock .cell{cursor:default}
+.wline{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+.wline line{stroke:#E9C46A;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:140;stroke-dashoffset:140;animation:draw .5s .2s ease-out forwards;opacity:.9}
+.tip{text-align:center;font-weight:900;font-size:clamp(18px,4.6vw,24px);min-height:1.4em}
+.over{position:fixed;inset:0;z-index:5;background:rgba(239,230,216,.95);display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:16px;padding:16px;text-align:center;overflow-y:auto}
+.over h2{margin:0;font-size:clamp(28px,7vw,42px);font-weight:900}
+.over p{margin:0;font-weight:700;color:var(--mute);font-size:17px}
+.modes{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.mode{all:unset;cursor:pointer;width:clamp(140px,36vw,210px);border-radius:24px;background:var(--white);box-shadow:0 5px 0 rgba(74,69,82,.14);padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:900;font-size:clamp(18px,4.5vw,22px)}
+.mode svg{width:70%;height:auto}
+.mode small{font-size:14px;color:var(--mute);font-weight:700}
+.lv{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:21px;padding:12px 26px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+.big.alt{background:var(--white);color:var(--ink);box-shadow:0 5px 0 rgba(74,69,82,.15)}
+.big.sel{outline:4px solid var(--ink)}
+.conf{position:fixed;pointer-events:none;z-index:4;width:12px;height:12px;border-radius:3px}
+@media (orientation:portrait){.main{flex-direction:column}.side{flex-direction:row;width:100%;max-width:620px}.who{flex:1;min-width:0;padding:8px 12px}.who svg{width:34px;height:34px}.board{height:auto;width:min(100%,62vh)}}
+@media (orientation:landscape) and (max-height:500px){.app{gap:4px}.tip{font-size:17px}.over{gap:10px}.mode{padding:10px}.mode svg{width:50%}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>OOXX</h1><button class="pill" id="menu" type="button">換玩法</button></header>
+  <div class="tip" id="tip"></div>
+  <div class="main">
+    <div class="side" id="sideA"><div class="who o" id="whoO"></div></div>
+    <div class="board" id="board"></div>
+    <div class="side" id="sideB"><div class="who x" id="whoX"></div></div>
+  </div>
+</div>
+<div class="over" id="over"></div>
+<script>
+/* ---------- 聲音、語音 ---------- */
+let ac=null;
+function A(){if(!ac){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();return ac}
+function tone(f,d,{type='triangle',v=.14,at=0,to=null}={}){const c=A();if(!c)return;try{const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.03)}catch(e){}}
+const S={o(){tone(523,.25);tone(784,.3,{at:.08,v:.08})},x(){tone(440,.22,{type:'sine',v:.18});tone(330,.25,{at:.08,type:'sine',v:.1})},
+  no(){tone(220,.18,{type:'sine',v:.1})},win(){[523,659,784,1046,1318].forEach((f,i)=>tone(f,.45,{at:i*.11}))},draw(){[523,494,523].forEach((f,i)=>tone(f,.3,{at:i*.16,v:.1}))},tap(){tone(660,.08,{v:.1})}};
+let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
+try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
+function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
+
+/* ---------- 圖案 ---------- */
+const svgO=()=>`<svg viewBox="0 0 100 100"><g class="mk o"><circle cx="50" cy="50" r="36" style="--len:227" transform="rotate(-90 50 50)"/></g></svg>`;
+const svgX=()=>`<svg viewBox="0 0 100 100"><g class="mk x"><path d="M18 18L82 82" style="--len:91"/><path d="M82 18L18 82" style="--len:91"/></g></svg>`;
+const icon=k=>k==='o'?`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--o)" stroke-width="16"/></svg>`:`<svg viewBox="0 0 100 100"><path d="M20 20L80 80M80 20L20 80" stroke="var(--x)" stroke-width="16" stroke-linecap="round"/></svg>`;
+const kid=`<svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="22" fill="#F2C9A8"/><path d="M28 34q4-22 22-22t22 22q-10-10-22-8t-22 8z" fill="#6E5A4E"/><circle cx="42" cy="38" r="3" fill="#4A4552"/><circle cx="58" cy="38" r="3" fill="#4A4552"/><path d="M43 47q7 6 14 0" stroke="#B86F68" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M22 96q0-30 28-30t28 30z" fill="#D88E87"/></svg>`;
+const robot=`<svg viewBox="0 0 100 100"><line x1="50" y1="8" x2="50" y2="20" stroke="#8E8791" stroke-width="4"/><circle cx="50" cy="8" r="5" fill="#E9C46A"/><rect x="24" y="20" width="52" height="40" rx="12" fill="#A9CFDC"/><circle cx="40" cy="40" r="6" fill="#4A4552"/><circle cx="60" cy="40" r="6" fill="#4A4552"/><rect x="40" y="50" width="20" height="4" rx="2" fill="#4A4552"/><rect x="30" y="64" width="40" height="30" rx="10" fill="#6F9FC0"/></svg>`;
+const adult=`<svg viewBox="0 0 100 100"><circle cx="50" cy="34" r="20" fill="#F2C9A8"/><path d="M30 32q2-22 20-22t20 22q-8-8-20-8t-20 8z" fill="#4A4552"/><circle cx="43" cy="35" r="2.6" fill="#4A4552"/><circle cx="57" cy="35" r="2.6" fill="#4A4552"/><path d="M44 43q6 5 12 0" stroke="#B86F68" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M18 98q0-36 32-36t32 36z" fill="#6F9FC0"/></svg>`;
+
+/* ---------- 遊戲狀態 ---------- */
+const $=id=>document.getElementById(id);
+const boardEl=$('board'),tipEl=$('tip'),over=$('over');
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let mode='cpu',level='easy',cells=Array(9).fill(''),turn='o',first='o',busy=false,ended=false,score={o:0,x:0},cpuT=null,idleT=null;
+const NAMES=()=>mode==='cpu'?{o:'小朋友',x:'機器人'}:{o:'小朋友',x:'大人'};
+try{const sv=JSON.parse(localStorage.getItem('ooxxSet')||'{}');if(sv.mode)mode=sv.mode;if(sv.level)level=sv.level}catch(e){}
+function save(){try{localStorage.setItem('ooxxSet',JSON.stringify({mode,level}))}catch(e){}}
+
+function buildBoard(){boardEl.innerHTML='';cells.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.className='cell';b.setAttribute('aria-label','第'+(i+1)+'格');b.onclick=()=>tapCell(i);boardEl.appendChild(b)})}
+function paintWho(){const n=NAMES();$('whoO').innerHTML=`${kid}${icon('o')}<span class="sc">${score.o}</span>`;$('whoO').setAttribute('aria-label',n.o+' O '+score.o+' 分');
+  $('whoX').innerHTML=`${mode==='cpu'?robot:adult}${icon('x')}<span class="sc">${score.x}</span>`;$('whoX').setAttribute('aria-label',n.x+' X '+score.x+' 分');
+  $('whoO').classList.toggle('on',!ended&&turn==='o');$('whoX').classList.toggle('on',!ended&&turn==='x')}
+function winner(b){for(const l of LINES){const [a,c,d]=l;if(b[a]&&b[a]===b[c]&&b[a]===b[d])return{k:b[a],l}}return b.every(Boolean)?{k:'draw'}:null}
+
+function newRound(){clearTimeout(cpuT);clearTimeout(idleT);cells=Array(9).fill('');ended=false;busy=false;turn=first;buildBoard();boardEl.classList.remove('lock');boardEl.querySelector('.wline')?.remove();paintWho();
+  const n=NAMES();
+  if(mode==='cpu'&&turn==='x'){tipEl.textContent='機器人先下';busy=true;cpuT=setTimeout(cpuMove,900)}
+  else{tipEl.textContent=(turn==='o'?n.o+' 先下 O':n.x+' 先下 X');talk(turn==='o'?'小朋友先下,點一個格子':(mode==='cpu'?'機器人先下':'大人先下'));armIdle()}}
+function armIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{if(ended||busy)return;if(mode==='cpu'&&turn!=='o')return;const free=cells.map((c,i)=>c?-1:i).filter(i=>i>=0);const i=free.includes(4)?4:free[0];const el=boardEl.children[i];el&&el.classList.add('hint')},9000)}
+function tapCell(i){A();if(ended)return;if(busy||cells[i]){S.no();return}if(mode==='cpu'&&turn!=='o')return;place(i)}
+function place(i){clearTimeout(idleT);boardEl.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'));
+  cells[i]=turn;const el=boardEl.children[i];el.innerHTML=turn==='o'?svgO():svgX();el.setAttribute('aria-label','第'+(i+1)+'格 '+turn.toUpperCase());S[turn]();
+  const w=winner(cells);if(w){end(w);return}
+  turn=turn==='o'?'x':'o';paintWho();const n=NAMES();
+  if(mode==='cpu'&&turn==='x'){busy=true;tipEl.textContent='機器人想一想…';cpuT=setTimeout(cpuMove,700+Math.random()*500)}
+  else{tipEl.textContent='換 '+(turn==='o'?n.o+' 下 O':n.x+' 下 X');if(mode==='pvp')talk(turn==='o'?'換小朋友':'換大人');armIdle()}}
+
+/* 電腦:簡單=會擋也會贏,但常常亂下;厲害=幾乎不會輸 */
+function cpuMove(){if(ended)return;const free=cells.map((c,i)=>c?-1:i).filter(i=>i>=0);let m;
+  const find=k=>{for(const i of free){const b=cells.slice();b[i]=k;if(winner(b)?.k===k)return i}return -1};
+  if(level==='easy'){const r=Math.random();m=find('x');if(m<0||r<.3){const blk=find('o');m=(blk>=0&&r<.45)?blk:free[Math.floor(Math.random()*free.length)]}}
+  else{m=find('x');if(m<0)m=find('o');if(m<0)m=best();
+    if(Math.random()<.12&&find('o')<0&&find('x')<0)m=free[Math.floor(Math.random()*free.length)]}
+  busy=false;place(m)}
+function best(){let bv=-9,bm=-1;const order=[4,0,2,6,8,1,3,5,7];for(const i of order){if(cells[i])continue;cells[i]='x';const v=mm(false,0);cells[i]='';if(v>bv){bv=v;bm=i}}return bm}
+function mm(isX,d){const w=winner(cells);if(w)return w.k==='x'?10-d:w.k==='o'?d-10:0;let b=isX?-99:99;for(let i=0;i<9;i++){if(cells[i])continue;cells[i]=isX?'x':'o';const v=mm(!isX,d+1);cells[i]='';b=isX?Math.max(b,v):Math.min(b,v)}return b}
+
+function end(w){ended=true;busy=false;boardEl.classList.add('lock');const n=NAMES();
+  if(w.k==='draw'){tipEl.textContent='平手!大家都好棒';S.draw();talk('平手,大家都好棒')}
+  else{score[w.k]++;w.l.forEach(i=>boardEl.children[i].classList.add('win'));drawLine(w.l);
+    if(w.k==='o'){tipEl.textContent='小朋友贏了!';S.win();confetti();talk('連成一條線,小朋友贏了')}
+    else{tipEl.textContent=n.x+'贏了,再來一次!';S.draw();talk(n.x+'贏了,再來一次')}}
+  paintWho();first=first==='o'?'x':'o';
+  setTimeout(()=>{if(!ended)return;tipEl.innerHTML='';const b=document.createElement('button');b.className='big';b.type='button';b.textContent='再玩一次';b.onclick=()=>{S.tap();newRound()};tipEl.appendChild(b)},1600)}
+function drawLine(l){const p=i=>[(i%3)*33.33+16.67,Math.floor(i/3)*33.33+16.67];const [a,b]=[p(l[0]),p(l[2])];
+  const ns='http://www.w3.org/2000/svg',s=document.createElementNS(ns,'svg');s.setAttribute('class','wline');s.setAttribute('viewBox','0 0 100 100');
+  const ln=document.createElementNS(ns,'line');const dx=(b[0]-a[0])*.12,dy=(b[1]-a[1])*.12;ln.setAttribute('x1',a[0]-dx);ln.setAttribute('y1',a[1]-dy);ln.setAttribute('x2',b[0]+dx);ln.setAttribute('y2',b[1]+dy);s.appendChild(ln);boardEl.appendChild(s)}
+function confetti(){const r=boardEl.getBoundingClientRect(),cols=['#D88E87','#6F9FC0','#E9C46A','#7FB08A'];
+  for(let i=0;i<26;i++){const d=document.createElement('div');d.className='conf';d.style.background=cols[i%4];d.style.left=r.left+r.width/2+'px';d.style.top=r.top+r.height/2+'px';document.body.appendChild(d);
+    const a=Math.random()*6.28,dist=80+Math.random()*Math.min(r.width,260);d.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:`translate(${Math.cos(a)*dist}px,${Math.sin(a)*dist+60}px) rotate(${Math.random()*540}deg)`,opacity:0}],{duration:1100+Math.random()*500,easing:'cubic-bezier(.2,.7,.4,1)'}).onfinish=()=>d.remove()}}
+
+/* ---------- 選玩法 ---------- */
+function menu(){clearTimeout(cpuT);clearTimeout(idleT);over.hidden=false;
+  over.innerHTML=`<h2>OOXX 井字遊戲</h2><p>三個一樣的連成一條線就贏了</p>
+  <div class="modes"><button class="mode" type="button" data-m="cpu">${robot}跟電腦玩<small>小朋友 O,機器人 X</small></button>
+  <button class="mode" type="button" data-m="pvp">${adult}跟大人一起玩<small>輪流點格子</small></button></div>
+  <div class="lv" id="lv"><span style="align-self:center;font-weight:900">機器人:</span><button class="big alt" type="button" data-l="easy">簡單</button><button class="big alt" type="button" data-l="hard">厲害</button></div>`;
+  const paintLv=()=>over.querySelectorAll('[data-l]').forEach(b=>b.classList.toggle('sel',b.dataset.l===level));paintLv();
+  over.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{A();S.tap();level=b.dataset.l;save();paintLv()});
+  over.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{A();S.tap();if(b.dataset.m!==mode){score={o:0,x:0};first='o'}mode=b.dataset.m;save();over.hidden=true;newRound()});
+  talk('要跟電腦玩,還是跟大人一起玩?')}
+$('menu').onclick=()=>{S.tap();menu()};
+buildBoard();paintWho();menu();
+</script>
+</body>
+</html>
