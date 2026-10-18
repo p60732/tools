@@ -513,6 +513,13 @@ const DEF={coins:0,inv:ZERO(),stock:ZERO(),shelf:[null,null,null,null],orders:[]
 let G=JSON.parse(JSON.stringify(DEF));
 try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv){delete s.plots;G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.stock=Object.assign({},DEF.stock,s.stock);G.seeds=Object.assign({},DEF.seeds,s.seeds);G.herd=Object.assign({},DEF.herd,s.herd);if(!s.seedLv){G.seedLv={};for(const c of ['apple','grape','cane'])G.seedLv[c]=Math.min(3,Math.max((s.seeds&&s.seeds[c])||0,s.crops&&s.crops[c]&&s.crops[c].st>0?1:0))}else G.seedLv=Object.assign({},DEF.seedLv,s.seedLv);G.crops=Object.assign({},DEF.crops,s.crops);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen);if(!Array.isArray(G.shelf)||G.shelf.length!==4)G.shelf=[null,null,null,null]}}catch(e){}
 const save=()=>{try{localStorage.setItem('farmState',JSON.stringify(G))}catch(e){}};
+// 沒做完的事:結帳中的客人 → 照價收錢;加工中 → 做好了就給成品,沒做好退材料;打包中 → 沒封箱退回籃子,已封箱直接完成訂單
+function settlePending(){let ch=false;
+  if(Array.isArray(G.sale)&&G.sale.length){G.coins+=G.sale.reduce((a,k)=>a+(PRICE[k]||0),0);ch=true}G.sale=null;
+  if(G.making&&RECIPES[G.making.id]){const R=RECIPES[G.making.id];if(G.making.done)G.inv[R.out]=(G.inv[R.out]||0)+1;else Object.keys(R.need).forEach(k=>G.inv[k]=(G.inv[k]||0)+R.need[k]);ch=true}G.making=null;
+  const P=G.packing;if(P){if(!P.sealing)(P.taken||[]).forEach(k=>G.inv[k]=(G.inv[k]||0)+1);
+    else{G.orders=(G.orders||[]).filter(x=>x.id!==P.id);if(P.type==='store')(P.free?P.taken:Object.keys(P.items).flatMap(k=>Array(P.items[k]).fill(k))).forEach(k=>G.stock[k]=(G.stock[k]||0)+1);else G.coins+=P.pay||0}ch=true}G.packing=null;
+  save();if(ch)try{paint()}catch(e){}}
 
 /* ================= 共用 ================= */
 const $=id=>document.getElementById(id);
@@ -1174,7 +1181,7 @@ function showWork(g){const m=document.createElement('div');stage.appendChild(m);
     b.innerHTML=`<span class="wpic">${svg(ICON[R.out])}</span><b>${NAME[R.out]}</b><span class="need">${Object.keys(R.need).map(k=>`<span class="${G.inv[k]>=R.need[k]?'':'lack'}">${svg(ICON[k])}<em>${NAME[k]}</em>${G.inv[k]}/${R.need[k]}</span>`).join('')||'<span>不用材料</span>'}</span>${ok?'':'<span class="dot">練習</span>'}`;
     b.onclick=()=>{S.tap();go('make',id)};m.appendChild(b)})}
 function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').textContent=NAME[R.out];
-  if(!practice){Object.keys(R.need).forEach(k=>G.inv[k]-=R.need[k]);save();paint()}
+  if(!practice){Object.keys(R.need).forEach(k=>G.inv[k]-=R.need[k]);G.making={id,done:false};save();paint()}
   const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
   sc.innerHTML=`<div class="steps" id="steps"></div><div class="mk" id="mk"><svg id="mksvg" viewBox="2 6 196 140" preserveAspectRatio="xMidYMid meet"></svg><div class="clock" id="clk" hidden>${svg(clockSVG)}</div>${practice?'<span class="prac">練習模式</span>':''}<div class="made" id="made" hidden></div></div>`;
   const mk=$('mk'),sv=$('mksvg'),tm=[];let k=0,busy=false,done=false;
@@ -1191,13 +1198,13 @@ function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').t
     busy=true;const st=R.steps[k];draw(k);(S[st[2]]||S.tap)();parts(st[3]);
     if(st[4]){const c=$('clk');c.hidden=false;c.classList.remove('spin');void c.offsetWidth;c.classList.add('spin')}
     tm.push(setTimeout(()=>{$('clk').hidden=true;k++;draw();busy=false;
-      if(k>=R.steps.length){done=true;finish()}else{S.grow();talk(st[0]+'好了')}},st[4]?1700:1400))}
+      if(k>=R.steps.length){done=true;if(G.making){G.making.done=true;save()}finish()}else{S.grow();talk(st[0]+'好了')}},st[4]?1700:1400))}
   function finish(){S.win();const m=$('made');m.hidden=false;m.innerHTML=`${svg(ICON[R.out])}<b>${NAME[R.out]}做好了!</b><small>${practice?'練習完成!收集材料就能真的做喔':'點一下收進籃子'}</small>`;
     const r=mk.getBoundingClientRect();sparkAt(mk,r.width/2,r.height/2,8);talk(NAME[R.out]+'做好了'+(practice?',練習完成':''))}
   let got=false;
-  function collect(){busy=true;if(practice){S.tap();go('work',curGroup);return}got=true;const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work',curGroup),900))}
+  function collect(){busy=true;if(practice){S.tap();go('work',curGroup);return}got=true;G.making=null;save();const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work',curGroup),900))}
   mk.addEventListener('pointerdown',e=>{e.preventDefault();step()});
-  cleanup=()=>{tm.forEach(clearTimeout);if(practice||got)return;if(done)G.inv[R.out]++;else Object.keys(R.need).forEach(k=>G.inv[k]+=R.need[k]);save();paint()}}
+  cleanup=()=>{tm.forEach(clearTimeout);if(practice||got)return;settlePending()}}
 
 /* ================= 出貨:訂單(外送打包、商店進貨) ================= */
 const TRUCK=`<rect x="8" y="40" width="112" height="52" rx="6" fill="#C9A97A"/><path d="M8 54h112M8 70h112" stroke="#B89A6C" stroke-width="3"/><rect x="120" y="30" width="46" height="62" rx="10" fill="#D88E87"/><path d="M166 56h18q8 0 10 10v26h-28z" fill="#D88E87"/><rect x="132" y="38" width="26" height="22" rx="5" fill="#DCEBF0"/><rect x="4" y="88" width="190" height="10" rx="5" fill="#8E8791"/><circle cx="44" cy="100" r="14" fill="#55505C"/><circle cx="44" cy="100" r="6" fill="#B9BEC5"/><circle cx="154" cy="100" r="14" fill="#55505C"/><circle cx="154" cy="100" r="6" fill="#B9BEC5"/><rect x="186" y="70" width="8" height="8" rx="2" fill="#F4DE9E"/>`;
@@ -1233,18 +1240,18 @@ function showPack(id){const free=id==='free';const o=free?{id:'free',type:'store
   const tm=[];let busy=false,packed=[],inflight=0,taken=[],sealing=false,finished=false;
   function chip(){if(free){$('ochip').innerHTML=`<b>放進木箱:${packed.length+inflight} 件</b>`+(packed.length?`<button class="big" id="sendF" type="button">送到商店</button>`:'');const sb=$('sendF');if(sb)sb.onclick=()=>{ac();if(busy||inflight)return;seal()};return}$('ochip').innerHTML=`<b>${o.who}</b>`+Object.keys(o.items).map(k=>`<span class="oi${need[k]?'':' ok'}">${svg(ICON[k])}<b>${o.items[k]-need[k]}/${o.items[k]}</b></span>`).join('')}
   function row(){const r=$('prow');r.innerHTML='';(free?ORDER.filter(k=>G.inv[k]>0):Object.keys(o.items)).forEach(k=>{const b=document.createElement('button');b.type='button';b.className='goods'+(free||need[k]?' want':' zero');b.innerHTML=`${svg(ICON[k])}<span>${NAME[k]}</span><span class="n">×${G.inv[k]}</span>`;
-    b.onclick=()=>{ac();if(busy)return;if(!free&&!need[k]||!G.inv[k]){S.no();return}G.inv[k]--;if(!free)need[k]--;inflight++;taken.push(k);save();paint();S.pick();const rr=b.querySelector('svg').getBoundingClientRect();row();chip();
+    b.onclick=()=>{ac();if(busy)return;if(!free&&!need[k]||!G.inv[k]){S.no();return}G.inv[k]--;if(!free)need[k]--;inflight++;taken.push(k);G.packing={id:o.id,free,type:o.type,items:o.items,pay:o.pay,taken:taken.slice(),sealing:false};save();paint();S.pick();const rr=b.querySelector('svg').getBoundingClientRect();row();chip();
       fly(ICON[k],rr,$('pbox'),()=>{inflight--;packed.push(k);$('pin').innerHTML=packed.slice(-8).map(x=>svg(ICON[x])).join('');S.plant();chip();if(!free&&Object.values(need).every(v=>!v))seal()},60)};r.appendChild(b)})}
   chip();row();tipEl.textContent=free?'點籃子裡的東西放進木箱,好了按「送到商店」':'點商品,裝進'+(o.type==='store'?'木箱':'紙箱');
-  function seal(){busy=true;sealing=true;tipEl.textContent='裝好了!封箱出貨';if(free){const sb=$('sendF');if(sb)sb.remove();}const bx=$('pbox');
+  function seal(){busy=true;sealing=true;if(G.packing){G.packing.sealing=true;G.packing.taken=taken.slice();save()}tipEl.textContent='裝好了!封箱出貨';if(free){const sb=$('sendF');if(sb)sb.remove();}const bx=$('pbox');
     tm.push(setTimeout(()=>{bx.innerHTML=svg(o.type==='store'?CRATE+`<rect x="12" y="32" width="76" height="8" rx="2" fill="#B89A6C"/>`:BOXC);S.chop();talk('封箱好了');
       tm.push(setTimeout(()=>{const t=$('ptruck');t.hidden=false;S.truck();t.animate([{transform:'translateX(-120%)'},{transform:'translateX(0)'}],{duration:900,easing:'ease-out'}).onfinish=()=>{
         const br=bx.getBoundingClientRect();bx.style.visibility='hidden';fly(o.type==='store'?CRATE:BOXC,br,t,()=>{
           t.animate([{transform:'translateX(0)'},{transform:'translateX(160%)'}],{duration:1100,easing:'ease-in'}).onfinish=()=>{t.hidden=true;
-            if(finished)return;finished=true;G.orders=G.orders.filter(x=>x.id!==o.id);
+            if(finished)return;finished=true;G.packing=null;G.orders=G.orders.filter(x=>x.id!==o.id);
             if(o.type==='store'){if(free)packed.forEach(k=>G.stock[k]++);else Object.keys(o.items).forEach(k=>G.stock[k]+=o.items[k]);save();S.win();talk('送到商店倉庫了');tipEl.textContent='送到商店了!可以去商店擺貨';tm.push(setTimeout(()=>go('ship'),1600))}
             else{talk(o.who+'收到了,給你 '+o.pay+' 塊錢');coinRain(t.getBoundingClientRect().width?$('ps').getBoundingClientRect():br,o.pay,()=>{});tm.push(setTimeout(()=>go('ship'),2200))}}},80)}},700))},600))}
-  cleanup=()=>{tm.forEach(clearTimeout);if(!sealing){taken.forEach(k=>G.inv[k]++);save();paint();return}if(!finished){finished=true;G.orders=G.orders.filter(x=>x.id!==o.id);if(o.type==='store')(free?taken:Object.keys(o.items).flatMap(k=>Array(o.items[k]).fill(k))).forEach(k=>G.stock[k]++);else G.coins+=o.pay;save();paint()}}}
+  cleanup=()=>{tm.forEach(clearTimeout);if(!finished)settlePending()}}
 
 /* ================= 商店:客人自己選、刷條碼結帳 ================= */
 const CN=['零','一','兩','三','四','五','六'];
@@ -1289,7 +1296,7 @@ function showShop(){const me={};shopTok=me;const sc=document.createElement('div'
       const want=1+Math.floor(Math.random()*3);
       for(let n=0;n<want;n++){const idx=G.shelf.map((s,i)=>s?i:-1).filter(i=>i>=0);if(!idx.length)break;const i=idx[Math.floor(Math.random()*idx.length)],s=G.shelf[i];
         await new Promise(r=>tm.push(setTimeout(r,700)));if(shopTok!==me)return;
-        const rr=$('rack').children[i].getBoundingClientRect();s.n--;const k=s.k;if(!s.n)G.shelf[i]=null;cust.items.push(k);save();drawRack();S.pick();
+        const rr=$('rack').children[i].getBoundingClientRect();s.n--;const k=s.k;if(!s.n)G.shelf[i]=null;cust.items.push(k);G.sale=cust.items.slice();save();drawRack();S.pick();
         await new Promise(r=>fly(ICON[k],rr,custEl,r,48));if(shopTok!==me)return}
       if(!cust.items.length){leave();return}
       talk('我要買這些');await new Promise(r=>tm.push(setTimeout(r,500)));if(shopTok!==me)return;
@@ -1308,18 +1315,19 @@ function showShop(){const me={};shopTok=me;const sc=document.createElement('div'
     tm.push(setTimeout(()=>{S.beep();cust.total+=PRICE[k];cust.scanned++;$('regn').textContent=cust.total;z.querySelector('.zprice').hidden=false;talk(NAME[k]+' '+PRICE[k]+'元')},900));
     tm.push(setTimeout(()=>{const r=z.querySelector('.zitem').getBoundingClientRect();z.hidden=true;z.innerHTML='';b.remove();layout();run();zooming=false;
       fly(ICON[k],r,$('bagz'),()=>{bump($('bagz'));if(cust&&cust.scanned===cust.items.length){cust.phase='pay';$('reg').classList.add('ready');tip();talk('一共 '+cust.total+' 元')}},60)},1900))}
-  $('reg').onclick=()=>{ac();if(!cust||cust.phase!=='pay'){S.tap();return}cust.phase='bye';$('reg').classList.remove('ready');$('reg').classList.add('open');S.till();tip();
+  $('reg').onclick=()=>{ac();if(!cust||cust.phase!=='pay'){S.tap();return}cust.phase='bye';G.sale=null;$('reg').classList.remove('ready');$('reg').classList.add('open');S.till();tip();
     const earn=cust.total;coinRain(custEl.getBoundingClientRect(),earn,()=>{});talk('收您 '+earn+' 元,謝謝光臨');
     tm.push(setTimeout(()=>{$('reg').classList.remove('open');$('regn').textContent='0';const br=$('bagz').getBoundingClientRect();fly(BAG,br,custEl,()=>leave(),50)},1400))};
   function leave(){const cw=custEl.clientWidth||100;place(-cw-40,1100).then(()=>{custEl.innerHTML='';cust=null;nextAt=performance.now()+1800;tip()})}
   const loop=setInterval(()=>{if(!cust&&performance.now()>nextAt&&G.shelf.some(Boolean))spawn()},400);
-  cleanup=()=>{clearInterval(loop);tm.forEach(clearTimeout);if(cust&&cust.phase!=='bye'&&cust.items.length){cust.items.forEach(k=>G.stock[k]++);save()}cust=null;shopTok=null}}
+  cleanup=()=>{clearInterval(loop);tm.forEach(clearTimeout);settlePending();cust=null;shopTok=null}}
 function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
-function coinRain(rr,earn,done){const n=Math.min(earn,10);let got=0;
+function coinRain(rr,earn,done){const n=Math.min(earn,10);let got=0;const base=G.coins;G.coins+=earn;save();$('coinN').textContent=base;let shown=base;
   for(let j=0;j<n;j++)setTimeout(()=>{const c=document.createElement('div');c.className='coinf';c.innerHTML=svg(COIN,'0 0 30 30');const sx=rr.left+rr.width*(.2+Math.random()*.6),sy=rr.top+rr.height*.3;c.style.left=sx+'px';c.style.top=sy+'px';document.body.appendChild(c);
-    const p=$('coinP').getBoundingClientRect();let fin=false;const end=()=>{if(fin)return;fin=true;c.remove();S.coin();bump($('coinP'));got++;const add=got===n?earn-Math.floor(earn/n)*(n-1):Math.floor(earn/n);G.coins+=add;save();paint();if(got===n){plusAt($('coinP'),'+'+earn);S.win();done()}};
+    const p=$('coinP').getBoundingClientRect();let fin=false;const end=()=>{if(fin)return;fin=true;c.remove();S.coin();bump($('coinP'));got++;const add=got===n?earn-Math.floor(earn/n)*(n-1):Math.floor(earn/n);shown+=add;$('coinN').textContent=Math.min(shown,G.coins);if(got===n){paint();plusAt($('coinP'),'+'+earn);S.win();done()}};
     try{c.animate([{transform:'translate(0,0)'},{transform:`translate(${(p.left+20-sx)*.4}px,${(p.top-sy)*.4-80}px)`,offset:.4},{transform:`translate(${p.left+8-sx}px,${p.top+4-sy}px) scale(.7)`}],{duration:700,easing:'ease-in-out'}).onfinish=end}catch(e){end()}setTimeout(end,900)},j*110)}
 
+settlePending();
 go('map');
 </script>
 </body>
