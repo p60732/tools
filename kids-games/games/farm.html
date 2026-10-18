@@ -128,6 +128,7 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .bee svg{width:100%;height:100%;animation:flap .12s linear infinite alternate}
 @keyframes flap{to{transform:translateY(-3px)}}
 .gscene .drop{animation-duration:.8s}
+.wdrop{position:absolute;width:8px;height:12px;margin:-6px 0 0 -4px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#8FBCCB;pointer-events:none;z-index:4}
 .gscene svg.plant.windy{animation:windy .4s ease-in-out 4 alternate;transform-origin:50% 68%}
 @keyframes windy{from{transform:skewX(-5deg)}to{transform:skewX(5deg)}}
 .gust{position:absolute;left:-30%;width:30%;height:3px;border-radius:2px;background:rgba(255,255,255,.9);pointer-events:none;z-index:4;animation:gust 1s linear forwards}
@@ -315,7 +316,7 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .scanwin{position:absolute;left:59%;width:12%;top:6%;height:26%;border-radius:6px;background:#3E3A44;overflow:hidden}
 .scanwin::before,.scanwin::after{content:"";position:absolute;left:10%;right:10%;top:50%;height:2px;background:#E07A72;transform:rotate(25deg)}
 .scanwin::after{transform:rotate(-25deg)}
-.gun{position:absolute;left:58%;bottom:100%;width:clamp(40px,9vmin,64px);aspect-ratio:1;transform:rotate(-20deg)}
+.gun{position:absolute;left:66%;bottom:96%;width:clamp(40px,9vmin,64px);aspect-ratio:1;transform:rotate(22deg);transform-origin:20% 40%}
 .gun svg{width:100%;height:100%}
 .zoom{position:absolute;inset:0;z-index:20;background:rgba(74,69,82,.35);display:grid;place-items:center;animation:popin .25s}
 .zcard{position:relative;background:#FFFFFF;border-radius:28px;padding:16px 20px 14px;width:min(86%,460px);display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 8px 0 rgba(74,69,82,.15)}
@@ -324,10 +325,12 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .zcode{position:relative;width:88%}
 .zcode svg{width:100%;height:auto;display:block}
 .laser{position:absolute;left:-4%;right:-4%;top:10%;height:4px;border-radius:2px;background:#E07A72;box-shadow:0 0 10px 2px rgba(224,122,114,.7);opacity:0}
-.laser.go{animation:laser .55s ease-in-out 2 alternate}
+.laser.go{animation:laser .55s ease-in-out 2 alternate both}
 @keyframes laser{0%{opacity:1;top:8%}100%{opacity:1;top:72%}}
-.zgun{position:absolute;right:-6%;top:22%;width:min(30%,130px);aspect-ratio:1;transform:rotate(-30deg) translateX(30px);transition:transform .3s}
-.zgun.go{transform:rotate(-20deg) translateX(0)}
+.zgun{position:absolute;right:-8%;top:30%;width:min(28%,120px);aspect-ratio:1;transform:rotate(30deg) translateX(40px);transition:transform .3s;z-index:2}
+.zgun.go{transform:rotate(18deg) translateX(0)}
+.zbeam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1}
+.zbeam polygon{fill:rgba(224,122,114,.28)}
 .zgun svg{width:100%;height:100%}
 .zprice{font-weight:900;font-size:clamp(22px,6vw,34px);color:var(--ok-d);animation:popin .4s cubic-bezier(.3,1.6,.5,1)}
 .bitem{all:unset;cursor:pointer;width:clamp(52px,12vmin,80px);aspect-ratio:1;background:rgba(255,255,255,.9);border-radius:14px;box-shadow:0 3px 0 rgba(74,69,82,.12);animation:popin .3s}
@@ -656,7 +659,7 @@ function cropSVG(c,st,left){let p=GROUND;const C=CROPS[c];
   if(st===8){const L=left||C.pos.map((_,k)=>k);
     p+=L.map(k=>{const [x,y]=C.pos[k];return `<g class="fruit" data-k="${k}">${c==='grape'?`<path d="M${x} 62V${y-14}" stroke="#8A6A4D" stroke-width="2"/>`+bunch(x,y,C.size,'#9C7BB0','#BBA2CB'):c==='strawberry'?ic('strawberry',x,y+2,C.size):ic(c,x,y,C.size)}</g>`}).join('')}
   return p}
-const CANSVG=`<path d="M22 44h48v40Q70 92 62 92H30Q22 92 22 84z" fill="#8FBCCB"/><path d="M70 54L94 30" stroke="#8FBCCB" stroke-width="9" stroke-linecap="round"/><ellipse cx="95" cy="28" rx="8" ry="5" fill="#7AA9BA" transform="rotate(-45 95 28)"/><path d="M28 44Q46 18 64 44" stroke="#7AA9BA" stroke-width="6" fill="none"/><rect x="28" y="60" width="36" height="6" rx="3" fill="#B5D6E1"/>`;
+const CANSVG=`<g transform="translate(100 0) scale(-1 1)"><path d="M22 44h48v40Q70 92 62 92H30Q22 92 22 84z" fill="#8FBCCB"/><path d="M70 54L94 30" stroke="#8FBCCB" stroke-width="9" stroke-linecap="round"/><ellipse cx="95" cy="28" rx="8" ry="5" fill="#7AA9BA" transform="rotate(-45 95 28)"/><path d="M28 44Q46 18 64 44" stroke="#7AA9BA" stroke-width="6" fill="none"/><rect x="28" y="60" width="36" height="6" rx="3" fill="#B5D6E1"/></g><circle class="spoutTip" cx="5" cy="27" r="1" fill="none"/>`;
 const BEE=`<ellipse cx="38" cy="22" rx="12" ry="9" fill="#FFFFFF" opacity=".85"/><ellipse cx="56" cy="20" rx="12" ry="9" fill="#FFFFFF" opacity=".85"/><ellipse cx="48" cy="44" rx="26" ry="20" fill="#F4D77E"/><path d="M40 26v36M54 26v36" stroke="${K}" stroke-width="6" opacity=".75"/><circle cx="22" cy="40" r="11" fill="${K}"/><circle cx="19" cy="37" r="2.5" fill="#fff"/><path d="M74 44l8 0" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`;
 const SUN=`<g fill="#F4DE9E">${[0,45,90,135,180,225,270,315].map(a=>`<rect x="46" y="2" width="8" height="18" rx="4" transform="rotate(${a} 50 50)"/>`).join('')}</g><circle cx="50" cy="50" r="24" fill="#F4D77E"/>`;
 
@@ -693,6 +696,11 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
   const pt=(x,y)=>{const m=pl.getScreenCTM(),q=new DOMPoint(x,y).matrixTransform(m),r=gs.getBoundingClientRect();return{x:q.x-r.left,y:q.y-r.top}};
   function moveTo(el,x,y,rot,dur){const r=el.getBoundingClientRect(),g=gs.getBoundingClientRect(),dx=x-(r.left-g.left+r.width/2),dy=y-(r.top-g.top+r.height/2);
     return el.animate([{transform:'none'},{transform:`translate(${dx}px,${dy}px)`,offset:.3},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:.8},{transform:'none'}],{duration:dur,easing:'ease-in-out'})}
+  // 水從壺嘴尖端流出,往下落到植物上
+  function pour(top){const tip=gs.querySelector('#can .spoutTip'),g=gs.getBoundingClientRect();
+    for(let j=0;j<14;j++)tm.push(setTimeout(()=>{const r=tip.getBoundingClientRect(),sx=r.left-g.left,sy=r.top-g.top,d=document.createElement('div');d.className='wdrop';d.style.left=sx+'px';d.style.top=sy+'px';gs.appendChild(d);
+      const tx=top.x+(Math.random()-.5)*50-sx,ty=top.y+10+Math.random()*40-sy;
+      d.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${tx*.5}px,${ty*.35}px)`,offset:.5},{transform:`translate(${tx}px,${ty}px)`,opacity:.3}],{duration:550,easing:'cubic-bezier(.3,0,.9,.6)'}).onfinish=()=>d.remove()},770+j*34))}
   function particles(cls,x0,x1,y,n,delay,step){for(let j=0;j<n;j++)tm.push(setTimeout(()=>{const s=document.createElement('div');s.className=cls;s.style.left=(x0+Math.random()*(x1-x0))+'px';s.style.top=y+'px';gs.appendChild(s);setTimeout(()=>s.remove(),800)},delay+j*step))}
   function advance(say){P.st++;if(P.st===8)P.left=C.pos.map((_,k)=>k);save();draw(true);if(P.st===8)S.ripe();else S.grow();talk(say)}
   const SAY=C.say||['','種子種好了','發芽了,長出根和兩片小葉子','長出小苗了','長大了','長得好茂盛','開花了','蜜蜂幫忙授粉,結出小果實了','成熟了,可以採收'];
@@ -701,7 +709,7 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
     busy=true;const base=pt(100,166),top=pt(100,st>=5?60:st>=4?100:140);
     if(st===0&&!hasSeed(c)){busy=false;S.no();talk('沒有種子了,去農場商店買');tipEl.textContent='沒有'+C.name+'種子了!';if(!$('toSeeds')){const t=document.createElement('button');t.type='button';t.id='toSeeds';t.className='big w gotoseed';t.textContent='去農場商店買種子';t.onclick=ev=>{ev.stopPropagation();S.tap();shopBack='garden';go('seeds')};t.addEventListener('pointerdown',ev=>ev.stopPropagation());gs.appendChild(t)}return}
     if(st===0){if(!PER(c))G.seeds[c]--;save();moveTo($('bag'),base.x+30,base.y-70,-70,1300);S.plant();particles('seedf',base.x-14,base.x+10,base.y-50,9,450,50);tm.push(setTimeout(()=>{busy=false;advance(SAY[1])},1250))}
-    else if(st<=5){moveTo($('can'),top.x+70,top.y-40,-38,1500);S.water();particles('drop',top.x-30,top.x+30,top.y-20,18,500,35);tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1450))}
+    else if(st<=5){const cw=$('can').getBoundingClientRect().width;moveTo($('can'),top.x+cw*.37,top.y-18-cw*.34,-70,1700);S.water();pour(top);tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1750))}
     else if(st===6&&C.a6==='wind'){pl.classList.add('windy');S.wind();const g=gs.getBoundingClientRect();for(let j=0;j<10;j++)tm.push(setTimeout(()=>{const w=document.createElement('div');w.className='gust';w.style.top=(g.height*(.15+Math.random()*.4))+'px';gs.appendChild(w);setTimeout(()=>w.remove(),1000)},j*120));tm.push(setTimeout(()=>{pl.classList.remove('windy');busy=false;advance(SAY[7])},1700))}
     else if(st===6&&C.a6==='sun'||st===7){const s=$('sun'),w=$('warm');s.classList.remove('shine');w.classList.remove('on');void s.offsetWidth;s.classList.add('shine');w.classList.add('on');S.sun();tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1500))}
     else if(st===6){const bee=$('bee');bee.hidden=false;S.buzz();const pts=C.pos.map(([x,y])=>pt(x,y)),g=gs.getBoundingClientRect(),w=g.width;
@@ -1264,6 +1272,7 @@ const FACE=`<circle cx="41" cy="54" r="3.5" fill="${K}"/><circle cx="59" cy="54"
 const CBASKET=`<path d="M60 112Q72 98 84 112" stroke="#A98467" stroke-width="3" fill="none"/><path d="M54 112h36l-5 22H59z" fill="#C9A97A"/>`;
 const REG=`<rect x="8" y="40" width="84" height="44" rx="8" fill="#D9D2C6"/><rect x="16" y="12" width="56" height="26" rx="5" fill="#6E6876"/><rect x="72" y="22" width="14" height="18" rx="3" fill="#B9BEC5"/>${[0,1,2].map(r=>[0,1,2,3].map(c=>`<rect x="${18+c*12}" y="${48+r*9}" width="9" height="6" rx="2" fill="#F4EEE2"/>`).join('')).join('')}<rect x="68" y="50" width="16" height="24" rx="3" fill="#7FB08A"/><rect x="4" y="84" width="92" height="10" rx="3" fill="#B9BEC5"/>`;
 const BARCODE=`<rect x="56" y="78" width="38" height="18" rx="3" fill="#FFFFFF" stroke="#E6DCCB"/>${[59,61,63,66,68,71,74,76,79,82,84,87,90].map((x,i)=>`<rect x="${x}" y="81" width="${i%3?1:1.8}" height="12" fill="${K}"/>`).join('')}`;
+const GUNL=()=>`<g transform="translate(100 0) scale(-1 1)">${GUN}</g>`;
 const GUN=`<path d="M30 30h44q10 0 10 10v6q0 8-10 8H52l-6 34q-1 6-8 6h-4q-6 0-5-6l5-34h-4q-8 0-8-8v-8q0-8 8-8z" fill="#55505C"/><rect x="76" y="34" width="8" height="16" rx="2" fill="#E07A72"/><rect x="40" y="36" width="20" height="5" rx="2.5" fill="#8E8791"/>`;
 const bigCode=k=>{let x=8,p='';const seed=ORDER.indexOf(k)*7+3;for(let i=0;i<34;i++){const w=((i*seed+5)%3)+1.2;p+=`<rect x="${x}" y="6" width="${w}" height="40" fill="${K}"/>`;x+=w+((i*seed)%2?2.2:3.4)}return `<rect width="${x+8}" height="64" rx="6" fill="#FFFFFF"/>${p}<text x="${(x+8)/2}" y="59" text-anchor="middle" font-size="11" font-weight="700" fill="${K}" letter-spacing="2">4 710${String(100+ORDER.indexOf(k)*37).padStart(3,'0')} ${PRICE[k]}${PRICE[k]}${PRICE[k]}</text>`};
 const BAG=`<path d="M18 30h64l6 64H12z" fill="#E6CBA0"/><path d="M34 30q0-16 16-16t16 16" stroke="#C9A97A" stroke-width="4" fill="none"/>`;
@@ -1271,7 +1280,7 @@ let shopTok=null;
 function showShop(){const me={};shopTok=me;const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
   sc.innerHTML=`<div class="shop"><div class="stockbar"><b>倉庫</b><div class="stock" id="stock"></div></div>
     <div class="shopscene" id="ss"><div class="rack" id="rack"></div><div class="floor2" id="floor"><div class="cust2" id="cust"></div>
-      <div class="checkout" id="co"><div class="tread" id="tread"></div><div class="lane" id="lane"></div><div class="scanwin"></div><div class="gun">${svg(GUN)}</div><div class="bagz" id="bagz">${svg(BAG)}</div><button class="reg" id="reg" type="button" aria-label="收銀機">${svg(REG)}<span class="regn" id="regn">0</span></button></div></div>
+      <div class="checkout" id="co"><div class="tread" id="tread"></div><div class="lane" id="lane"></div><div class="scanwin"></div><div class="gun">${svg(GUNL())}</div><div class="bagz" id="bagz">${svg(BAG)}</div><button class="reg" id="reg" type="button" aria-label="收銀機">${svg(REG)}<span class="regn" id="regn">0</span></button></div></div>
       <div class="zoom" id="zoom" hidden></div></div></div>`;
   const tm=[];let cust=null,zooming=false,nextAt=performance.now()+1500;const SLOTS=4,CAP=6;
   function drawStock(){const st=$('stock');st.innerHTML='';const ks=ORDER.filter(k=>G.stock[k]>0);
@@ -1309,9 +1318,13 @@ function showShop(){const me={};shopTok=me;const sc=document.createElement('div'
   function scan(b){ac();if(!cust||cust.phase!=='scan'||zooming)return;
     if(!b.classList.contains('front')){S.no();b.classList.remove('wg');void b.offsetWidth;b.classList.add('wg');tipEl.textContent='一個一個來,先刷最前面的';return}
     zooming=true;const k=b.dataset.k,z=$('zoom');S.tap();
-    z.innerHTML=`<div class="zcard"><div class="zitem">${svg(ICON[k])}</div><div class="zcode">${svg(bigCode(k),'0 0 '+(8+34*4.5+8)+' 64')}<div class="laser"></div></div><div class="zgun">${svg(GUN)}</div><div class="zprice" hidden>${NAME[k]} ${PRICE[k]} 元</div></div>`;
+    z.innerHTML=`<div class="zcard"><div class="zitem">${svg(ICON[k])}</div><div class="zcode">${svg(bigCode(k),'0 0 '+(8+34*4.5+8)+' 64')}<div class="laser"></div></div><div class="zgun">${svg(GUNL())}</div><svg class="zbeam"><polygon points=""/></svg><div class="zprice" hidden>${NAME[k]} ${PRICE[k]} 元</div></div>`;
     z.hidden=false;
-    tm.push(setTimeout(()=>{z.querySelector('.laser').classList.add('go');z.querySelector('.zgun').classList.add('go')},350));
+    tm.push(setTimeout(()=>{z.querySelector('.zgun').classList.add('go')},150));
+    tm.push(setTimeout(()=>{const las=z.querySelector('.laser'),gun=z.querySelector('.zgun'),card=z.querySelector('.zcard'),poly=z.querySelector('.zbeam polygon');las.classList.add('go');const t0=performance.now();
+      (function beam(){if(!z.contains(las))return;const c=card.getBoundingClientRect(),g=gun.getBoundingClientRect(),l=las.getBoundingClientRect();
+        const wx=g.left+g.width*.2-c.left,wy=g.top+g.height*.42-c.top,ly=l.top+l.height/2-c.top;
+        poly.setAttribute('points',`${wx},${wy} ${l.left-c.left},${ly} ${l.right-c.left},${ly}`);if(performance.now()-t0<1150)requestAnimationFrame(beam);else poly.setAttribute('points','')})()},500));
     tm.push(setTimeout(()=>{S.beep();cust.total+=PRICE[k];cust.scanned++;$('regn').textContent=cust.total;z.querySelector('.zprice').hidden=false;talk(NAME[k]+' '+PRICE[k]+'元')},900));
     tm.push(setTimeout(()=>{const r=z.querySelector('.zitem').getBoundingClientRect();z.hidden=true;z.innerHTML='';b.remove();layout();run();zooming=false;
       fly(ICON[k],r,$('bagz'),()=>{bump($('bagz'));if(cust&&cust.scanned===cust.items.length){cust.phase='pay';$('reg').classList.add('ready');tip();talk('一共 '+cust.total+' 元')}},60)},1900))}
