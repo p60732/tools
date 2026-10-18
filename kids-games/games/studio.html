@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>錄音室</title>
+<style>
+/* 錄音室:大人把遊戲和故事裡的台詞錄成自己的聲音。錄音只存在這台裝置。 */
+:root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--mute:#6E6876;--ok:#7FB08A;--rec:#D8584E;--rec-d:#B0453D;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button{font-family:inherit}
+.app{max-width:900px;margin:0 auto;box-sizing:border-box;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(60px + env(safe-area-inset-bottom,0px))}
+h1{margin:0 0 4px;font-size:clamp(24px,6vw,32px);font-weight:900}
+.intro{margin:0 0 14px;font-weight:700;color:var(--mute);font-size:16px;line-height:1.6}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2}
+.tab{all:unset;cursor:pointer;background:var(--white);border-radius:999px;padding:8px 14px;font-weight:900;font-size:15px;box-shadow:0 3px 0 rgba(74,69,82,.12)}
+.tab.on{background:var(--ink);color:var(--white)}
+.tab small{font-weight:700;opacity:.75;margin-left:4px}
+.row{background:var(--white);border-radius:18px;padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 3px 0 rgba(74,69,82,.08)}
+.row.live{outline:4px solid var(--rec)}
+.row .t{flex:1 1 260px;font-weight:900;font-size:18px;line-height:1.5}
+.row .st{font-size:14px;font-weight:700;color:var(--mute);width:100%}
+.row .st.has{color:#5E8F69}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.b{all:unset;cursor:pointer;border-radius:999px;padding:9px 15px;font-weight:900;font-size:15px;background:#F1E9DC;white-space:nowrap}
+.b.red{background:var(--rec);color:var(--white);box-shadow:0 3px 0 var(--rec-d)}
+.b.red.live{animation:p 1s ease-in-out infinite}
+@keyframes p{50%{transform:scale(1.06)}}
+.b:active{transform:translateY(2px)}
+.msg{background:#F7E3E0;border-radius:14px;padding:10px 14px;font-weight:700;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🎙 錄音室</h1>
+  <p class="intro">每一句都可以錄成大人的聲音,遊戲和故事就會改播你的聲音。錄音只存在這台手機或平板上;還沒錄的句子會用電腦的聲音唸。</p>
+  <div class="msg" id="msg" hidden></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="rows"></div>
+</div>
+<script src="voice.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let groups=[],gi=0,have=new Set(),liveKey=null,sec=0,tm=null;
+function msg(t){$('msg').hidden=!t;$('msg').textContent=t||''}
+async function load(){try{groups=await (await fetch('../voice/lines.json')).json()}catch(e){groups=[];msg('讀不到台詞清單,請連上網路後再打開一次')}
+  have=new Set(await KV.rec.keys());if(!KV.rec.ok())msg('這個瀏覽器不能錄音,請用 Safari 或 Chrome 打開主畫面再進來');paint()}
+function paint(){$('tabs').innerHTML=groups.map((g,i)=>{const n=g.lines.filter(t=>have.has(t)).length;return `<button class="tab${i===gi?' on':''}" type="button" data-i="${i}">${g.name}<small>${n}/${g.lines.length}</small></button>`}).join('');
+  $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{if(liveKey)return;gi=+b.dataset.i;paint();scrollTo(0,0)});
+  const g=groups[gi];if(!g){$('rows').innerHTML='';return}
+  $('rows').innerHTML=g.lines.map((t,i)=>{const h=have.has(t),live=liveKey===t;
+    return `<div class="row${live?' live':''}" data-i="${i}"><div class="t">${t}</div><div class="btns">${live?`<button class="b red live" data-a="stop" type="button">■ 錄好了 <span id="sec">${sec}</span>秒</button><button class="b" data-a="cancel" type="button">取消</button>`
+      :`<button class="b red" data-a="rec" type="button">● ${h?'重錄':'錄音'}</button><button class="b" data-a="play" type="button">▶ 聽</button>${h?'<button class="b" data-a="del" type="button">刪掉</button>':''}`}</div>
+      <div class="st${h?' has':''}">${live?'正在錄音,請唸上面這句':h?'✓ 已經是大人的聲音':'還沒錄,現在是電腦的聲音'}</div></div>`}).join('');
+  $('rows').querySelectorAll('.row').forEach(r=>{const t=g.lines[+r.dataset.i];r.querySelectorAll('.b').forEach(b=>b.onclick=()=>act(b.dataset.a,t))})}
+async function act(a,t){msg('');
+  if(a==='play'){KV.say(t);return}
+  if(a==='del'){await KV.rec.del(t);have.delete(t);paint();return}
+  if(a==='rec'){if(liveKey)return;try{await KV.rec.start()}catch(e){msg('沒辦法使用麥克風。請在跳出的視窗按「允許」,或到瀏覽器設定打開麥克風權限。');return}
+    liveKey=t;sec=0;clearInterval(tm);tm=setInterval(()=>{sec++;const e=$('sec');if(e)e.textContent=sec;if(sec>=90)act('stop',t)},1000);paint();return}
+  if(a==='stop'){clearInterval(tm);liveKey=null;try{await KV.rec.finish(t);have.add(t);paint();setTimeout(()=>KV.say(t),250)}catch(e){msg('錄得太短了,再錄一次');paint()}return}
+  if(a==='cancel'){clearInterval(tm);liveKey=null;KV.rec.cancel();paint()}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&liveKey){clearInterval(tm);liveKey=null;KV.rec.cancel();paint()}});
+load();
+</script>
+</body>
+</html>

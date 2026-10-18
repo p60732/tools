@@ -179,6 +179,7 @@ body.alarm::before{animation:alarm 1s ease-in-out infinite}
 
 <div class="book" id="book" hidden><h2>我的貼紙簿</h2><div class="cnt" id="cnt"></div><div class="grid" id="grid"></div><button class="again" id="closeBook" type="button">回去解鎖</button></div>
 
+<script src="voice.js"></script>
 <script>
 /* ================= 貼紙 ================= */
 const K='#4A4552';
@@ -243,7 +244,8 @@ const S={
 // 會說話:平板內建的語音(沒有也沒關係)
 let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
 try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
-function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1.05;u.pitch=1.5;speechSynthesis.speak(u)}catch(e){}}
+function talk(x){if(window.KV)return KV.say(x);talk0(x)}
+function talk0(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1.05;u.pitch=1.5;speechSynthesis.speak(u)}catch(e){}}
 function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
 
 /* ================= 時鐘 ================= */

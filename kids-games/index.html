@@ -38,7 +38,7 @@ h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blu
 .card:focus-visible{outline:5px dashed var(--ink);outline-offset:5px}
 .pic{aspect-ratio:4/3;max-width:100%;border-bottom:5px solid var(--ink);display:grid;place-items:center}
 .pic svg{width:86%;height:86%}
-.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c11 .pic{background:#E8D2A6}.c12 .pic{background:#E3EEDF}.c13 .pic{background:#DCEBF0}.c14 .pic{background:#F1E6D2}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
+.c1 .pic{background:var(--yellow)}.c4 .pic{background:#CFE5D8}.c5 .pic{background:#F1DAE2}.c6 .pic{background:#D4E1F0}.c7 .pic{background:#F1DDB5}.c8 .pic{background:#D3E4C9}.c9 .pic{background:#F3ECE0}.c10 .pic{background:#E3E6E2}.c11 .pic{background:#E8D2A6}.c12 .pic{background:#E3EEDF}.c13 .pic{background:#DCEBF0}.c14 .pic{background:#F1E6D2}.c15 .pic{background:#E8DDF0}.c16 .pic{background:#F7E3E0}.c2 .pic{background:var(--sky)}.c3 .pic{background:#EFCBA6}
 .info{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .info .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .name{font-size:clamp(24px,6vw,30px);font-weight:900}
@@ -249,6 +249,23 @@ body.playing{overflow:hidden}
       </svg></span>
       <span class="info"><span class="txt"><span class="name">OOXX</span><span class="desc">井字遊戲,跟電腦玩或跟大人一起玩</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
     </button>
+    <button class="card c15" type="button" data-src="games/stories.html" data-name="說故事">
+      <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect width="200" height="150" fill="#E8DDF0"/><path d="M30 40 Q65 28 100 42 V128 Q65 114 30 126z" fill="#FFFFFF"/><path d="M170 40 Q135 28 100 42 V128 Q135 114 170 126z" fill="#F7F1E6"/><path d="M100 42 V128" stroke="#C9B6E4" stroke-width="3"/>
+        <path d="M44 58 h40M44 70 h36M44 82 h40" stroke="#C9B6E4" stroke-width="4" stroke-linecap="round"/>
+        <g transform="translate(135 104) scale(.42)"><path d="M-24 -114 L-31 -138 L-7 -121Z" fill="#E8A09A"/><path d="M24 -114 L31 -138 L7 -121Z" fill="#E8A09A"/><ellipse cx="0" cy="-42" rx="34" ry="37" fill="#F2B9B4"/><circle cx="0" cy="-100" r="29" fill="#F2B9B4"/><ellipse cx="0" cy="-91" rx="13" ry="9" fill="#E8A09A"/><circle cx="-11" cy="-107" r="3.4" fill="#4A4552"/><circle cx="11" cy="-107" r="3.4" fill="#4A4552"/></g>
+        <circle cx="160" cy="30" r="6" fill="#E9C46A"/><circle cx="40" cy="24" r="4" fill="#E9C46A"/>
+      </svg></span>
+      <span class="info"><span class="txt"><span class="name">說故事</span><span class="desc">三隻小豬、龜兔賽跑、拔蘿蔔、三隻熊,大人可以錄自己的聲音</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+    </button>
+    <button class="card c16" type="button" data-src="games/studio.html" data-name="錄音室">
+      <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect width="200" height="150" fill="#F7E3E0"/><rect x="82" y="22" width="36" height="66" rx="18" fill="#8E8791"/><path d="M90 40h20M90 52h20M90 64h20" stroke="#B9B4BE" stroke-width="3"/>
+        <path d="M66 70 a34 34 0 0 0 68 0" stroke="#6E6876" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M100 104 v18M80 124 h40" stroke="#6E6876" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="152" cy="40" r="10" fill="#D8584E"/><path d="M40 60 q-10 14 0 28M28 52 q-16 22 0 44" stroke="#D88E87" stroke-width="5" fill="none" stroke-linecap="round"/>
+      </svg></span>
+      <span class="info"><span class="txt"><span class="name">錄音室</span><span class="desc">大人把遊戲和故事的台詞錄成自己的聲音</span></span><span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z" fill="#fff" stroke="#4A4552" stroke-width="2.5" stroke-linejoin="round"/></svg></span></span>
+    </button>
   </div>
 </main>
 
@@ -264,7 +281,7 @@ const player=document.getElementById('player'),ptitle=document.getElementById('p
 let frame=null,opener=null;
 function openGame(card){
   opener=card;ptitle.textContent=card.dataset.name;
-  frame=document.createElement('iframe');frame.src=card.dataset.src;frame.title=card.dataset.name;frame.allow='autoplay';
+  frame=document.createElement('iframe');frame.src=card.dataset.src;frame.title=card.dataset.name;frame.allow='autoplay; microphone';
   player.appendChild(frame);player.hidden=false;document.body.classList.add('playing');
   try{history.pushState({game:1},'')}catch(e){}
   closeBtn.focus();
@@ -299,7 +316,7 @@ addEventListener('popstate',()=>closeGame(true));
 const offEl=document.getElementById('offline');
 const GAMES=[...document.querySelectorAll('.card')].map(c=>c.dataset.src);
 async function checkOffline(){try{if(!('caches' in window))return;const keys=await caches.keys();const k=keys.find(x=>x.startsWith('kids-v'));if(!k)return;const c=await caches.open(k);
-  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/18n 版';offEl.hidden=false}}catch(e){}}
+  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/18o 版';offEl.hidden=false}}catch(e){}}
 if('serviceWorker' in navigator){let hadCtl=!!navigator.serviceWorker.controller,reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!reloaded){reloaded=true;location.reload()}});addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{try{r.update()}catch(e){}return navigator.serviceWorker.ready}).then(()=>setTimeout(checkOffline,500)).catch(()=>{})});checkOffline()}
 </script>
 

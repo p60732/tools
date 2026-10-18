@@ -67,6 +67,7 @@ h1{margin:0;font-size:clamp(22px,5vw,30px);font-weight:900}
   </div>
 </div>
 <div class="over" id="over"></div>
+<script src="voice.js"></script>
 <script>
 /* ---------- 聲音、語音 ---------- */
 let ac=null;
@@ -76,7 +77,8 @@ const S={o(){tone(523,.25);tone(784,.3,{at:.08,v:.08})},x(){tone(440,.22,{type:'
   no(){tone(220,.18,{type:'sine',v:.1})},win(){[523,659,784,1046,1318].forEach((f,i)=>tone(f,.45,{at:i*.11}))},draw(){[523,494,523].forEach((f,i)=>tone(f,.3,{at:i*.16,v:.1}))},tap(){tone(660,.08,{v:.1})}};
 let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
 try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
-function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
+function talk(x){if(window.KV)return KV.say(x);talk0(x)}
+function talk0(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
 
 /* ---------- 圖案 ---------- */
 const svgO=()=>`<svg viewBox="0 0 100 100"><g class="mk o"><circle cx="50" cy="50" r="36" style="--len:227" transform="rotate(-90 50 50)"/></g></svg>`;

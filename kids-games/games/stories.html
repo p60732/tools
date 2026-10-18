@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>說故事</title>
+<style>
+/* 說故事:四個經典童話,每頁一個場景,點畫面會動。大人可以每頁錄自己的聲音。 */
+:root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--mute:#6E6876;--ok:#7FB08A;--ok-d:#5E8F69;--rec:#D8584E;--rec-d:#B0453D;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+button{font-family:inherit}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(44px + env(safe-area-inset-bottom,0px));max-width:1200px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(20px,5vw,28px);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.pill{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;background:var(--white);border-radius:999px;padding:8px 14px;font-weight:900;font-size:16px;box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.pill.on{background:var(--ink);color:var(--white)}
+.pill.recon{background:var(--rec);color:var(--white)}
+.pill:active,.nav button:active,.cover:active,.rb:active{transform:translateY(2px)}
+/* 故事列表 */
+.list{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));grid-auto-rows:max-content;gap:16px;align-content:safe center;padding:4px}
+.cover{all:unset;cursor:pointer;background:var(--white);border-radius:24px;overflow:hidden;box-shadow:0 5px 0 rgba(74,69,82,.13);display:flex;flex-direction:column}
+.cover svg{width:100%;aspect-ratio:16/9;display:block}
+.cover b{font-size:clamp(20px,5vw,24px);padding:10px 16px 2px}
+.cover small{font-size:15px;color:var(--mute);font-weight:700;padding:0 16px 14px}
+/* 閱讀 */
+.reader{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center}
+.scene{width:100%;height:100%;max-height:100%;cursor:pointer;display:block}
+.scene .hintg{transform-box:fill-box;transform-origin:50% 50%;animation:hintp 1.4s ease-in-out infinite}
+.scene.go .hintg{display:none}
+@keyframes hintp{50%{transform:scale(1.08)}}
+.side{display:flex;flex-direction:column;gap:8px;flex:none}
+.text{background:var(--white);border-radius:20px;padding:12px 18px;font-weight:900;font-size:clamp(19px,4.6vw,26px);line-height:1.55;min-height:2.6em;display:flex;align-items:center;box-shadow:0 3px 0 rgba(74,69,82,.1)}
+.recbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#F7E3E0;border-radius:18px;padding:8px 10px}
+.recbar .st{font-weight:900;font-size:15px;color:var(--mute);flex:1;min-width:150px}
+.rb{all:unset;cursor:pointer;border-radius:999px;padding:9px 16px;font-weight:900;font-size:16px;background:var(--white);box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.rb.red{background:var(--rec);color:var(--white);box-shadow:0 3px 0 var(--rec-d)}
+.rb.red.live{animation:hintp 1s ease-in-out infinite}
+.nav{display:flex;gap:10px;align-items:center}
+.nav button{all:unset;cursor:pointer;flex:1;text-align:center;border-radius:20px;padding:14px 0;font-weight:900;font-size:clamp(18px,4.5vw,22px);background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+.nav button.back{background:var(--white);color:var(--ink);box-shadow:0 5px 0 rgba(74,69,82,.15)}
+.nav button[disabled]{opacity:.35}
+.nav .pg{font-weight:900;color:var(--mute);min-width:56px;text-align:center}
+.endo{position:fixed;inset:0;background:rgba(239,230,216,.95);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:16px;text-align:center;padding:16px;overflow-y:auto}
+.endo h2{margin:0;font-size:clamp(28px,7vw,40px);font-weight:900}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:21px;padding:12px 26px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+.big.alt{background:var(--white);color:var(--ink);box-shadow:0 5px 0 rgba(74,69,82,.15)}
+@media (orientation:portrait){.stage{flex:none;width:100%;aspect-ratio:16/9}.side{flex:1;min-height:0}.text{flex:1;font-size:clamp(21px,5.6vw,28px);align-items:center;overflow-y:auto}}
+@media (orientation:landscape) and (max-height:560px){
+  .reader{flex-direction:row}.side{width:min(42%,380px);justify-content:center}
+  .text{font-size:19px;padding:10px 14px}.nav button{padding:10px 0}}
+
+/* ---- 場景動畫 ---- */
+.scene g[class]{transform-box:fill-box;transform-origin:50% 100%}
+.bob{animation:bob 2.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-5px)}}
+.sway{animation:sway 3.4s ease-in-out infinite}
+@keyframes sway{50%{transform:rotate(2.5deg)}}
+.zz{animation:zz 2.4s ease-in-out infinite}
+@keyframes zz{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-34px)}}
+.steam{animation:steam 2s ease-in-out infinite}
+@keyframes steam{0%{opacity:0;transform:translateY(6px)}40%{opacity:.8}100%{opacity:0;transform:translateY(-22px)}}
+.drift{animation:drift 30s linear infinite}
+@keyframes drift{to{transform:translateX(120px)}}
+.hid{opacity:0}
+.grow0{transform:scale(1,0)}
+.go .a-show{animation:show .6s ease-out forwards;animation-delay:var(--d,0s)}
+@keyframes show{to{opacity:1}}
+.go .a-hop{animation:hop .45s ease-in-out 4;animation-delay:var(--d,0s)}
+@keyframes hop{50%{transform:translateY(-26px)}}
+.go .grow0{animation:grow 1.3s cubic-bezier(.3,1.35,.5,1) forwards;animation-delay:var(--d,0s)}
+@keyframes grow{from{transform:scale(1,0)}to{transform:scale(1,1)}}
+.go .a-grow{animation:grow2 1.8s cubic-bezier(.3,1.3,.5,1) forwards}
+@keyframes grow2{from{transform:scale(.35)}to{transform:scale(1)}}
+.a-grow{transform:scale(.35)}
+.go .a-fly{animation:fly 1.6s ease-in forwards;animation-delay:var(--d,.5s)}
+@keyframes fly{to{transform:translate(460px,-280px) rotate(80deg);opacity:0}}
+.go .a-run{animation:run var(--t,1.6s) ease-in forwards;animation-delay:var(--d,.8s)}
+@keyframes run{to{transform:translateX(var(--x,560px))}}
+.go .a-crawl{animation:run var(--t,3s) linear forwards;animation-delay:var(--d,0s)}
+.go .a-shake{animation:shake .22s 7;animation-delay:var(--d,0s)}
+@keyframes shake{25%{transform:rotate(-1.6deg)}75%{transform:rotate(1.6deg)}}
+.go .a-tug{animation:tug .55s ease-in-out 4}
+@keyframes tug{50%{transform:translateX(-9px) rotate(-5deg)}}
+.go .a-pop{animation:pop 1s cubic-bezier(.3,1.7,.5,1) forwards;animation-delay:.9s}
+@keyframes pop{to{transform:translateY(-120px) rotate(-6deg)}}
+.go .a-tumble{animation:tumble .7s ease-out forwards;animation-delay:1s}
+@keyframes tumble{to{transform:translateX(-26px) rotate(-16deg)}}
+.go .a-drop{animation:drop .9s ease-in forwards}
+@keyframes drop{to{transform:translateY(80px);opacity:0}}
+.go .a-away{animation:away 1.5s ease-out forwards;animation-delay:var(--d,1.1s)}
+@keyframes away{0%{opacity:1;transform:translate(0,0)}100%{opacity:1;transform:translate(320px,-300px) rotate(220deg)}}
+.go .a-break{animation:brk .5s ease-in forwards;animation-delay:var(--d,.4s)}
+@keyframes brk{to{transform:rotate(70deg) translateY(6px)}}
+.go .a-hide{animation:hide .7s forwards;animation-delay:var(--d,.8s)}
+@keyframes hide{to{opacity:0}}
+.go .a-eat{animation:eat .6s ease-in-out 4}
+@keyframes eat{50%{transform:translate(-16px,12px) rotate(-18deg)}}
+.go .a-puff{animation:puff .55s ease-in-out 4}
+@keyframes puff{50%{transform:scale(1.1)}}
+.wind path{stroke-dasharray:50 250;stroke-dashoffset:300}
+.go .wind path{animation:wind .8s linear 4;animation-delay:var(--d,0s)}
+@keyframes wind{to{stroke-dashoffset:0}}
+.go .a-sit{animation:sit .6s ease-in-out forwards;animation-delay:var(--d,0s)}
+@keyframes sit{to{transform:translateY(18px)}}
+@media (prefers-reduced-motion:reduce){.scene *{animation-duration:.01s!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="pill" id="home" type="button" hidden>◀ 故事列表</button>
+    <h1 id="title">說故事</h1>
+    <button class="pill" id="auto" type="button" hidden>自動翻頁</button>
+    <button class="pill" id="recBtn" type="button">🎙 大人錄音</button>
+  </header>
+  <div class="list" id="list"></div>
+  <div class="reader" id="reader" hidden>
+    <div class="stage" id="stage"></div>
+    <div class="side">
+      <div class="text" id="text"></div>
+      <div class="recbar" id="recbar" hidden></div>
+      <div class="nav"><button class="back" id="prev" type="button">◀ 上一頁</button><span class="pg" id="pg"></span><button id="next" type="button">下一頁 ▶</button></div>
+    </div>
+  </div>
+</div>
+<div class="endo" id="endo" hidden></div>
+<script src="voice.js"></script>
+<script>
+/* ================= 聲音效果 ================= */
+let ac=null;
+function A(){if(!ac){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();return ac}
+function tone(f,d,{type='triangle',v=.12,at=0,to=null}={}){const c=A();if(!c)return;try{const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(d,{at=0,v=.12,f=800,q=.8,to=null}={}){const c=A();if(!c)return;try{const t=c.currentTime+at,n=c.sampleRate*d,b=c.createBuffer(1,n,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<n;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type='bandpass';fl.frequency.setValueAtTime(f,t);if(to)fl.frequency.exponentialRampToValueAtTime(to,t+d);fl.Q.value=q;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+d*.3);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(c.destination);s.start(t)}catch(e){}}
+const SFX={
+  hop(){[0,.45,.9].forEach(a=>tone(520,.2,{at:a,to:900,v:.09}))},
+  build(){for(let i=0;i<6;i++)tone(180+i*20,.09,{at:i*.2,type:'square',v:.06})},
+  blow(){noise(1.6,{v:.2,f:500,to:1400,q:.6});noise(1.6,{at:1.4,v:.16,f:900,to:400,q:.6})},
+  crash(){noise(.8,{at:.5,v:.25,f:300,q:.5});tone(120,.5,{at:.5,type:'sine',v:.15,to:60})},
+  strong(){noise(1.8,{v:.2,f:500,to:1400,q:.6});[0,.4,.8].forEach(a=>tone(90,.25,{at:1+a,type:'sine',v:.12}))},
+  cheer(){[523,659,784,1046,1318].forEach((f,i)=>tone(f,.45,{at:i*.11}))},
+  dash(){noise(.7,{v:.15,f:2000,to:600,q:1.2})},
+  crawl(){for(let i=0;i<6;i++)tone(300,.08,{at:i*.45,type:'sine',v:.06})},
+  snore(){[0,1.2].forEach(a=>{noise(.8,{at:a,v:.08,f:250,q:2});tone(110,.6,{at:a+.1,type:'sine',v:.05})})},
+  tug(){[0,.55,1.1,1.65].forEach(a=>tone(160,.3,{at:a,type:'sine',v:.12,to:120}))},
+  pop(){tone(300,.25,{at:.9,to:1200,v:.15});noise(.3,{at:.95,v:.12,f:1500});[784,988,1175].forEach((f,i)=>tone(f,.4,{at:1.3+i*.1}))},
+  grow(){tone(300,1.6,{to:900,v:.08,type:'sine'})},
+  crack(){noise(.15,{at:.4,v:.25,f:2500,q:1});noise(.4,{at:.5,v:.15,f:400})},
+  eat(){[0,.6,1.2,1.8].forEach(a=>tone(700,.08,{at:a,type:'sine',v:.07}))},
+  ouch(){noise(.6,{v:.15,f:3000,q:.7});tone(900,.6,{at:.3,to:300,type:'sawtooth',v:.05});tone(400,1,{at:1.1,to:1400,v:.08})},
+  knock(){[0,.25].forEach(a=>tone(200,.1,{at:a,type:'square',v:.08}))},
+  run(){for(let i=0;i<10;i++)tone(400+(i%2)*80,.06,{at:.8+i*.12,type:'sine',v:.06})},
+  wonder(){tone(500,.3,{to:800,v:.08});tone(500,.3,{at:.5,to:800,v:.08})},
+  heart(){[659,784,988].forEach((f,i)=>tone(f,.5,{at:i*.15,v:.1}))}
+};
+
+/* ================= 繪圖小工具 ================= */
+const W=800,H=450,GY=360;
+const P=(x,y,s,inner,cls='',flip=false,style='')=>`<g transform="translate(${x} ${y}) scale(${flip?-s:s} ${s})"><g${cls?` class="${cls}"`:''}${style?` style="${style}"`:''}>${inner}</g></g>`;
+const sky=(c1='#CFE4EC',c2='#EEF4F0')=>`<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#sk)"/>`;
+const cloud=(x,y,s=1)=>P(x,y,s,`<g class="drift"><ellipse cx="0" cy="0" rx="46" ry="18" fill="#FFFFFF" opacity=".9"/><ellipse cx="-20" cy="-12" rx="22" ry="16" fill="#FFFFFF" opacity=".9"/><ellipse cx="16" cy="-14" rx="26" ry="20" fill="#FFFFFF" opacity=".9"/></g>`);
+const sun=(x=700,y=70)=>`<circle cx="${x}" cy="${y}" r="34" fill="#F6D58A"/><circle cx="${x}" cy="${y}" r="46" fill="#F6D58A" opacity=".25"/>`;
+const hills=()=>`<path d="M0 300 Q120 230 260 280 T540 270 T800 280 V${GY} H0z" fill="#A9C99A"/>`;
+const ground=(c='#B9D2A8')=>`<rect y="${GY-6}" width="${W}" height="${H-GY+6}" fill="${c}"/>`;
+const tree=(x,y=GY,s=1)=>P(x,y,s,`<g class="sway"><rect x="-9" y="-90" width="18" height="90" rx="6" fill="#8A6A4D"/><circle cx="0" cy="-120" r="48" fill="#7FA676"/><circle cx="-30" cy="-96" r="32" fill="#8FB283"/><circle cx="30" cy="-98" r="34" fill="#6E9A66"/></g>`);
+const pine=(x,y=GY,s=1)=>P(x,y,s,`<g class="sway"><rect x="-7" y="-40" width="14" height="40" fill="#8A6A4D"/><path d="M0 -170 L44 -90 H-44z M0 -130 L54 -40 H-54z" fill="#6E9A66"/></g>`);
+const flower=(x,y,c='#F2B9B4')=>`<g transform="translate(${x} ${y})"><path d="M0 0v-16" stroke="#7FA676" stroke-width="3"/><circle cy="-20" r="7" fill="${c}"/><circle cy="-20" r="3" fill="#F6D58A"/></g>`;
+const flowers=()=>[60,140,330,470,610,740].map((x,i)=>flower(x,GY+30+(i%2)*28,['#F2B9B4','#F6D58A','#C9B6E4'][i%3])).join('');
+const outdoor=(extra='')=>sky()+sun()+cloud(140,80)+cloud(470,60,.8)+hills()+ground()+extra;
+const room=()=>`<rect width="${W}" height="${H}" fill="#F1E6D2"/><rect y="${GY-20}" width="${W}" height="${H}" fill="#D9C2A0"/><rect y="${GY-26}" width="${W}" height="8" fill="#C9A97A"/>
+  <rect x="600" y="70" width="140" height="110" rx="10" fill="#CFE4EC" stroke="#B49A7E" stroke-width="8"/><path d="M670 70v110M600 125h140" stroke="#B49A7E" stroke-width="5"/><circle cx="640" cy="160" r="20" fill="#7FA676"/><circle cx="705" cy="165" r="16" fill="#6E9A66"/>`;
+const speech=(x,y,txt,cls='hid a-show',d='.3s')=>`<g transform="translate(${x} ${y})"><g class="${cls}" style="--d:${d}"><rect x="${-txt.length*13-14}" y="-34" width="${txt.length*26+28}" height="46" rx="20" fill="#FFFFFF" stroke="#4A4552" stroke-width="3"/><path d="M-8 12 L0 26 L10 12z" fill="#FFFFFF" stroke="#4A4552" stroke-width="3" stroke-linejoin="round"/><rect x="-10" y="8" width="22" height="6" fill="#FFFFFF"/><text x="0" y="-2" text-anchor="middle" font-size="24" font-weight="900" fill="#4A4552">${txt}</text></g></g>`;
+const zz=(x,y)=>`<g transform="translate(${x} ${y})"><g class="zz"><text font-size="28" font-weight="900" fill="#6F9FC0">Z</text></g></g><g transform="translate(${x+20} ${y-24})"><g class="zz" style="animation-delay:.8s"><text font-size="22" font-weight="900" fill="#6F9FC0">z</text></g></g>`;
+const confetti=(cx,cy,d='.3s')=>{let s='';const c=['#D88E87','#6F9FC0','#E9C46A','#7FB08A','#C9B6E4'];for(let i=0;i<22;i++){const a=i/22*6.28,r=60+(i%4)*30;s+=`<rect x="${cx+Math.cos(a)*r}" y="${cy+Math.sin(a)*r*.6}" width="12" height="8" rx="2" fill="${c[i%5]}" transform="rotate(${i*37} ${cx+Math.cos(a)*r} ${cy+Math.sin(a)*r*.6})"/>`}return `<g class="hid a-show" style="--d:${d}">${s}</g>`};
+const heart=(x,y,s=1,d='.2s')=>P(x,y,s,`<path d="M0 0 C-30 -24 -24 -54 0 -40 C24 -54 30 -24 0 0z" fill="#D88E87"/>`,'hid a-show',false,`--d:${d}`);
+const windL=(x,y,s=1,d='0s')=>P(x,y,s,`<g class="wind" style="--d:${d}"><path d="M0 0 Q60 -10 120 0 T240 0" stroke="#FFFFFF" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M10 34 Q70 24 130 34 T250 34" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M0 -34 Q60 -44 120 -34 T230 -34" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/></g>`);
+
+/* ---- 角色 ---- */
+function pig(sc='#E9C46A',o={}){const sk='#F2B9B4',dk='#E8A09A';return `
+  <ellipse cx="-15" cy="-6" rx="11" ry="7" fill="${dk}"/><ellipse cx="15" cy="-6" rx="11" ry="7" fill="${dk}"/>
+  <ellipse cx="0" cy="-42" rx="34" ry="37" fill="${sk}"/>${o.apron?'<path d="M-22 -60 H22 L26 -10 H-26z" fill="#FFFFFF" opacity=".85"/>':''}
+  <ellipse cx="-35" cy="-48" rx="9" ry="15" fill="${sk}" transform="rotate(${o.wave?-60:15} -35 -48)"/><ellipse cx="35" cy="-48" rx="9" ry="15" fill="${sk}" transform="rotate(${o.wave?60:-15} 35 -48)"/>
+  <path d="M-27 -76 Q0 -64 27 -76 L23 -64 Q0 -54 -23 -64Z" fill="${sc}"/>
+  <path d="M-24 -114 L-31 -138 L-7 -121Z" fill="${dk}"/><path d="M24 -114 L31 -138 L7 -121Z" fill="${dk}"/>
+  <circle cx="0" cy="-100" r="29" fill="${sk}"/>
+  <ellipse cx="0" cy="-91" rx="13" ry="9" fill="${dk}"/><circle cx="-4.5" cy="-91" r="2.6" fill="#B86F68"/><circle cx="4.5" cy="-91" r="2.6" fill="#B86F68"/>
+  ${o.sad?'<path d="M-15 -108 q5 -3 9 0M6 -108 q5 -3 9 0" stroke="#4A4552" stroke-width="3" fill="none" stroke-linecap="round"/>':'<circle cx="-11" cy="-107" r="3.4" fill="#4A4552"/><circle cx="11" cy="-107" r="3.4" fill="#4A4552"/>'}
+  <circle cx="-19" cy="-95" r="4.5" fill="#E8A09A" opacity=".6"/><circle cx="19" cy="-95" r="4.5" fill="#E8A09A" opacity=".6"/>
+  <path d="M-6 -79 q6 4 12 0" stroke="#B86F68" stroke-width="2.5" fill="none" stroke-linecap="round"/>`}
+function wolf(o={}){const c='#9E98A2',d='#8E8791',l='#D9D4DC';return `
+  <path d="M24 -36 Q76 -40 72 -92 Q56 -58 20 -52Z" fill="${d}"/>
+  <rect x="-24" y="-28" width="15" height="28" rx="6" fill="#7A7480"/><rect x="9" y="-28" width="15" height="28" rx="6" fill="#7A7480"/>
+  <ellipse cx="0" cy="-58" rx="33" ry="40" fill="${c}"/><ellipse cx="0" cy="-52" rx="18" ry="27" fill="${l}"/>
+  <ellipse cx="-34" cy="-66" rx="9" ry="18" fill="${c}" transform="rotate(20 -34 -66)"/><ellipse cx="34" cy="-66" rx="9" ry="18" fill="${c}" transform="rotate(-20 34 -66)"/>
+  <path d="M-27 -126 L-34 -166 L-6 -138Z" fill="${d}"/><path d="M27 -126 L34 -166 L6 -138Z" fill="${d}"/>
+  <circle cx="0" cy="-120" r="31" fill="${c}"/>
+  <ellipse cx="0" cy="-104" rx="17" ry="13" fill="${l}"/><ellipse cx="0" cy="-113" rx="6.5" ry="4.5" fill="#4A4552"/>
+  <path d="M-19 -134 l10 4M19 -134 l-10 4" stroke="#4A4552" stroke-width="3.5" stroke-linecap="round"/><circle cx="-11" cy="-125" r="3.4" fill="#4A4552"/><circle cx="11" cy="-125" r="3.4" fill="#4A4552"/>
+  ${o.blow?'<circle cx="0" cy="-97" r="5.5" fill="#4A4552"/><circle cx="-21" cy="-106" r="9" fill="#D88E87" opacity=".7"/><circle cx="21" cy="-106" r="9" fill="#D88E87" opacity=".7"/>':o.ouch?'<path d="M-8 -96 q8 -8 16 0" stroke="#4A4552" stroke-width="3" fill="none"/>':'<path d="M-9 -97 q9 6 18 0" stroke="#4A4552" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-5 -95 l2 5 2-5M3 -95 l2 5 2-5" fill="#FFFFFF"/>'}`}
+function house(k){let walls='',roof='',extra='';
+  if(k==='straw'){walls=`<rect x="-90" y="-128" width="180" height="128" fill="#E9C46A"/>`+Array.from({length:15},(_,i)=>`<path d="M${-84+i*12} -124 v120" stroke="#C9A44A" stroke-width="2"/>`).join('');
+    roof=`<path d="M-108 -124 L0 -210 L108 -124z" fill="#DDB24F"/>`+Array.from({length:9},(_,i)=>`<path d="M${-90+i*22} -128 L0 -204" stroke="#C9A44A" stroke-width="2"/>`).join('')}
+  if(k==='wood'){walls=`<rect x="-90" y="-128" width="180" height="128" fill="#B98A5E"/>`+Array.from({length:7},(_,i)=>`<path d="M-90 ${-110+i*18} h180" stroke="#9A6E48" stroke-width="3"/>`).join('');
+    roof=`<path d="M-108 -124 L0 -210 L108 -124z" fill="#8A6A4D"/><path d="M-108 -124 L0 -210 L108 -124" stroke="#6E5240" stroke-width="6" fill="none" stroke-linejoin="round"/>`}
+  if(k==='brick'){walls=`<rect x="-90" y="-128" width="180" height="128" fill="#C97C6E"/>`;for(let r=0;r<8;r++){walls+=`<path d="M-90 ${-128+r*16} h180" stroke="#E6CFC3" stroke-width="2"/>`;for(let c=0;c<7;c++){const x=-90+c*30+(r%2?15:0);if(x>-90&&x<90)walls+=`<path d="M${x} ${-128+r*16} v16" stroke="#E6CFC3" stroke-width="2"/>`}}
+    extra=`<rect x="40" y="-212" width="26" height="60" fill="#B0665A"/><rect x="36" y="-218" width="34" height="10" fill="#8E5A50"/>`;
+    roof=`<path d="M-108 -124 L0 -210 L108 -124z" fill="#8E5A50"/>`}
+  return `${extra}${walls}${roof}<path d="M-20 0 V-50 a20 20 0 0 1 40 0 V0z" fill="#6E5240"/><circle cx="12" cy="-26" r="3" fill="#E9C46A"/><rect x="38" y="-100" width="34" height="32" rx="4" fill="#CFE4EC" stroke="#6E5240" stroke-width="4"/>`}
+function straws(n=8){let s='';for(let i=0;i<n;i++)s+=`<rect x="${-80+i*22}" y="${-20-(i%3)*14}" width="40" height="6" rx="3" fill="#DDB24F" transform="rotate(${i*23} ${-60+i*22} ${-17-(i%3)*14})"/>`;return s}
+function rabbit(o={}){const c='#F4F0EA';return `
+  <ellipse cx="-13" cy="-5" rx="13" ry="7" fill="${c}"/><ellipse cx="13" cy="-5" rx="13" ry="7" fill="${c}"/>
+  <ellipse cx="0" cy="-38" rx="26" ry="32" fill="${c}"/><ellipse cx="0" cy="-32" rx="14" ry="20" fill="#FFFFFF"/>
+  <ellipse cx="-27" cy="-44" rx="7" ry="13" fill="${c}" transform="rotate(${o.wave?-50:20} -27 -44)"/><ellipse cx="27" cy="-44" rx="7" ry="13" fill="${c}" transform="rotate(${o.wave?50:-20} 27 -44)"/>
+  <ellipse cx="-12" cy="-128" rx="9" ry="30" fill="${c}"/><ellipse cx="-12" cy="-126" rx="4.5" ry="21" fill="#F2B9B4"/>
+  <ellipse cx="12" cy="-128" rx="9" ry="30" fill="${c}" transform="rotate(${o.ear?25:0} 12 -100)"/><ellipse cx="12" cy="-126" rx="4.5" ry="21" fill="#F2B9B4" transform="rotate(${o.ear?25:0} 12 -100)"/>
+  <circle cx="0" cy="-86" r="26" fill="${c}"/>
+  ${o.laugh?'<path d="M-15 -92 q5 -5 10 0M5 -92 q5 -5 10 0" stroke="#4A4552" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-9 -78 q9 12 18 0z" fill="#B86F68"/>':'<circle cx="-9" cy="-90" r="3.2" fill="#4A4552"/><circle cx="9" cy="-90" r="3.2" fill="#4A4552"/><path d="M-5 -77 q5 4 10 0" stroke="#B86F68" stroke-width="2.5" fill="none"/>'}
+  <ellipse cx="0" cy="-82" rx="4" ry="3" fill="#E8A09A"/><circle cx="-16" cy="-80" r="4" fill="#F2B9B4" opacity=".7"/><circle cx="16" cy="-80" r="4" fill="#F2B9B4" opacity=".7"/>`}
+function rabbitSleep(){const c='#F4F0EA';return `<ellipse cx="0" cy="-22" rx="54" ry="24" fill="${c}"/><ellipse cx="-58" cy="-30" rx="9" ry="7" fill="#FFFFFF"/>
+  <ellipse cx="62" cy="-48" rx="34" ry="11" fill="${c}" transform="rotate(-18 62 -48)"/><ellipse cx="64" cy="-44" rx="26" ry="5" fill="#F2B9B4" transform="rotate(-18 64 -44)"/>
+  <circle cx="44" cy="-34" r="24" fill="${c}"/><path d="M34 -36 q5 4 10 0M50 -36 q5 4 10 0" stroke="#4A4552" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="47" cy="-26" rx="4" ry="3" fill="#E8A09A"/>`}
+function turtle(o={}){return `
+  <ellipse cx="-34" cy="-6" rx="11" ry="8" fill="#A9C58E"/><ellipse cx="30" cy="-6" rx="11" ry="8" fill="#A9C58E"/>
+  <ellipse cx="60" cy="-30" rx="17" ry="14" fill="#A9C58E"/><circle cx="66" cy="-34" r="3.2" fill="#4A4552"/><path d="M62 -24 q6 3 10 -1" stroke="#5E8F69" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M-54 -12 Q-50 -76 0 -78 Q50 -76 54 -12Z" fill="#7FA676"/>
+  <path d="M-22 -60 l22 -12 22 12 0 22 -22 12 -22 -12z" fill="none" stroke="#5E8F69" stroke-width="3"/><path d="M-22 -38 l-22 12M22 -38 l22 12M-22 -60 l-14 -8M22 -60 l14 -8" stroke="#5E8F69" stroke-width="3"/>
+  <rect x="-58" y="-16" width="116" height="11" rx="5.5" fill="#6E9A66"/><path d="M-56 -12 l-14 4" stroke="#A9C58E" stroke-width="6" stroke-linecap="round"/>
+  ${o.medal?'<path d="M60 -44 l-6 22 h12z" fill="#6F9FC0"/><circle cx="60" cy="-16" r="9" fill="#E9C46A" stroke="#C9A44A" stroke-width="2"/>':''}`}
+function person(o){const sk='#F2C9A8',sh=o.shirt||'#6F9FC0';const reach=o.reach;return `
+  <rect x="-14" y="-44" width="11" height="44" rx="5" fill="${o.legs||'#6E6876'}"/><rect x="3" y="-44" width="11" height="44" rx="5" fill="${o.legs||'#6E6876'}"/>
+  <ellipse cx="-9" cy="-2" rx="10" ry="5" fill="#4A4552"/><ellipse cx="9" cy="-2" rx="10" ry="5" fill="#4A4552"/>
+  ${o.dress?`<path d="M-20 -96 H20 L32 -34 H-32z" fill="${sh}"/>`:`<path d="M-22 -96 H22 L24 -40 H-24z" fill="${sh}"/>`}
+  ${reach?`<rect x="0" y="-92" width="${reach}" height="12" rx="6" fill="${sh}"/><circle cx="${reach}" cy="-86" r="7" fill="${sk}"/>`:o.wave?`<rect x="18" y="-128" width="12" height="40" rx="6" fill="${sh}" transform="rotate(20 24 -92)"/><circle cx="34" cy="-128" r="7" fill="${sk}"/><rect x="-30" y="-92" width="12" height="40" rx="6" fill="${sh}" transform="rotate(10 -24 -92)"/>`:`<rect x="-30" y="-92" width="12" height="40" rx="6" fill="${sh}" transform="rotate(10 -24 -92)"/><rect x="18" y="-92" width="12" height="40" rx="6" fill="${sh}" transform="rotate(-10 24 -92)"/>`}
+  <rect x="-6" y="-104" width="12" height="10" fill="${sk}"/>
+  ${o.longhair?`<path d="M-26 -120 Q-30 -76 -18 -70 H18 Q30 -76 26 -120z" fill="${o.hair}"/>`:''}
+  <circle cx="0" cy="-122" r="24" fill="${sk}"/>
+  ${o.bald?`<path d="M-24 -124 q-4 14 4 18M24 -124 q4 14 -4 18" stroke="#E6E2DC" stroke-width="7" fill="none" stroke-linecap="round"/>`:o.hair?`<path d="M-25 -122 Q-24 -150 0 -150 Q24 -150 25 -122 Q14 -136 -2 -134 Q-16 -134 -25 -122z" fill="${o.hair}"/>`:''}
+  ${o.bun?`<circle cx="0" cy="-152" r="10" fill="${o.hair}"/>`:''}
+  ${o.tails?`<circle cx="-27" cy="-128" r="8" fill="${o.hair}"/><circle cx="27" cy="-128" r="8" fill="${o.hair}"/>`:''}
+  ${o.sleep?'<path d="M-13 -122 q4 3 8 0M5 -122 q4 3 8 0" stroke="#4A4552" stroke-width="2.6" fill="none" stroke-linecap="round"/>':o.surprise?'<circle cx="-9" cy="-124" r="4" fill="#4A4552"/><circle cx="9" cy="-124" r="4" fill="#4A4552"/><ellipse cx="0" cy="-110" rx="4" ry="5" fill="#B86F68"/>':'<circle cx="-9" cy="-124" r="3" fill="#4A4552"/><circle cx="9" cy="-124" r="3" fill="#4A4552"/><path d="M-6 -112 q6 5 12 0" stroke="#B86F68" stroke-width="2.6" fill="none" stroke-linecap="round"/>'}
+  <circle cx="-15" cy="-115" r="4" fill="#F2B9B4" opacity=".7"/><circle cx="15" cy="-115" r="4" fill="#F2B9B4" opacity=".7"/>
+  ${o.beard?'<path d="M-16 -110 Q0 -84 16 -110 Q0 -100 -16 -110z" fill="#F4F2EE"/>':''}${o.glasses?'<circle cx="-9" cy="-124" r="7" fill="none" stroke="#8E8791" stroke-width="2"/><circle cx="9" cy="-124" r="7" fill="none" stroke="#8E8791" stroke-width="2"/>':''}`}
+function animal(k,o={}){const C={dog:['#C9A97A','#A88A60'],cat:['#E9B26A','#D0964E'],mouse:['#B9B4BE','#9E98A2']}[k];const c=C[0],d=C[1];const reach=o.reach||0;
+  const ears=k==='dog'?`<ellipse cx="-24" cy="-74" rx="9" ry="18" fill="${d}" transform="rotate(20 -24 -74)"/><ellipse cx="24" cy="-74" rx="9" ry="18" fill="${d}" transform="rotate(-20 24 -74)"/>`:k==='cat'?`<path d="M-24 -86 L-22 -112 L-4 -94z M24 -86 L22 -112 L4 -94z" fill="${c}"/>`:`<circle cx="-22" cy="-96" r="15" fill="${c}"/><circle cx="22" cy="-96" r="15" fill="${c}"/><circle cx="-22" cy="-96" r="8" fill="#F2B9B4"/><circle cx="22" cy="-96" r="8" fill="#F2B9B4"/>`;
+  return `<path d="M-20 -24 Q-58 -30 ${k==='mouse'?'-64 -6':'-48 -64'}" stroke="${d}" stroke-width="${k==='mouse'?4:9}" fill="none" stroke-linecap="round"/>
+  <ellipse cx="-12" cy="-5" rx="10" ry="6" fill="${d}"/><ellipse cx="12" cy="-5" rx="10" ry="6" fill="${d}"/>
+  <ellipse cx="0" cy="-32" rx="24" ry="28" fill="${c}"/><ellipse cx="0" cy="-28" rx="12" ry="16" fill="#F7F1E6"/>
+  ${reach?`<rect x="0" y="-48" width="${reach}" height="10" rx="5" fill="${c}"/>`:''}
+  <circle cx="0" cy="-76" r="24" fill="${c}"/>${ears}
+  <ellipse cx="0" cy="-68" rx="10" ry="7" fill="#F7F1E6"/><ellipse cx="0" cy="-71" rx="4.5" ry="3.2" fill="#4A4552"/>
+  <circle cx="-9" cy="-82" r="3" fill="#4A4552"/><circle cx="9" cy="-82" r="3" fill="#4A4552"/>${k!=='dog'?'<path d="M-10 -68 h-14M-10 -64 h-12M10 -68 h14M10 -64 h12" stroke="#8E8791" stroke-width="1.5"/>':''}`}
+function turnip(){return `<path d="M0 -96 Q-36 -150 -60 -140 Q-40 -120 -8 -100z" fill="#7FA676"/><path d="M0 -96 Q10 -170 40 -168 Q30 -130 6 -98z" fill="#6E9A66"/><path d="M0 -96 Q40 -140 70 -120 Q40 -104 6 -96z" fill="#8FB283"/>
+  <path d="M0 64 Q-74 10 -62 -40 Q-50 -100 0 -100 Q50 -100 62 -40 Q74 10 0 64z" fill="#F7F1E6"/><path d="M-62 -40 Q-50 -100 0 -100 Q50 -100 62 -40 Q30 -60 0 -60 Q-30 -60 -62 -40z" fill="#C9A3CF"/><path d="M0 64 v18" stroke="#E6DCCB" stroke-width="4"/>`}
+function bear(k){const c={dad:'#A0754F',mom:'#B98A5E',baby:'#C9A07A'}[k],d='#8A6A4D',m='#E6CFAE';return `
+  <ellipse cx="-16" cy="-6" rx="13" ry="8" fill="${d}"/><ellipse cx="16" cy="-6" rx="13" ry="8" fill="${d}"/>
+  <ellipse cx="0" cy="-46" rx="38" ry="42" fill="${c}"/><ellipse cx="0" cy="-40" rx="22" ry="27" fill="${m}"/>
+  <ellipse cx="-38" cy="-54" rx="10" ry="18" fill="${c}" transform="rotate(16 -38 -54)"/><ellipse cx="38" cy="-54" rx="10" ry="18" fill="${c}" transform="rotate(-16 38 -54)"/>
+  <circle cx="-24" cy="-132" r="12" fill="${c}"/><circle cx="24" cy="-132" r="12" fill="${c}"/><circle cx="-24" cy="-132" r="6" fill="${m}"/><circle cx="24" cy="-132" r="6" fill="${m}"/>
+  <circle cx="0" cy="-108" r="31" fill="${c}"/><ellipse cx="0" cy="-98" rx="14" ry="11" fill="${m}"/><ellipse cx="0" cy="-103" rx="5.5" ry="4" fill="#4A4552"/>
+  <circle cx="-11" cy="-115" r="3.4" fill="#4A4552"/><circle cx="11" cy="-115" r="3.4" fill="#4A4552"/><path d="M-5 -93 q5 4 10 0" stroke="#4A4552" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  ${k==='dad'?'<path d="M-8 -84 l8 10 8-10 -8 -4z" fill="#6F9FC0"/>':k==='mom'?'<path d="M14 -140 l14 -8 v16z M14 -140 l-14 -8 v16z" fill="#D88E87"/><circle cx="14" cy="-140" r="4" fill="#B86F68"/>':'<path d="M-14 -80 Q0 -66 14 -80 Q0 -74 -14 -80z" fill="#F6D58A"/>'}`}
+const goldi=(o={})=>person({hair:'#E9C46A',longhair:1,dress:1,shirt:'#C9B6E4',legs:'#F2C9A8',...o});
+function bowl(s,full=true){return `<path d="M${-40*s} -${24*s} a${40*s} ${26*s} 0 0 0 ${80*s} 0z" fill="#FFFFFF" stroke="#B49A7E" stroke-width="3"/>${full?`<ellipse cx="0" cy="-${24*s}" rx="${36*s}" ry="${7*s}" fill="#F3DFAE"/>`:''}`}
+function chair(s,c){return `<rect x="${-30*s}" y="${-120*s}" width="${60*s}" height="${70*s}" rx="${8*s}" fill="${c}"/><rect x="${-36*s}" y="${-58*s}" width="${72*s}" height="${12*s}" rx="4" fill="${c}"/><rect x="${-32*s}" y="${-48*s}" width="${8*s}" height="${48*s}" fill="${c}"/><rect x="${24*s}" y="${-48*s}" width="${8*s}" height="${48*s}" fill="${c}"/>`}
+function bed(s,c){return `<rect x="${-80*s}" y="${-70*s}" width="${12*s}" height="${70*s}" rx="4" fill="#8A6A4D"/><rect x="${68*s}" y="${-50*s}" width="${12*s}" height="${50*s}" rx="4" fill="#8A6A4D"/><rect x="${-70*s}" y="${-40*s}" width="${140*s}" height="${24*s}" rx="6" fill="#FFFFFF"/><rect x="${-20*s}" y="${-46*s}" width="${90*s}" height="${30*s}" rx="8" fill="${c}"/><ellipse cx="${-48*s}" cy="${-42*s}" rx="${20*s}" ry="${9*s}" fill="#F7F1E6"/>`}
+const table=(x0,x1,y=260)=>`<rect x="${x0}" y="${y}" width="${x1-x0}" height="16" rx="6" fill="#B98A5E"/><rect x="${x0+14}" y="${y+16}" width="12" height="${GY-y-36}" fill="#9A6E48"/><rect x="${x1-26}" y="${y+16}" width="12" height="${GY-y-36}" fill="#9A6E48"/>`;
+const banner=(x,txt,c='#D88E87')=>`<rect x="${x-4}" y="190" width="8" height="${GY-180}" fill="#8E8791"/><rect x="${x+150-4}" y="190" width="8" height="${GY-180}" fill="#8E8791"/><path d="M${x} 196 H${x+150} V236 H${x}z" fill="${c}"/><text x="${x+75}" y="226" text-anchor="middle" font-size="26" font-weight="900" fill="#FFFFFF">${txt}</text>`;
+const pot=(x,y,s=1)=>P(x,y,s,`<rect x="-70" y="-90" width="140" height="90" rx="20" fill="#8E8791"/><rect x="-80" y="-96" width="160" height="16" rx="8" fill="#7A7480"/><rect x="-96" y="-80" width="20" height="10" rx="4" fill="#7A7480"/><rect x="76" y="-80" width="20" height="10" rx="4" fill="#7A7480"/>`+[-30,0,30].map((dx,i)=>`<g class="steam" style="animation-delay:${i*.6}s"><path d="M${dx} -104 q-10 -14 0 -28 q10 -14 0 -28" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/></g>`).join(''));
+
+/* ================= 故事內容 ================= */
+const PIGC=['#E9C46A','#6F9FC0','#D88E87'];
+const pullers=[
+  (x,r)=>P(x,GY,1,person({bald:1,beard:1,glasses:1,shirt:'#6F9FC0',reach:r}),'pull'),
+  (x,r)=>P(x,GY,.95,person({hair:'#C9C4CC',bun:1,dress:1,shirt:'#D88E87',legs:'#F2C9A8',reach:r}),'pull'),
+  (x,r)=>P(x,GY,.8,person({hair:'#4A4552',tails:1,dress:1,shirt:'#E9C46A',legs:'#F2C9A8',reach:r}),'pull'),
+  (x,r)=>P(x,GY,1,animal('dog',{reach:r}),'pull'),
+  (x,r)=>P(x,GY,.85,animal('cat',{reach:r}),'pull'),
+  (x,r)=>P(x,GY,.55,animal('mouse',{reach:r}),'pull')];
+const PX=[530,438,358,290,230,182],PR=[44,46,40,46,40,36];
+function chain(n,win){let s='';const tn=P(640,GY-10,1,turnip(),win?'a-pop':'a-shake');for(let i=n-1;i>=0;i--)s+=`<g class="${win?'a-tumble':'a-tug'}">${pullers[i](PX[i],PR[i])}</g>`;
+  return outdoor(flowers())+tn+`<ellipse cx="640" cy="${GY+22}" rx="100" ry="36" fill="#9A7E5E"/><ellipse cx="640" cy="${GY+8}" rx="78" ry="14" fill="#B0916E"/>`+s+(win?confetti(560,200,'1.4s'):'')}
+const STORIES=[
+ {id:'pigs',name:'三隻小豬',sub:'草房子、木頭房子、磚頭房子',cover:()=>outdoor()+P(250,GY,1.15,house('brick'))+P(470,GY,.9,pig(PIGC[0]))+P(560,GY,.9,pig(PIGC[1]))+P(650,GY,.9,pig(PIGC[2])),
+  pages:[
+  {t:'豬媽媽說:「你們長大了,去蓋自己的房子吧!」三隻小豬揮揮手,出發囉!',s:'hop',
+   d:()=>outdoor(flowers()+tree(90,GY,.9))+P(230,GY,1.3,pig('#C9B6E4',{apron:1,wave:1}),'bob')+[0,1,2].map(i=>P(420+i*120,GY,.95,pig(PIGC[i],{wave:i===1}),'a-hop',false,`--d:${i*.15}s`)).join('')},
+  {t:'豬大哥用稻草,一下子就蓋好了草房子。',s:'build',
+   d:()=>outdoor(flowers())+P(300,GY,1.3,house('straw'),'grow0')+P(560,GY,1,pig(PIGC[0],{wave:1}),'bob')+P(650,GY,.7,straws(4))},
+  {t:'豬二哥用木頭,叩叩叩,蓋好了木頭房子。',s:'build',
+   d:()=>outdoor(flowers()+tree(720,GY,.8))+P(300,GY,1.3,house('wood'),'grow0')+P(560,GY,1,pig(PIGC[1],{wave:1}),'bob')+`<g transform="translate(610 ${GY-40}) rotate(-30)"><rect x="-4" y="-50" width="8" height="50" fill="#8A6A4D"/><rect x="-16" y="-62" width="32" height="14" rx="3" fill="#8E8791"/></g>`},
+  {t:'豬小弟用磚頭,一塊一塊慢慢蓋,蓋好了好堅固的磚頭房子。',s:'build',
+   d:()=>outdoor(flowers())+P(300,GY,1.3,house('brick'),'grow0',false,'animation-duration:2.4s')+P(560,GY,1,pig(PIGC[2],{wave:1}),'bob')+[0,1,2].map(i=>`<rect x="${620+i*30}" y="${GY-22}" width="28" height="16" fill="#C97C6E" stroke="#E6CFC3" stroke-width="2"/>`).join('')},
+  {t:'大野狼來了!「呼──呼──」他把草房子吹倒了,豬大哥趕快跑去二哥家。',s:'blow',crash:1,
+   d:()=>outdoor()+P(470,GY,1.2,house('straw'),'a-fly')+P(470,GY,1.2,straws(10),'a-fly',false,'--d:.8s')+P(520,GY,.8,pig(PIGC[0]),'a-run',false,'--x:420px;--d:1s')+P(150,GY,1.2,wolf({blow:1}),'a-puff')+windL(220,GY-150,1)},
+  {t:'大野狼又「呼──呼──」把木頭房子也吹倒了,兩隻小豬趕快跑去小弟家。',s:'blow',crash:1,
+   d:()=>outdoor()+P(470,GY,1.2,house('wood'),'a-fly')+P(560,GY,.8,pig(PIGC[0]),'a-run',false,'--x:360px;--d:1s')+P(640,GY,.8,pig(PIGC[1]),'a-run',false,'--x:300px;--d:1.1s')+P(150,GY,1.2,wolf({blow:1}),'a-puff')+windL(220,GY-150,1)},
+  {t:'大野狼用力吹,「呼──呼──呼──」磚頭房子一動也不動!',s:'strong',
+   d:()=>outdoor(flowers())+P(500,GY,1.3,house('brick'))+P(150,GY,1.2,wolf({blow:1}),'a-puff')+windL(220,GY-150,1)+`<g transform="translate(150 ${GY-200})"><g class="hid a-show" style="--d:1.6s"><text x="-20" font-size="40" font-weight="900" fill="#D8584E">!?</text></g></g>`+P(700,GY,.6,pig(PIGC[2]),'bob')},
+  {t:'大野狼從煙囪爬下去,撲通!掉進熱水鍋,燙得哇哇叫,趕快逃走,再也不敢來了。',s:'ouch',
+   d:()=>outdoor()+P(400,GY,1.1,house('brick'))+P(458,GY-236,.5,wolf(),'a-drop')+P(458,GY-236,.5,wolf({ouch:1}),'hid a-away')+[0,1,2].map(i=>P(620+i*55,GY,.55,pig(PIGC[i]),'a-hop',false,`--d:${1.2+i*.15}s`)).join('')+`<g transform="translate(458 ${GY-250})"><g class="hid a-show" style="--d:.8s"><circle r="34" fill="#FFFFFF" opacity=".9"/><text x="-26" y="10" font-size="28" font-weight="900" fill="#D8584E">燙!</text></g></g>`},
+  {t:'三隻小豬開開心心地住在磚頭房子裡。做事認真,房子就很堅固喔!',s:'cheer',
+   d:()=>outdoor(flowers())+P(260,GY,1.3,house('brick'))+[0,1,2].map(i=>P(470+i*110,GY,.95,pig(PIGC[i],{wave:1}),'a-hop',false,`--d:${i*.12}s`)).join('')+confetti(580,180)}
+ ]},
+ {id:'race',name:'龜兔賽跑',sub:'慢慢來也可以贏',cover:()=>outdoor(flowers())+banner(520,'終點')+P(300,GY,1.1,rabbit())+P(460,GY,1.3,turtle()),
+  pages:[
+  {t:'兔子跑得好快,常常笑烏龜:「哈哈,你走得好慢喔!」',s:'hop',
+   d:()=>outdoor(flowers()+tree(90))+P(330,GY,1.3,rabbit({laugh:1}),'a-hop')+speech(330,GY-230,'哈哈哈')+P(560,GY,1.5,turtle())},
+  {t:'烏龜說:「那我們來比賽吧!」森林裡的動物都跑來看。',s:'cheer',
+   d:()=>outdoor(tree(700)+pine(60,GY,.8))+P(250,GY,1.1,rabbit())+P(430,GY,1.4,turtle())+speech(470,GY-150,'來比賽吧!')+P(610,GY,.7,animal('cat'),'a-hop')+P(680,GY,.55,animal('mouse'),'a-hop',false,'--d:.15s')+P(560,GY,.75,animal('dog'),'a-hop',false,'--d:.3s')},
+  {t:'預備,開始!兔子「咻」一下就跑好遠,烏龜一步一步慢慢爬。',s:'dash',
+   d:()=>outdoor(flowers())+banner(90,'起點','#7FB08A')+P(170,GY,1,rabbit({ear:1}),'a-run',false,'--x:700px;--t:1s;--d:.1s')+P(160,GY+40,1.1,turtle(),'a-crawl',false,'--x:90px;--t:3s')},
+  {t:'兔子回頭看:「烏龜還好遠,我先睡一下好了。」就在大樹下睡著了。',s:'snore',
+   d:()=>outdoor()+tree(480,GY,1.4)+P(470,GY+10,1.2,rabbitSleep(),'bob')+zz(540,GY-70)+P(80,GY+30,.6,turtle(),'a-crawl',false,'--x:70px;--t:3s')},
+  {t:'烏龜不休息,一直爬、一直爬,爬過了睡覺的兔子。',s:'crawl',
+   d:()=>outdoor(flowers())+tree(420,GY,1.4)+P(410,GY+10,1.2,rabbitSleep())+zz(480,GY-70)+P(200,GY+40,1.2,turtle(),'a-crawl',false,'--x:380px;--t:3.5s')},
+  {t:'兔子醒來趕快跑,可是烏龜已經先到終點了!',s:'cheer',
+   d:()=>outdoor()+banner(560,'終點')+P(520,GY+20,1.2,turtle(),'a-crawl',false,'--x:200px;--t:2s')+P(130,GY,1,rabbit({ear:1}),'a-run',false,'--x:300px;--t:2.4s;--d:.2s')+confetti(660,200,'1.8s')},
+  {t:'烏龜拿到金牌!慢慢來、不放棄,也可以做到喔!',s:'cheer',
+   d:()=>outdoor(flowers())+P(400,GY,1.7,turtle({medal:1}),'a-hop')+P(200,GY,1,rabbit({wave:1}),'bob')+P(600,GY,.7,animal('cat'),'a-hop',false,'--d:.1s')+P(680,GY,.55,animal('mouse'),'a-hop',false,'--d:.25s')+confetti(400,170)}
+ ]},
+ {id:'turnip',name:'拔蘿蔔',sub:'大家一起嘿喲嘿喲',cover:()=>chain(4,false),
+  pages:[
+  {t:'老爺爺種了一顆蘿蔔,蘿蔔長呀長,長得好大好大!',s:'grow',
+   d:()=>outdoor(flowers())+P(640,GY-10,1,turnip(),'a-grow')+`<ellipse cx="640" cy="${GY+22}" rx="100" ry="36" fill="#9A7E5E"/><ellipse cx="640" cy="${GY+8}" rx="78" ry="14" fill="#B0916E"/>`+P(380,GY,1.1,person({bald:1,beard:1,glasses:1,shirt:'#6F9FC0',wave:1}),'bob')},
+  {t:'老爺爺拔蘿蔔,「嘿喲嘿喲」,拔呀拔,拔不動。',s:'tug',d:()=>chain(1)},
+  {t:'老爺爺叫老奶奶來幫忙。「嘿喲嘿喲」,還是拔不動。',s:'tug',d:()=>chain(2)},
+  {t:'老奶奶叫小妹妹來幫忙。「嘿喲嘿喲」,還是拔不動。',s:'tug',d:()=>chain(3)},
+  {t:'小妹妹叫小狗來幫忙。「汪汪!嘿喲嘿喲」,還是拔不動。',s:'tug',d:()=>chain(4)},
+  {t:'小狗叫小貓來幫忙。「喵喵!嘿喲嘿喲」,還是拔不動。',s:'tug',d:()=>chain(5)},
+  {t:'小貓叫小老鼠來幫忙。大家一起「嘿喲──嘿喲──」,拔起來了!',s:'pop',d:()=>chain(6,true)},
+  {t:'大家一起煮了香香的蘿蔔湯。一起合作,力氣就變大了!',s:'cheer',
+   d:()=>outdoor(flowers())+pot(400,GY,1.2)+P(220,GY,.95,person({bald:1,beard:1,glasses:1,shirt:'#6F9FC0',wave:1}),'a-hop')+P(300,GY,.85,person({hair:'#C9C4CC',bun:1,dress:1,shirt:'#D88E87',legs:'#F2C9A8'}),'a-hop',false,'--d:.1s')+P(520,GY,.75,person({hair:'#4A4552',tails:1,dress:1,shirt:'#E9C46A',legs:'#F2C9A8',wave:1}),'a-hop',false,'--d:.2s')+P(600,GY,.8,animal('dog'),'a-hop',false,'--d:.3s')+P(670,GY,.7,animal('cat'),'a-hop',false,'--d:.4s')+P(730,GY,.45,animal('mouse'),'a-hop',false,'--d:.5s')}
+ ]},
+ {id:'bears',name:'三隻熊',sub:'金髮小女孩到熊的家',cover:()=>room()+P(220,GY,1,bear('dad'))+P(360,GY,.85,bear('mom'))+P(470,GY,.6,bear('baby'))+P(600,GY,.9,goldi()),
+  pages:[
+  {t:'森林裡住著熊爸爸、熊媽媽和熊寶寶。粥太燙了,他們先出門散步。',s:'hop',
+   d:()=>sky()+sun()+hills()+ground()+pine(70)+pine(740,GY,.9)+P(250,GY,1.1,bear('dad'),'a-hop')+P(400,GY,.9,bear('mom'),'a-hop',false,'--d:.1s')+P(520,GY,.65,bear('baby'),'a-hop',false,'--d:.2s')+P(660,GY,.9,`<rect x="-80" y="-120" width="160" height="120" fill="#B98A5E"/><path d="M-96 -116 L0 -190 L96 -116z" fill="#8A6A4D"/><path d="M-20 0 V-56 a20 20 0 0 1 40 0 V0z" fill="#6E5240"/>`)},
+  {t:'金髮小女孩走進熊的家,看到三碗粥。大碗太燙,中碗太冷,小碗剛剛好,吃光光!',s:'eat',
+   d:()=>room()+table(110,560)+P(190,260,1,bowl(1.3))+[0,1,2].map(i=>`<g transform="translate(${172+i*18} 214)"><g class="steam" style="animation-delay:${i*.5}s"><path d="M0 0 q-8 -12 0 -24 q8 -12 0 -24" stroke="#FFFFFF" stroke-width="5" fill="none" stroke-linecap="round"/></g></g>`).join('')+P(330,260,1,bowl(1))+P(450,260,1,`<g class="a-hide" style="--d:2.2s">${bowl(.75)}</g><g>${bowl(.75,false)}</g>`)+P(620,GY,1,goldi({wave:1}),'a-eat')},
+  {t:'她坐坐椅子。大椅子太硬,中椅子太軟,小椅子剛剛好……喀啦!椅子壞掉了。',s:'crack',
+   d:()=>room()+P(170,GY,1,chair(1.4,'#8A6A4D'))+P(330,GY,1,chair(1.1,'#D88E87'))+P(490,GY,1,chair(.75,'#6F9FC0'),'a-break',false,'--d:.5s')+P(500,GY-30,.85,goldi({surprise:1}),'a-sit',false,'--d:.5s')},
+  {t:'她好睏喔,爬到小床上,呼呼睡著了。',s:'snore',
+   d:()=>room()+P(160,GY,1,bed(1.3,'#6F9FC0'))+P(380,GY,1,bed(1,'#D88E87'))+P(600,GY,1,bed(.8,'#E9C46A'))+`<g transform="translate(560 ${GY-46}) rotate(-90)">${P(0,0,.55,goldi({sleep:1}))}</g>`+zz(600,GY-110)},
+  {t:'三隻熊回家了。熊爸爸說:「誰吃了我的粥?」熊寶寶說:「我的粥被吃光了!」',s:'wonder',
+   d:()=>room()+table(420,770)+P(490,260,1,bowl(1.3))+P(600,260,1,bowl(1))+P(705,260,1,bowl(.75,false))+P(110,GY,1.05,bear('dad'))+P(230,GY,.9,bear('mom'))+speech(110,GY-200,'?')+speech(230,GY-180,'?','hid a-show','.4s')+P(340,GY,.6,bear('baby'),'a-hop')+speech(340,GY-130,'我的粥!','hid a-show','.8s')},
+  {t:'熊寶寶說:「有人睡在我的床上!」小女孩醒來嚇一跳,趕快跑回家。',s:'run',
+   d:()=>room()+P(600,GY,1,bed(.8,'#E9C46A'))+P(560,GY,.7,goldi({surprise:1}),'a-run',false,'--x:-720px;--d:.6s;--t:1.4s')+P(260,GY,1,bear('dad'))+P(370,GY,.85,bear('mom'))+P(460,GY,.6,bear('baby'),'a-hop')},
+  {t:'小女孩說:「對不起!」以後去別人家,要先敲敲門、問一問喔。',s:'heart',
+   d:()=>sky()+sun()+hills()+ground()+pine(60)+P(560,GY,.9,`<rect x="-80" y="-120" width="160" height="120" fill="#B98A5E"/><path d="M-96 -116 L0 -190 L96 -116z" fill="#8A6A4D"/><path d="M-20 0 V-56 a20 20 0 0 1 40 0 V0z" fill="#6E5240"/>`)+P(280,GY,1,goldi({wave:1}),'bob')+P(460,GY,.6,bear('baby'),'a-hop')+heart(370,GY-150,1.2)+speech(280,GY-210,'對不起!')}
+ ]}
+];
+
+/* ================= 介面 ================= */
+const $=id=>document.getElementById(id);
+const stageEl=$('stage'),textEl=$('text'),recbar=$('recbar'),endo=$('endo');
+let cur=null,pi=0,played=false,autoOn=false,recMode=false,recLive=false,autoT=null;
+try{autoOn=localStorage.getItem('storyAuto')==='1'}catch(e){}
+function list(){cur=null;KV.stop();clearTimeout(autoT);$('reader').hidden=true;$('list').hidden=false;$('home').hidden=true;$('auto').hidden=true;$('title').textContent='說故事';
+  $('list').innerHTML=STORIES.map((s,i)=>`<button class="cover" type="button" data-i="${i}"><svg viewBox="0 0 800 450">${s.cover()}</svg><b>${s.name}</b><small>${s.sub} · ${s.pages.length} 頁</small></button>`).join('');
+  $('list').querySelectorAll('.cover').forEach(b=>b.onclick=()=>{A();open(+b.dataset.i)})}
+function open(i){cur=STORIES[i];pi=0;$('list').hidden=true;$('reader').hidden=false;$('home').hidden=false;$('auto').hidden=false;$('title').textContent=cur.name;paintAuto();show()}
+function show(){clearTimeout(autoT);if(recLive)stopRec(false);const pg=cur.pages[pi];played=false;
+  stageEl.querySelector('svg')?.remove();stageEl.insertAdjacentHTML('afterbegin',`<svg class="scene" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${pg.t}"><clipPath id="clp"><rect width="800" height="450" rx="24"/></clipPath><g clip-path="url(#clp)">${pg.d()}</g><g transform="translate(680 412)"><g class="hintg"><rect x="-86" y="-24" width="172" height="44" rx="22" fill="#FFFFFF" opacity=".93"/><text y="7" text-anchor="middle" font-size="22" font-weight="900" fill="#4A4552">點畫面看看</text></g></g></svg>`);
+  stageEl.querySelector('svg').onclick=act;
+  textEl.textContent=pg.t;$('pg').textContent=(pi+1)+' / '+cur.pages.length;$('prev').disabled=pi===0;$('next').textContent=pi===cur.pages.length-1?'講完了 ✓':'下一頁 ▶';
+  paintRec();read()}
+function read(){KV.say(cur.pages[pi].t,{onend:()=>{if(autoOn&&!recMode&&cur){if(!played)act();autoT=setTimeout(()=>{if(cur)next()},played?2200:1500)}}})}
+function act(){A();if(recLive)return;const sv=stageEl.querySelector('svg');sv.classList.remove('go');void sv.getBoundingClientRect();sv.classList.add('go');const s=cur.pages[pi].s;SFX[s]&&SFX[s]();if(cur.pages[pi].crash)SFX.crash();played=true}
+function next(){if(pi<cur.pages.length-1){pi++;show()}else finish()}
+function finish(){KV.stop();clearTimeout(autoT);endo.hidden=false;SFX.cheer();
+  endo.innerHTML=`<h2>${cur.name} 講完了!</h2><svg viewBox="0 0 800 450" style="width:min(80vw,420px);border-radius:20px">${cur.cover()}</svg><button class="big" id="again" type="button">再聽一次</button><button class="big alt" id="other" type="button">選別的故事</button>`;
+  $('again').onclick=()=>{endo.hidden=true;pi=0;show()};$('other').onclick=()=>{endo.hidden=true;list()};KV.say('故事講完了')}
+$('next').onclick=()=>{A();next()};
+$('prev').onclick=()=>{A();if(pi>0){pi--;show()}};
+$('home').onclick=()=>list();
+function paintAuto(){$('auto').classList.toggle('on',autoOn);$('auto').textContent=autoOn?'自動翻頁 開':'自動翻頁'}
+$('auto').onclick=()=>{autoOn=!autoOn;try{localStorage.setItem('storyAuto',autoOn?'1':'0')}catch(e){}paintAuto();if(autoOn&&cur)read()};
+
+/* ---- 大人錄音 ---- */
+$('recBtn').onclick=()=>{recMode=!recMode;$('recBtn').classList.toggle('recon',recMode);$('recBtn').textContent=recMode?'🎙 錄音中(按這裡結束)':'🎙 大人錄音';if(!recMode&&recLive)stopRec(false);
+  if(recMode&&!cur){open(0)}else paintRec();if(recMode)KV.stop()};
+let recSec=0,recTimer=null;
+async function paintRec(){recbar.hidden=!recMode||!cur;if(recbar.hidden)return;const key=cur.pages[pi].t;
+  if(!KV.rec.ok()){recbar.innerHTML='<span class="st">這台裝置的瀏覽器不能錄音,請用 Safari 或 Chrome 打開</span>';return}
+  if(recLive){recbar.innerHTML=`<button class="rb red live" id="rStop" type="button">■ 錄好了</button><span class="st">正在錄音… <b id="rSec">${recSec}</b> 秒,請唸上面那段</span><button class="rb" id="rCancel" type="button">取消</button>`;
+    $('rStop').onclick=()=>stopRec(true);$('rCancel').onclick=()=>stopRec(false);return}
+  const has=await KV.rec.has(key);if(!cur||cur.pages[pi].t!==key||recLive)return;
+  recbar.innerHTML=has?`<span class="st">✓ 這頁已經有大人的聲音</span><button class="rb" id="rPlay" type="button">▶ 聽聽看</button><button class="rb red" id="rGo" type="button">● 重錄</button><button class="rb" id="rDel" type="button">刪掉</button>`
+    :`<span class="st">這頁還沒錄,現在會用電腦的聲音</span><button class="rb red" id="rGo" type="button">● 錄這一頁</button>`;
+  $('rGo').onclick=startRec;if(has){$('rPlay').onclick=()=>KV.say(key);$('rDel').onclick=async()=>{await KV.rec.del(key);paintRec()}}}
+async function startRec(){KV.stop();try{await KV.rec.start()}catch(e){recbar.innerHTML='<span class="st">沒辦法使用麥克風。請允許這個網頁使用麥克風再試一次。</span>';setTimeout(paintRec,3500);return}
+  recLive=true;recSec=0;clearInterval(recTimer);recTimer=setInterval(()=>{recSec++;const e=$('rSec');if(e)e.textContent=recSec;if(recSec>=90)stopRec(true)},1000);paintRec()}
+async function stopRec(save){clearInterval(recTimer);const key=cur&&cur.pages[pi].t;recLive=false;
+  if(save&&key){try{await KV.rec.finish(key);SFX.heart();paintRec();setTimeout(()=>KV.say(key),300);return}catch(e){recbar.innerHTML='<span class="st">錄得太短了,再試一次</span>';setTimeout(paintRec,1800);return}}
+  KV.rec.cancel();paintRec()}
+
+list();
+document.addEventListener('visibilitychange',()=>{if(document.hidden){KV.stop();clearTimeout(autoT);if(recLive)stopRec(false)}});
+</script>
+</body>
+</html>

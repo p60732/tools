@@ -71,6 +71,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
     <button class="ctl go" id="go" type="button"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#FFFFFF"/></svg><span id="goT">出發</span></button>
   </div>
 </div>
+<script src="voice.js"></script>
 <script>
 /* ================= 聲音 ================= */
 let ac=null,out=null,motor=null,motorG=null;
@@ -89,7 +90,8 @@ function motorSet(v){try{const c=A();if(!motor){motor=c.createOscillator();motor
   motor.frequency.setTargetAtTime(48+v*22,c.currentTime,.1);motorG.gain.setTargetAtTime(v>.05?.025+v*.006:0,c.currentTime,.15)}catch(e){}}
 let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
 try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
-function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.2;speechSynthesis.speak(u)}catch(e){}}
+function talk(x){if(window.KV)return KV.say(x);talk0(x)}
+function talk0(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.2;speechSynthesis.speak(u)}catch(e){}}
 
 /* ================= 狀態 ================= */
 const $=id=>document.getElementById(id);
