@@ -163,6 +163,13 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .store svg{width:100%;height:100%}
 /* 牧場雞舍:道具放下方,點畫面走流程 */
 .tapscene{cursor:pointer}
+.herd{position:absolute;left:4%;right:4%;top:34%;height:22%;pointer-events:none}
+.herd span{position:absolute;width:15%;aspect-ratio:4/3;opacity:.92}
+.herd.hen span{width:9%;aspect-ratio:1}
+.herd svg{width:100%;height:100%}
+.big.toshop{position:absolute;right:10px;top:10px;z-index:6;font-size:17px;padding:8px 16px}
+.cntag{position:absolute;left:10px;top:10px;z-index:6;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.9);border-radius:999px;padding:2px 12px 2px 4px;font-weight:900;font-size:17px}
+.cntag svg{width:34px;height:30px}
 .tapscene .prop{bottom:3%}
 .prop.l{left:4%}.prop.r{right:4%}.prop.r2{right:calc(6% + clamp(64px,16vmin,120px))}
 .tapscene .cow{width:min(78%,calc(var(--sh,400px)*1.05));bottom:14%}
@@ -493,10 +500,10 @@ const CHICK=`<path d="M42 86v6M58 86v6M38 92h8M54 92h8" stroke="#E3A06B" stroke-
 const HEN=`<path d="M44 86v8M58 86v8M40 94h8M54 94h8" stroke="#E3A06B" stroke-width="3" stroke-linecap="round"/><path d="M72 60Q92 40 86 26Q80 40 74 46Q86 30 76 22Q74 40 68 48z" fill="#EDEAE4"/><ellipse cx="54" cy="66" rx="28" ry="22" fill="#FBFAF6"/><path d="M56 66q14-6 18 6-12 8-18-6z" fill="#EDEAE4"/><g class="headg"><path d="M26 40Q28 60 40 64L46 48z" fill="#FBFAF6"/><circle cx="32" cy="38" r="13" fill="#FBFAF6"/><path d="M24 26q2-8 6-6 2-6 6-2 4-2 4 4-2 6-8 6z" fill="#D8796E"/><circle cx="28" cy="36" r="2.6" fill="${K}"/><path d="M19 39l-8 3 8 3z" fill="#E3A06B"/><path d="M22 46q-2 6 2 8 4-2 2-8z" fill="#D8796E"/></g>`;
 
 /* ================= 存檔 ================= */
-const DEF={coins:0,inv:ZERO(),stock:ZERO(),shelf:[null,null,null,null],orders:[],seeds:{tomato:2,strawberry:2,wheat:2},seedLv:{apple:1,grape:1,cane:1},crops:{tomato:{st:0},strawberry:{st:0},apple:{st:0},grape:{st:0},wheat:{st:0},cane:{st:0}},
+const DEF={coins:0,inv:ZERO(),stock:ZERO(),shelf:[null,null,null,null],orders:[],seeds:{tomato:2,strawberry:2,wheat:2},seedLv:{apple:1,grape:1,cane:1},herd:{cow:1,hen:1},crops:{tomato:{st:0},strawberry:{st:0},apple:{st:0},grape:{st:0},wheat:{st:0},cane:{st:0}},
   cow:{grown:false,full:0,clean:false},hen:{stage:'egg',crack:0,fed:0,egg:false}};
 let G=JSON.parse(JSON.stringify(DEF));
-try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv){delete s.plots;G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.stock=Object.assign({},DEF.stock,s.stock);G.seeds=Object.assign({},DEF.seeds,s.seeds);if(!s.seedLv){G.seedLv={};for(const c of ['apple','grape','cane'])G.seedLv[c]=Math.min(3,Math.max((s.seeds&&s.seeds[c])||0,s.crops&&s.crops[c]&&s.crops[c].st>0?1:0))}else G.seedLv=Object.assign({},DEF.seedLv,s.seedLv);G.crops=Object.assign({},DEF.crops,s.crops);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen);if(!Array.isArray(G.shelf)||G.shelf.length!==4)G.shelf=[null,null,null,null]}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('farmState')||'null');if(s&&s.inv){delete s.plots;G=Object.assign(G,s);G.inv=Object.assign({},DEF.inv,s.inv);G.stock=Object.assign({},DEF.stock,s.stock);G.seeds=Object.assign({},DEF.seeds,s.seeds);G.herd=Object.assign({},DEF.herd,s.herd);if(!s.seedLv){G.seedLv={};for(const c of ['apple','grape','cane'])G.seedLv[c]=Math.min(3,Math.max((s.seeds&&s.seeds[c])||0,s.crops&&s.crops[c]&&s.crops[c].st>0?1:0))}else G.seedLv=Object.assign({},DEF.seedLv,s.seedLv);G.crops=Object.assign({},DEF.crops,s.crops);G.cow=Object.assign({},DEF.cow,s.cow);G.hen=Object.assign({},DEF.hen,s.hen);if(!Array.isArray(G.shelf)||G.shelf.length!==4)G.shelf=[null,null,null,null]}}catch(e){}
 const save=()=>{try{localStorage.setItem('farmState',JSON.stringify(G))}catch(e){}};
 
 /* ================= 共用 ================= */
@@ -520,7 +527,7 @@ let screen='map',cleanup=null;
 const AREAS=[['garden','果菜園'],['barn','牧場'],['coop','雞舍'],['work','加工坊'],['ship','出貨'],['shop','商店']];
 function go(k,arg){if(cleanup){cleanup();cleanup=null}screen=k;stage.innerHTML='';$('back').hidden=k==='map';const A=AREAS.find(a=>a[0]===k);$('title').textContent=k==='map'?'快樂農場':A?A[1]:'';
   ({map:showMap,garden:showGarden,seeds:showSeeds,plant:showPlant,barn:showBarn,coop:showCoop,work:showWork,make:showMake,ship:showShip,pack:showPack,shop:showShop})[k](arg);paint()}
-$('back').onclick=()=>{S.tap();go({plant:'garden',seeds:'garden',make:'work',pack:'ship'}[screen]||'map')};
+$('back').onclick=()=>{S.tap();go({plant:'garden',seeds:shopBack,make:'work',pack:'ship'}[screen]||'map')};
 $('basketP').onclick=()=>{S.tap();if(screen!=='ship')go('ship')};
 $('coinP').onclick=()=>{S.coin();bump($('coinP'));talk('你有 '+G.coins+' 塊錢')};
 
@@ -555,6 +562,11 @@ const STEP=['種子','發芽','小苗','長大','茂盛','開花','結果','成�
 const stepsOf=c=>CROPS[c].steps||STEP;
 const SEEDP={tomato:1,strawberry:2,apple:5,grape:5,wheat:1,cane:3};
 const PER=c=>!!CROPS[c].back;
+const ANIMALS={cow:{name:'乳牛',price:15,max:10,out:'milk',pic:()=>cowSVG(true,false),vb:'0 0 200 150'},hen:{name:'母雞',price:6,max:10,out:'egg',pic:()=>`<g transform="translate(0 -6)">${HEN}</g>`,vb:'0 0 100 100'}};
+let shopBack='garden';
+function herdRow(kind){const n=Math.max(0,(G.herd[kind]||1)-1);if(!n)return '';const A=ANIMALS[kind];
+  return `<div class="herd ${kind}">${Array.from({length:n},(_,i)=>`<span style="left:${4+((i*37)%88)}%;bottom:${(i%3)*6}%;z-index:${3-i%3}">${svg(A.pic(),A.vb)}</span>`).join('')}</div>`}
+function shopBtn(from){return `<button class="big w toshop" id="toShop2" type="button">農場商店</button>`}
 const hasSeed=c=>PER(c)?(G.seedLv[c]||0)>0:(G.seeds[c]||0)>0;
 const packet=c=>`<path d="M18 10h64v80H18z" fill="#F4EEE2"/><path d="M18 10h64v14H18z" fill="#D9BE8C"/><path d="M18 24l8-4 8 4 8-4 8 4 8-4 8 4 8-4 8 4" stroke="#C9A97A" stroke-width="2" fill="none"/><rect x="26" y="32" width="48" height="48" rx="8" fill="#E3EEDF"/>${ic(c==='wheat'?'wheat':c==='cane'?'cane':c,50,56,40)}`;
 const tLeaf=(x,y,a,s)=>`<g transform="translate(${x} ${y}) rotate(${a}) scale(${s})"><path d="M0 0H34" stroke="${GR3}" stroke-width="2.4"/>${[[9,-1],[9,1],[21,-1],[21,1]].map(([lx,sd])=>`<ellipse cx="${lx}" cy="${sd*6}" rx="6.5" ry="3.6" fill="${sd<0?GR:GR2}" transform="rotate(${sd*25} ${lx} ${sd*6})"/>`).join('')}<ellipse cx="35" cy="0" rx="7.5" ry="4.2" fill="${GR}"/></g>`;
@@ -635,19 +647,25 @@ const SUN=`<g fill="#F4DE9E">${[0,45,90,135,180,225,270,315].map(a=>`<rect x="46
 
 function showGarden(){tipEl.textContent='要種什麼呢?選一種植物,沒種子可以去種子店買';$('title').textContent='果菜園';
   const m=document.createElement('div');m.className='screen map crops';stage.appendChild(m);
-  const shop=document.createElement('button');shop.type='button';shop.className='card';shop.innerHTML=`<span class="pic">${svg(`<rect width="260" height="182" fill="#F4EEE2"/><path d="M20 70L36 36h188l16 34z" fill="#7FB08A"/><path d="M36 36l-16 34h26l14-34zM96 36l-6 34h26l4-34zM156 36l4 34h26l-6-34zM210 36l14 34h16l-16-34z" fill="#F4EEE2" opacity=".6"/><rect x="28" y="70" width="204" height="90" fill="#E6DCCB"/>${['tomato','strawberry','wheat','apple'].map((c,i)=>`<svg x="${38+i*48}" y="84" width="46" height="62" viewBox="10 4 80 92">${packet(c)}</svg>`).join('')}`,'0 0 260 182')}</span><b>種子店</b>`;
-  shop.onclick=()=>{S.tap();go('seeds')};m.appendChild(shop);
+  const shop=document.createElement('button');shop.type='button';shop.className='card';shop.innerHTML=`<span class="pic">${svg(`<rect width="260" height="182" fill="#F4EEE2"/><path d="M20 70L36 36h188l16 34z" fill="#7FB08A"/><path d="M36 36l-16 34h26l14-34zM96 36l-6 34h26l4-34zM156 36l4 34h26l-6-34zM210 36l14 34h16l-16-34z" fill="#F4EEE2" opacity=".6"/><rect x="28" y="70" width="204" height="90" fill="#E6DCCB"/>${['tomato','strawberry','wheat','apple'].map((c,i)=>`<svg x="${38+i*48}" y="84" width="46" height="62" viewBox="10 4 80 92">${packet(c)}</svg>`).join('')}`,'0 0 260 182')}</span><b>農場商店</b>`;
+  shop.onclick=()=>{S.tap();shopBack='garden';go('seeds')};m.appendChild(shop);
   Object.keys(CROPS).forEach(c=>{const P=G.crops[c],b=document.createElement('button');b.type='button';b.className='card';
     b.innerHTML=`<span class="pic">${svg(cropSVG(c,8),'-30 10 260 182')}</span><b>${CROPS[c].name}</b><span class="seedn">${svg(packet(c))}${PER(c)?(G.seedLv[c]?'產量×'+G.seedLv[c]:'還沒買'):'×'+(G.seeds[c]||0)}</span>${P.st?`<span class="dot">${P.st===8?'可以採了':stepsOf(c)[P.st-1]}</span>`:''}`;
     b.onclick=()=>{S.tap();go('plant',c)};m.appendChild(b)})}
-function showSeeds(){$('title').textContent='種子店';tipEl.textContent='用金幣買種子,點一下買一包';
+function showSeeds(){$('title').textContent='農場商店';tipEl.textContent='用金幣買種子和動物,點一下買一個';
   const m=document.createElement('div');m.className='screen map seeds';stage.appendChild(m);
+  Object.keys(ANIMALS).forEach(a=>{const A=ANIMALS[a],b=document.createElement('button');b.type='button';b.className='card spk';
+    const n=()=>G.herd[a]||0,sold=()=>n()>=A.max;
+    const paint1=()=>{b.classList.toggle('soldout',sold());b.innerHTML=`<span class="pk">${svg(A.pic(),A.vb)}</span><b>${A.name}<small>多一隻,${NAME[A.out]}多一份</small></b>${sold()?'<span class="price so">售罄</span>':`<span class="price">${svg(COIN,'0 0 30 30')}${A.price}</span>`}<span class="dot">有 ${n()} 隻</span>`};paint1();
+    b.onclick=()=>{ac();if(sold()){S.no();talk(A.name+'已經有十隻,買滿了');tipEl.textContent=A.name+'已經買滿了(最多十隻)';return}
+      if(G.coins<A.price){S.no();talk('金幣不夠,去賣東西賺錢吧');tipEl.textContent='金幣不夠,去商店賣東西賺錢吧';b.classList.remove('wg');void b.offsetWidth;b.classList.add('wg');return}
+      G.coins-=A.price;G.herd[a]=n()+1;save();paint();S.coin();fly(COIN,$('coinP').getBoundingClientRect(),b,()=>{paint1();a==='cow'?S.moo():S.cluck();talk('買了一隻'+A.name+',現在有 '+n()+' 隻')},40)};m.appendChild(b)});
   Object.keys(CROPS).forEach(c=>{const b=document.createElement('button');b.type='button';b.className='card spk';
     const lv=()=>G.seedLv[c]||0,sold=()=>PER(c)&&lv()>=3;
     const paint1=()=>{b.classList.toggle('soldout',sold());b.innerHTML=`<span class="pk">${svg(packet(c))}</span><b>${CROPS[c].name}${PER(c)?'<small>種一次會一直長,多買一包產量變多</small>':''}</b>${sold()?'<span class="price so">售罄</span>':`<span class="price">${svg(COIN,'0 0 30 30')}${SEEDP[c]}</span>`}<span class="dot">${PER(c)?(lv()?'產量 ×'+lv():'還沒買'):'有 '+(G.seeds[c]||0)+' 包'}</span>`};paint1();
     b.onclick=()=>{ac();if(sold()){S.no();talk(CROPS[c].name+'已經買滿三包了');tipEl.textContent=CROPS[c].name+'已經買滿了(最多三包)';return}if(G.coins<SEEDP[c]){S.no();talk('金幣不夠,去賣東西賺錢吧');tipEl.textContent='金幣不夠,去商店賣東西賺錢吧';b.classList.remove('wg');void b.offsetWidth;b.classList.add('wg');return}
-      G.coins-=SEEDP[c];save();paint();S.coin();const pr=$('coinP').getBoundingClientRect();
-      fly(COIN,pr,b,()=>{if(PER(c)){G.seedLv[c]=lv()+1;talk(lv()===1?'買了'+CROPS[c].name+',種一次就會一直長':CROPS[c].name+'產量變成 '+lv()+' 倍')}else{G.seeds[c]=(G.seeds[c]||0)+1;talk('買了一包'+CROPS[c].name+'種子')}save();paint1();S.ding()},40)};m.appendChild(b)})}
+      G.coins-=SEEDP[c];if(PER(c))G.seedLv[c]=lv()+1;else G.seeds[c]=(G.seeds[c]||0)+1;save();paint();S.coin();const pr=$('coinP').getBoundingClientRect();
+      fly(COIN,pr,b,()=>{if(PER(c)){talk(lv()===1?'買了'+CROPS[c].name+',種一次就會一直長':CROPS[c].name+'產量變成 '+lv()+' 倍')}else{talk('買了一包'+CROPS[c].name+'種子')}paint1();S.ding()},40)};m.appendChild(b)})}
 function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.name;
   if(P.st===8&&(!Array.isArray(P.left)||!P.left.length))P.left=C.pos.map((_,k)=>k);save();
   const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
@@ -667,7 +685,7 @@ function showPlant(c){const C=CROPS[c],P=G.crops[c];$('title').textContent=C.nam
   function act(e){ac();if(busy)return;const st=P.st;
     if(st===8)return pick(e);
     busy=true;const base=pt(100,166),top=pt(100,st>=5?60:st>=4?100:140);
-    if(st===0&&!hasSeed(c)){busy=false;S.no();talk('沒有種子了,去種子店買');tipEl.textContent='沒有'+C.name+'種子了!';if(!$('toSeeds')){const t=document.createElement('button');t.type='button';t.id='toSeeds';t.className='big w gotoseed';t.textContent='去種子店買種子';t.onclick=ev=>{ev.stopPropagation();S.tap();go('seeds')};t.addEventListener('pointerdown',ev=>ev.stopPropagation());gs.appendChild(t)}return}
+    if(st===0&&!hasSeed(c)){busy=false;S.no();talk('沒有種子了,去農場商店買');tipEl.textContent='沒有'+C.name+'種子了!';if(!$('toSeeds')){const t=document.createElement('button');t.type='button';t.id='toSeeds';t.className='big w gotoseed';t.textContent='去農場商店買種子';t.onclick=ev=>{ev.stopPropagation();S.tap();shopBack='garden';go('seeds')};t.addEventListener('pointerdown',ev=>ev.stopPropagation());gs.appendChild(t)}return}
     if(st===0){if(!PER(c))G.seeds[c]--;save();moveTo($('bag'),base.x+30,base.y-70,-70,1300);S.plant();particles('seedf',base.x-14,base.x+10,base.y-50,9,450,50);tm.push(setTimeout(()=>{busy=false;advance(SAY[1])},1250))}
     else if(st<=5){moveTo($('can'),top.x+70,top.y-40,-38,1500);S.water();particles('drop',top.x-30,top.x+30,top.y-20,18,500,35);tm.push(setTimeout(()=>{busy=false;advance(SAY[st+1])},1450))}
     else if(st===6&&C.a6==='wind'){pl.classList.add('windy');S.wind();const g=gs.getBoundingClientRect();for(let j=0;j<10;j++)tm.push(setTimeout(()=>{const w=document.createElement('div');w.className='gust';w.style.top=(g.height*(.15+Math.random()*.4))+'px';gs.appendChild(w);setTimeout(()=>w.remove(),1000)},j*120));tm.push(setTimeout(()=>{pl.classList.remove('windy');busy=false;advance(SAY[7])},1700))}
@@ -690,7 +708,7 @@ function propMove(el,host,x,y,rot,dur,hold=.8){const r=el.getBoundingClientRect(
   return el.animate([{transform:'none'},{transform:`translate(${dx}px,${dy}px)`,offset:.3},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:.45},{transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,offset:hold},{transform:'none'}],{duration:dur,easing:'ease-in-out'})}
 function stepChips(el,names,idx){el.innerHTML=names.map((n,i)=>`<span class="${i<idx?'done':i===idx?'now':''}">${n}</span>`).join('')}
 function showBarn(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
-  sc.innerHTML=`<div class="steps" id="csteps"></div><div class="scene tapscene" id="scene">${FENCE}<div class="hero cow" id="cow"></div>
+  sc.innerHTML=`<div class="steps" id="csteps"></div><div class="scene tapscene" id="scene">${FENCE}${herdRow('cow')}${shopBtn()}<div class="cntag">${svg(cowSVG(true,false),'0 0 200 150')}×${G.herd.cow}</div><div class="hero cow" id="cow"></div>
     <div class="prop l" id="pGrass">${svg(GRASS)}</div><div class="prop r" id="pSponge">${svg(SPONGE)}</div><div class="prop r2" id="pPail">${svg(PAIL)}</div></div>`;
   const C=G.cow,cowEl=$('cow'),scene=$('scene'),tm=[];let busy=false;
   const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
@@ -720,13 +738,14 @@ function showBarn(){const sc=document.createElement('div');sc.className='screen'
     for(let j=0;j<6;j++)tm.push(setTimeout(()=>{S.squirt();n++;for(let q=0;q<3;q++){const m=document.createElement('div');m.className='milkd';const x=u.x+(q-1)*8,y=u.y;m.style.left=x+'px';m.style.top=y+'px';scene.appendChild(m);
         m.animate([{transform:'translate(0,0)'},{transform:`translate(0,${26}px)`,opacity:.4}],{duration:260,delay:q*60,easing:'ease-in'}).onfinish=()=>m.remove()}
       pail.innerHTML=svg(`<clipPath id="pk2"><path d="M22 34h56l-8 56H30z"/></clipPath><path d="M22 34h56l-8 56H30z" fill="#B9BEC5"/><rect clip-path="url(#pk2)" x="0" y="${90-n*9}" width="100" height="60" fill="#FFFFFF"/><path d="M22 34Q50 -4 78 34" stroke="#8E8791" stroke-width="4" fill="none"/><ellipse cx="50" cy="34" rx="28" ry="6" fill="none" stroke="#8E8791" stroke-width="3"/>`)},1100+j*260));
-    tm.push(setTimeout(()=>{const br=pail.getBoundingClientRect();pail.innerHTML=svg(PAIL);C.full=0;C.clean=false;save();draw();S.moo();talk('擠好牛奶了');toBasket('milk',br);busy=false},3500))}
-  scene.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(busy)return;busy=true;({feed,wash,grow,milk})[need()]()});
+    tm.push(setTimeout(()=>{const br=pail.getBoundingClientRect();pail.innerHTML=svg(PAIL);C.full=0;C.clean=false;save();draw();S.moo();const nm=G.herd.cow||1;talk(nm>1?nm+'隻乳牛,擠到 '+nm+' 瓶牛奶':'擠好牛奶了');toBasket('milk',br,nm);busy=false},3500))}
+  scene.addEventListener('pointerdown',e=>{if(e.target.closest('.toshop'))return;e.preventDefault();ac();if(busy)return;busy=true;({feed,wash,grow,milk})[need()]()});
+  $('toShop2').onclick=()=>{S.tap();shopBack='barn';go('seeds')};
   cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)}}
 
 /* ================= 雞舍(單一點擊) ================= */
 function showCoop(){const sc=document.createElement('div');sc.className='screen';stage.appendChild(sc);
-  sc.innerHTML=`<div class="steps" id="hsteps"></div><div class="scene tapscene" id="scene"><div class="hero bird" id="bird"></div><div class="prop l" id="pFeed">${svg(FEEDBAG)}</div></div>`;
+  sc.innerHTML=`<div class="steps" id="hsteps"></div><div class="scene tapscene" id="scene">${herdRow('hen')}${shopBtn()}<div class="cntag">${svg(`<g transform="translate(0 -6)">${HEN}</g>`)}×${G.herd.hen}</div><div class="hero bird" id="bird"></div><div class="prop l" id="pFeed">${svg(FEEDBAG)}</div></div>`;
   const H=G.hen,bird=$('bird'),scene=$('scene'),tm=[];let busy=false,eggEl=null;
   const fitSize=()=>scene.style.setProperty('--sh',scene.clientHeight+'px');fitSize();const ro=new ResizeObserver(fitSize);ro.observe(scene);
   function draw(){bird.innerHTML=svg(H.stage==='egg'?eggSVG(H.crack):H.stage==='chick'?CHICK:NEST+`<g transform="translate(0 -6)">${HEN}</g>`);$('pFeed').hidden=H.stage==='egg';
@@ -747,10 +766,11 @@ function showCoop(){const sc=document.createElement('div');sc.className='screen'
     tm.push(setTimeout(()=>{const s=bird.querySelector('svg');s&&s.classList.remove('peck');
       if(H.stage==='chick'){H.fed++;save();draw();if(H.fed>=3){anim('growup');S.grow();tm.push(setTimeout(()=>{H.stage='hen';H.fed=0;save();draw();S.cluck();talk('小雞長大變母雞了');const c2=center();sparkAt(scene,c2.x,c2.y,6);busy=false},600))}else{talk('好好吃');busy=false}}
       else{H.egg=true;save();layEgg();busy=false}},2400))}
-  function collect(){const r=eggEl.getBoundingClientRect();eggEl.remove();eggEl=null;H.egg=false;save();draw();toBasket('egg',r);talk('撿到一顆蛋');tm.push(setTimeout(()=>busy=false,500))}
+  function collect(){const r=eggEl.getBoundingClientRect();eggEl.remove();eggEl=null;H.egg=false;save();draw();const ne=G.herd.hen||1;toBasket('egg',r,ne);talk(ne>1?ne+'隻母雞,撿到 '+ne+' 顆蛋':'撿到一顆蛋');tm.push(setTimeout(()=>busy=false,500))}
   function layEgg(quiet){const c=center();eggEl=document.createElement('div');eggEl.className='egg-drop';eggEl.innerHTML=svg(ICON.egg);eggEl.style.left=(c.x+c.r.width*.3)+'px';scene.appendChild(eggEl);eggEl.style.top=Math.min(c.r.bottom-c.sr.top-c.r.height*.12,c.sr.height-eggEl.offsetHeight/2-8)+'px';
     if(!quiet){S.cluck();setTimeout(()=>S.pick(),300);talk('咕咕,生蛋了')}draw()}
-  scene.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(busy)return;busy=true;
+  $('toShop2').onclick=()=>{S.tap();shopBack='coop';go('seeds')};
+  scene.addEventListener('pointerdown',e=>{if(e.target.closest('.toshop'))return;e.preventDefault();ac();if(busy)return;busy=true;
     if(H.stage==='egg')warm();else if(H.stage==='hen'&&eggEl)collect();else feed()});
   cleanup=()=>{ro.disconnect();tm.forEach(clearTimeout)}}
 
