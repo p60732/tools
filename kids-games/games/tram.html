@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>天空電車</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
+<style>
+/* 天空電車:海邊高架雙管軌道上的小膠囊電車。兩種視角:駕駛座第一人稱、45 度俯視。按住前進/煞車,到站停好開門讓乘客上下車。 */
+:root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--ok:#7FB08A;--ok-d:#5E8F69;--red:#D88E87;--mute:#6E6876;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(44px + env(safe-area-inset-bottom,0px));max-width:1300px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(20px,5vw,28px);font-weight:900;white-space:nowrap}
+.pill{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;background:var(--white);border-radius:999px;padding:7px 14px;font-weight:900;font-size:17px;box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.pill svg{width:24px;height:24px}
+.pill:active,.ctl:active{transform:translateY(2px)}
+.right{margin-left:auto;display:flex;gap:8px}
+.route{flex:none;display:flex;align-items:center;gap:0;padding:0 6px}
+.route .st{display:flex;flex-direction:column;align-items:center;font-weight:900;font-size:13px;color:var(--mute);flex:none;width:64px}
+.route .st i{width:18px;height:18px;border-radius:50%;background:var(--white);border:4px solid #C9C2B6;box-sizing:border-box}
+.route .st.done i{background:var(--ok);border-color:var(--ok-d)}
+.route .seg{flex:1;height:6px;border-radius:3px;background:#D9D2C6;position:relative;margin:0 -22px 18px}
+.route .seg b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--ok)}
+.route .car{position:absolute;top:-11px;width:28px;height:20px;margin-left:-14px;border-radius:6px;transition:left .2s linear;box-shadow:0 2px 0 rgba(74,69,82,.2)}
+.tip{text-align:center;font-weight:900;font-size:clamp(15px,4vw,19px);color:var(--mute);min-height:1.3em}
+.stage{flex:1;min-height:0;position:relative;border-radius:24px;overflow:hidden;background:#DCEBF0}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ctrls{flex:none;display:flex;gap:12px;justify-content:center;align-items:stretch}
+.ctl{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:24px;font-weight:900;font-size:clamp(17px,4.5vw,22px);color:var(--white);min-height:clamp(74px,12vh,104px);touch-action:none}
+.ctl svg{width:38px;height:38px}
+.ctl.brake{background:#C97C76;box-shadow:0 6px 0 #A9625D;flex:1;max-width:230px}
+.ctl.go{background:var(--ok);box-shadow:0 6px 0 var(--ok-d);flex:1.4;max-width:320px}
+.ctl.door{background:#E9C46A;box-shadow:0 6px 0 #C9A44A;color:var(--ink);flex:1;max-width:200px}
+.ctl[disabled]{opacity:.35}
+.ctl.held{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.ctl.door.glow{animation:glow 1s ease-in-out infinite}
+@keyframes glow{50%{transform:scale(1.06)}}
+.over{position:absolute;inset:0;z-index:5;background:rgba(239,230,216,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:16px;overflow-y:auto}
+.over h2{margin:0;font-size:clamp(26px,7vw,40px);font-weight:900}
+.over p{margin:0;font-weight:700;color:var(--mute);font-size:17px}
+.cars{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.pick{all:unset;cursor:pointer;width:clamp(96px,22vw,140px);aspect-ratio:3/4;border-radius:20px;background:var(--white);box-shadow:0 5px 0 rgba(74,69,82,.14);display:grid;place-items:center}
+.pick svg{width:80%;height:80%}
+.pick:active{transform:translateY(3px)}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:22px;padding:12px 28px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+@media (orientation:landscape) and (max-height:520px){.ctl{min-height:64px}.route .st{font-size:12px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>天空電車</h1>
+    <div class="right">
+      <button class="pill" id="bell" type="button" aria-label="按鈴"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z" fill="#E9C46A"/><circle cx="12" cy="19" r="2.4" fill="#C9A44A"/></svg>噹噹</button>
+      <button class="pill" id="view" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" fill="#A9CFDC"/><circle cx="12" cy="12" r="3.5" fill="#FFFFFF"/></svg><span id="viewT">換成俯視</span></button>
+    </div>
+  </header>
+  <div class="route" id="route"></div>
+  <div class="tip" id="tip"></div>
+  <div class="stage" id="stage"><canvas id="cv"></canvas><div class="over" id="over"></div></div>
+  <div class="ctrls">
+    <button class="ctl brake" id="brake" type="button"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="4" fill="#FFFFFF"/></svg>煞車</button>
+    <button class="ctl door" id="door" type="button" disabled><svg viewBox="0 0 24 24"><rect x="4" y="3" width="7" height="18" rx="1.5" fill="#FFFFFF"/><rect x="13" y="3" width="7" height="18" rx="1.5" fill="#FFFFFF"/><path d="M9 12h-3M15 12h3" stroke="#C9A44A" stroke-width="2"/></svg>開門</button>
+    <button class="ctl go" id="go" type="button"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#FFFFFF"/></svg>按住前進</button>
+  </div>
+</div>
+<script>
+/* ================= 聲音 ================= */
+let ac=null,out=null,motor=null,motorG=null;
+function A(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=.7;out.connect(ac.destination)}if(ac.state==='suspended')ac.resume();return ac}
+function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=A(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.03)}catch(e){}}
+const T=()=>A().currentTime;
+const S={
+  bell(){const t=T();[0,.28].forEach(d=>{tone(1320,t+d,.5,{v:.12});tone(1980,t+d,.35,{v:.05})})},
+  chime(){const t=T();[76,72,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.22,.5,{type:'triangle',v:.1}))},
+  door(){const t=T();tone(300,t,.5,{type:'triangle',v:.06,to:200})},
+  win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.13,.6,{type:'triangle',v:.11}))},
+  tap(){tone(520,T(),.08,{type:'triangle',v:.1})},
+  far(){const t=T();tone(660,t,.25,{v:.05});tone(880,t+.3,.35,{v:.05})}
+};
+function motorSet(v){try{const c=A();if(!motor){motor=c.createOscillator();motor.type='sawtooth';const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=380;motorG=c.createGain();motorG.gain.value=0;motor.connect(f).connect(motorG).connect(out);motor.start()}
+  motor.frequency.setTargetAtTime(48+v*22,c.currentTime,.1);motorG.gain.setTargetAtTime(v>.05?.025+v*.006:0,c.currentTime,.15)}catch(e){}}
+function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';u.rate=1;u.pitch=1.2;speechSynthesis.speak(u)}catch(e){}}
+
+/* ================= 狀態 ================= */
+const $=id=>document.getElementById(id);
+const cv=$('cv'),g=cv.getContext('2d'),stage=$('stage'),tipEl=$('tip'),over=$('over');
+const COLORS={blue:['#3E73C8','藍色'],red:['#D8584E','紅色'],green:['#6DBA6A','綠色'],yellow:['#E9B949','黃色']};
+const STATIONS=[['尾浦站',0],['海景站',420],['青沙浦站',860]];
+const SPEEDMAX=5.2;
+let W=0,H=0,dpr=1,view='fp',color='blue',s=0,v=0,goHeld=false,brakeHeld=false,phase='pick',next=1,doorOpen=0,doorT=0,pax=0,backTo=null,lastT=0,riders=[];
+let oncoming=[],beach=null,ambT=8,ambT2=14,helpSaid=false;
+function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;g.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',fit);
+// 路線:彎道與起伏(公尺)
+const curveAt=x=>.0016*Math.sin(x/170)+.0009*Math.sin(x/61+1);
+const rnd=i=>{const t=Math.sin(i*127.1+311.7)*43758.5453;return t-Math.floor(t)};
+
+/* ================= 第一人稱畫面 ================= */
+function drawFP(){const y0=H*.34,f=Math.min(W,H*1.3)*.9,eye=1.7,k=curveAt(s+30);
+  const off=z=>.5*k*z*z;
+  const P=(z,x,h)=>[W/2+(x-off(z))*f/z,y0+(eye-h)*f/z];
+  // 天空
+  let gr=g.createLinearGradient(0,0,0,y0);gr.addColorStop(0,'#BFD9E6');gr.addColorStop(1,'#E8F1F2');g.fillStyle=gr;g.fillRect(0,0,W,y0+1);
+  // 遠方海面(右)與山丘(左)
+  const hs=(s*.15)%W;
+  g.fillStyle='#8FB8C8';g.fillRect(W*.45,y0-2,W*.6,H);
+  g.fillStyle='#7FA676';g.beginPath();g.moveTo(-10,y0+4);for(let x=-10;x<=W*.55;x+=12){const t=(x+hs)/W*6.28;g.lineTo(x,y0-H*.10-Math.sin(t)*H*.035-Math.sin(t*2.7)*H*.015-(1-x/(W*.55))*H*.12)}g.lineTo(W*.55,y0+4);g.fill();
+  // 地面:左邊綠地,右邊海、岩石、海岸鐵道
+  const G=-6.5;g.fillStyle='#9DBE8A';g.fillRect(0,y0,W,H);
+  const coast=[],rail=[];for(let i=0;i<=40;i++){const z=1.2+Math.pow(i/40,2)*160;coast.push(P(z,11,G));rail.push([P(z,7.2,G),P(z,9.4,G)])}
+  g.fillStyle='#8FB8C8';g.beginPath();g.moveTo(W+50,y0);coast.slice().reverse().forEach(([x,y])=>g.lineTo(x,y));g.lineTo(W+50,H+50);g.closePath();g.fill();
+  g.fillStyle='#B49A7E';g.beginPath();rail.forEach(([a])=>g.lineTo(a[0],a[1]));rail.slice().reverse().forEach(([,b])=>g.lineTo(b[0],b[1]));g.fill();
+  // 海浪亮點
+  g.fillStyle='rgba(255,255,255,.55)';for(let i=0;i<14;i++){const z=6+((i*13.7+s*.0)%140),[x,y]=P(z,14+rnd(i)*20,G);g.fillRect(x,y,Math.max(2,30/z*4),Math.max(1,6/z*2))}
+  // 樹(左側)
+  const trees=[];const s0=Math.floor(s/7)*7;for(let ts=s0+150;ts>=s0;ts-=7){const i=Math.round(ts/7),z=ts-s;if(z<7)continue;trees.push([z,-9-rnd(i)*9,i])}
+  // 由遠到近畫:結構、樹、車站、對向車
+  const STEP=2,FAR=150;
+  const items=[];
+  trees.forEach(t=>items.push({z:t[0],fn:()=>tree(P,t[0],t[1],t[2],G)}));
+  STATIONS.forEach(([name,sp])=>{const z=sp-s;if(z>-12&&z<FAR)items.push({z:z+8,fn:()=>station(P,sp,name)})});
+  oncoming.forEach(o=>{const z=o.s-s;if(z>1.5&&z<FAR)items.push({z,fn:()=>capsuleFront(P,z,3.35,o.c,f)})});
+  for(let z=FAR;z>1;z-=STEP){const z2=Math.max(1,z-STEP);
+    items.push({z:z+.01,fn:()=>{
+      // 柱子
+      const si=Math.floor((s+z2)/15),sp=si*15;if(sp-s>=z2&&sp-s<z){const zz=sp-s;quad(P(zz,1.4,-.4),P(zz,2.1,-.4),P(zz,2.1,G),P(zz,1.4,G),'#B9BEC5')}
+      // 橫樑
+      const bi=Math.floor((s+z2)/3.2)*3.2;if(bi-s>=z2&&bi-s<z){const zz=bi-s;quad(P(zz,-1.2,-.15),P(zz,4.6,-.15),P(zz,4.6,-.42),P(zz,-1.2,-.42),'#C9CED4')}
+      // 走道
+      quad(P(z,1.15,.02),P(z,2.25,.02),P(z2,2.25,.02),P(z2,1.15,.02),'#D6D9DD');
+      // 本線:兩根白色大管 + 內側導軌
+      pipe(P,z,z2,-.78,.2);pipe(P,z,z2,.78,.2);
+      quad(P(z,-.36,.08),P(z,-.3,.08),P(z2,-.3,.08),P(z2,-.36,.08),'#A6AEB6');quad(P(z,.3,.08),P(z,.36,.08),P(z2,.36,.08),P(z2,.3,.08),'#A6AEB6');
+      // 對向線
+      pipe(P,z,z2,2.6,.2);pipe(P,z,z2,4.1,.2);
+      quad(P(z,3.0,.08),P(z,3.06,.08),P(z2,3.06,.08),P(z2,3.0,.08),'#A6AEB6');quad(P(z,3.64,.08),P(z,3.7,.08),P(z2,3.7,.08),P(z2,3.64,.08),'#A6AEB6');
+    }})}
+  // 海岸鐵道上的海灘列車
+  if(beach){const z=beach.s-s;for(let c=0;c<3;c++){const zc=z+c*13;if(zc>2&&zc<FAR)items.push({z:zc,fn:()=>beachCar(P,zc,G)})}}
+  items.sort((a,b)=>b.z-a.z).forEach(it=>it.fn());
+  cab(f)}
+function quad(a,b,c,d,col){g.fillStyle=col;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.lineTo(c[0],c[1]);g.lineTo(d[0],d[1]);g.closePath();g.fill()}
+function pipe(P,z,z2,x,r){quad(P(z,x-r,.2),P(z,x+r,.2),P(z2,x+r,.2),P(z2,x-r,.2),'#F4F6F7');quad(P(z,x-r,.02),P(z,x-r*.2,.2),P(z2,x-r*.2,.2),P(z2,x-r,.02),'#E3E7EA')}
+function tree(P,z,x,i,G){const [bx,by]=P(z,x,G),[,ty]=P(z,x,G+7+rnd(i+3)*4),w=Math.max(2,(by-ty)*.55);
+  g.fillStyle='#8A6A4D';g.fillRect(bx-w*.06,ty+(by-ty)*.5,w*.12,(by-ty)*.5);
+  for(let l=0;l<3;l++){const yy=ty+(by-ty)*(.12+l*.2),ww=w*(.55+l*.25);g.fillStyle=l%2?'#5E8F69':'#6E9A66';g.beginPath();g.ellipse(bx,yy,ww,(by-ty)*.12,0,0,7);g.fill()}}
+function station(P,sp,name){const z1=Math.max(1.2,sp-8-s),z2=sp+8-s;if(z2<1.2)return;
+  quad(P(z2,-1.25,.1),P(z2,-4.2,.1),P(z1,-4.2,.1),P(z1,-1.25,.1),'#E6DCCB');
+  quad(P(z2,-1.25,.1),P(z1,-1.25,.1),P(z1,-1.25,-.5),P(z2,-1.25,-.5),'#C9A97A');
+  // 黃線
+  quad(P(z2,-1.5,.11),P(z2,-1.65,.11),P(z1,-1.65,.11),P(z1,-1.5,.11),'#E9C46A');
+  // 柱子與屋頂
+  [sp-7,sp,sp+7].forEach(ps=>{const z=ps-s;if(z>1.2){const a=P(z,-3.9,.1),b=P(z,-3.9,3.4),w=Math.max(1,6/z*3);g.fillStyle='#A6AEB6';g.fillRect(a[0]-w/2,b[1],w,a[1]-b[1])}});
+  quad(P(z2,-1.4,3.4),P(z2,-4.4,3.6),P(z1,-4.4,3.6),P(z1,-1.4,3.4),'#7FB08A');
+  // 站名牌
+  const zs=sp-6-s;if(zs>1.5){const a=P(zs,-2.6,2.9),b=P(zs,-2.6,2.2),h=b[1]-a[1],w=h*3.2;g.fillStyle='#FFFFFF';g.fillRect(a[0]-w/2,a[1],w,h);g.strokeStyle='#4A4552';g.lineWidth=Math.max(1,h*.08);g.strokeRect(a[0]-w/2,a[1],w,h);
+    if(h>9){g.fillStyle='#4A4552';g.font=`900 ${h*.62}px ${getComputedStyle(document.body).fontFamily}`;g.textAlign='center';g.textBaseline='middle';g.fillText(name,a[0],a[1]+h/2)}}
+  // 等車的人
+  for(let i=0;i<4;i++){const z=sp-4+i*2.6-s;if(z>1.5&&!(phase==='atStation'&&doorOpen>.5&&next>0&&STATIONS[next-1]&&STATIONS[next-1][1]===sp)){person(P,z,-2.4-(i%2)*.8,i)}}}
+function person(P,z,x,i){const a=P(z,x,.1),b=P(z,x,1.6),h=a[1]-b[1];const cols=['#D88E87','#A9CFDC','#E9C46A','#9DCB9A'];
+  g.fillStyle=cols[i%4];g.beginPath();g.roundRect?g.roundRect(a[0]-h*.18,b[1]+h*.28,h*.36,h*.72,h*.12):g.rect(a[0]-h*.18,b[1]+h*.28,h*.36,h*.72);g.fill();
+  g.fillStyle='#F2C9A8';g.beginPath();g.arc(a[0],b[1]+h*.16,h*.15,0,7);g.fill()}
+function capsuleFront(P,z,x,col,f){const a=P(z,x-.95,.3),b=P(z,x+.95,3.1),w=b[0]-a[0],h=a[1]-b[1];
+  g.fillStyle=col;g.fillRect(a[0],b[1],w,h);g.fillStyle='#FFFFFF';g.fillRect(a[0],b[1]+h*.22,w,h*.42);g.fillRect(a[0],b[1]+h*.05,w,h*.06);
+  g.fillStyle='#55505C';g.fillRect(a[0]+w*.18,b[1]+h*.27,w*.64,h*.32);g.fillStyle=col;g.fillRect(a[0]+w*.2,b[1]-h*.1,w*.6,h*.12);
+  g.fillStyle='#FFFFFF';g.beginPath();g.arc(a[0]+w/2,b[1]+h*.8,Math.max(1,w*.11),0,7);g.fill()}
+function beachCar(P,z,G){const a=P(z,7.5,G+.4),b=P(z,9.1,G+3.4),w=b[0]-a[0],h=a[1]-b[1];g.fillStyle='#3E73C8';g.fillRect(a[0],b[1],w,h);g.fillStyle='#DCEBF0';g.fillRect(a[0]+w*.1,b[1]+h*.2,w*.8,h*.3);g.fillStyle='#55505C';g.fillRect(a[0],b[1]-h*.06,w,h*.1)}
+// 駕駛艙框
+function cab(f){const c=COLORS[color][0],t=Math.max(10,W*.035),db=H*.2;
+  g.fillStyle=c;g.fillRect(0,0,W,t*1.2);g.fillRect(0,0,t,H);g.fillRect(W-t,0,t,H);
+  g.fillStyle='rgba(255,255,255,.12)';g.beginPath();g.moveTo(W*.62,t*1.2);g.lineTo(W*.7,t*1.2);g.lineTo(W*.52,H-db);g.lineTo(W*.46,H-db);g.fill();
+  // 儀表板
+  g.fillStyle='#55505C';g.fillRect(0,H-db,W,db);g.fillStyle=c;g.fillRect(0,H-db,W,db*.14);
+  const cx=W*.5,cy=H-db*.38,r=Math.min(db*.48,W*.12);g.fillStyle='#F4EEE2';g.beginPath();g.arc(cx,cy,r,Math.PI,0);g.fill();
+  for(let i=0;i<=5;i++){const a=Math.PI+i/5*Math.PI;g.strokeStyle='#8E8791';g.lineWidth=2;g.beginPath();g.moveTo(cx+Math.cos(a)*r*.78,cy+Math.sin(a)*r*.78);g.lineTo(cx+Math.cos(a)*r*.92,cy+Math.sin(a)*r*.92);g.stroke()}
+  const na=Math.PI+Math.min(1,v/SPEEDMAX)*Math.PI;g.strokeStyle='#D8584E';g.lineWidth=Math.max(3,r*.08);g.lineCap='round';g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(na)*r*.8,cy+Math.sin(na)*r*.8);g.stroke();
+  g.fillStyle='#4A4552';g.font=`900 ${Math.max(12,r*.32)}px ${getComputedStyle(document.body).fontFamily}`;g.textAlign='center';g.textBaseline='top';g.fillStyle='#FFFFFF';g.fillText(Math.round(v*3.6)+' km/h',cx,cy+r*.12);
+  // 門的指示燈
+  g.fillStyle=doorOpen>.5?'#7FB08A':'#8E8791';g.beginPath();g.arc(W*.8,H-db*.45,Math.max(6,db*.1),0,7);g.fill()}
+
+/* ================= 45 度俯視畫面 ================= */
+function drawIso(){const sc=Math.min(W,H*1.25)/(W<H?27:34),ox=W*.48,oy=H*.56;
+  const ux=.86*sc,uy=-.5*sc,lx=.5*sc,ly=.86*sc,zz=sc;
+  const P=(a,y,z)=>{const u=a-s;return [ox+u*ux+y*lx,oy+u*uy+y*ly-z*zz]};
+  g.fillStyle='#8FB8C8';g.fillRect(0,0,W,H);
+  const A0=s-60,A1=s+60;
+  const band=(y0,y1,col)=>quad(P(A0,y0,0),P(A1,y0,0),P(A1,y1,0),P(A0,y1,0),col);
+  band(-60,-5,'#9DBE8A');band(-5,6,'#B9D2A8');band(6,10.5,'#C9B59A');band(10.5,14,'#A6A1AC');band(14,17,'#E6DCCB');
+  // 海浪
+  g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=2;for(let i=0;i<10;i++){const a=Math.floor(s/12)*12-48+i*12,y=19+rnd(i+Math.floor(s/12))*10;const p=P(a,y,0),q=P(a+4,y,0);g.beginPath();g.moveTo(p[0],p[1]);g.quadraticCurveTo((p[0]+q[0])/2,(p[1]+q[1])/2-4,q[0],q[1]);g.stroke()}
+  // 岩石
+  for(let i=Math.floor(A0/5);i<A1/5;i++){const p=P(i*5+rnd(i)*3,11+rnd(i+9)*3,0);g.fillStyle=i%2?'#8E8791':'#A6A1AC';g.beginPath();g.ellipse(p[0],p[1],sc*(.6+rnd(i+2)*.6),sc*.4,0,0,7);g.fill()}
+  // 海岸鐵道
+  quad(P(A0,7.2,0),P(A1,7.2,0),P(A1,9.4,0),P(A0,9.4,0),'#B49A7E');
+  for(let i=Math.floor(A0/1.5);i<A1/1.5;i++){const a=i*1.5;quad(P(a,7.1,.01),P(a+.4,7.1,.01),P(a+.4,9.5,.01),P(a,9.5,.01),'#8E7468')}
+  [7.7,8.9].forEach(y=>{const p=P(A0,y,.05),q=P(A1,y,.05);g.strokeStyle='#8E8791';g.lineWidth=2;g.beginPath();g.moveTo(p[0],p[1]);g.lineTo(q[0],q[1]);g.stroke()});
+  // 樹(陸地)
+  const trees=[];for(let i=Math.floor(A0/6);i<A1/6;i++)trees.push([i*6+rnd(i)*4,-7-rnd(i+5)*12,i]);
+  // 海灘列車
+  if(beach)for(let c=0;c<3;c++){const a=beach.s+c*13;box(P,a-6,a+6,7.5,9.1,0,3,'#3E73C8','#2F5DA6','#5B8BD6',true)}
+  // 高架:柱子、橫樑
+  for(let i=Math.floor(A0/15);i<A1/15;i++){const a=i*15;box(P,a-.4,a+.4,1.3,2.1,0,5.6,'#C9CED4','#B9BEC5','#D6D9DD')}
+  for(let i=Math.floor(A0/3.2);i<A1/3.2;i++){const a=i*3.2;quad(P(a,-1.2,5.75),P(a+.3,-1.2,5.75),P(a+.3,4.6,5.75),P(a,4.6,5.75),'#B9BEC5')}
+  // 走道與管軌
+  quad(P(A0,1.15,6),P(A1,1.15,6),P(A1,2.25,6),P(A0,2.25,6),'#D6D9DD');
+  [-.78,.78,2.6,4.1].forEach(y=>{quad(P(A0,y-.2,6.1),P(A1,y-.2,6.1),P(A1,y+.2,6.1),P(A0,y+.2,6.1),'#F4F6F7');quad(P(A0,y+.12,6.1),P(A1,y+.12,6.1),P(A1,y+.2,6.05),P(A0,y+.2,6.05),'#DCE1E5')});
+  // 車站
+  STATIONS.forEach(([name,sp])=>{if(sp<A0-12||sp>A1+12)return;box(P,sp-8,sp+8,-4.2,-1.25,5.4,6,'#E6DCCB','#C9A97A','#D9CDB8');
+    quad(P(sp-8,-1.5,6.01),P(sp+8,-1.5,6.01),P(sp+8,-1.65,6.01),P(sp-8,-1.65,6.01),'#E9C46A');
+    for(let i=0;i<4;i++){const p=P(sp-4+i*2.6,-2.4-(i%2)*.8,6);if(!(phase==='atStation'&&doorOpen>.5&&STATIONS[next-1]&&STATIONS[next-1][1]===sp)){g.fillStyle=['#D88E87','#A9CFDC','#E9C46A','#9DCB9A'][i];g.fillRect(p[0]-sc*.25,p[1]-sc*1.3,sc*.5,sc*1.1);g.fillStyle='#F2C9A8';g.beginPath();g.arc(p[0],p[1]-sc*1.5,sc*.25,0,7);g.fill()}}
+    box(P,sp-8,sp+8,-4.4,-1.4,9.4,9.6,'#7FB08A','#6E9A66','#8FB283');
+    const p=P(sp-6,-4.3,8.2);g.fillStyle='#FFFFFF';const w=sc*5,h=sc*1.3;g.fillRect(p[0]-w/2,p[1]-h,w,h);g.strokeStyle='#4A4552';g.lineWidth=2;g.strokeRect(p[0]-w/2,p[1]-h,w,h);g.fillStyle='#4A4552';g.font=`900 ${h*.7}px ${getComputedStyle(document.body).fontFamily}`;g.textAlign='center';g.textBaseline='middle';g.fillText(name,p[0],p[1]-h/2)});
+  // 對向的膠囊
+  oncoming.forEach(o=>capsuleBox(P,o.s,3.35,o.c,sc));
+  // 自己的車
+  capsuleBox(P,s,0,COLORS[color][0],sc,true);
+  // 樹最後畫(在陸地那側,視覺上不會擋到軌道)
+  trees.forEach(([a,y,i])=>{const p=P(a,y,0),h=sc*(5+rnd(i)*3);g.fillStyle='#8A6A4D';g.fillRect(p[0]-sc*.2,p[1]-h*.5,sc*.4,h*.5);g.fillStyle=i%2?'#5E8F69':'#6E9A66';g.beginPath();g.ellipse(p[0],p[1]-h*.7,sc*1.8,h*.35,0,0,7);g.fill()})}
+function box(P,a0,a1,y0,y1,z0,z1,top,side,end,noEnd){
+  // 看得到的面:頂面、靠海那側(y1)、後端(a0)
+  quad(P(a0,y1,z0),P(a1,y1,z0),P(a1,y1,z1),P(a0,y1,z1),side);
+  if(!noEnd)quad(P(a0,y0,z0),P(a0,y1,z0),P(a0,y1,z1),P(a0,y0,z1),end);
+  quad(P(a0,y0,z1),P(a1,y0,z1),P(a1,y1,z1),P(a0,y1,z1),top)}
+function capsuleBox(P,a,y,col,sc,me){const L=1.9,Wd=1,z0=6.25,z1=9.0;
+  box(P,a-L,a+L,y-Wd,y+Wd,z0,z1,'#FFFFFF',col,col);
+  // 白色腰帶與窗
+  quad(P(a-L,y+Wd,z0+1.2),P(a+L,y+Wd,z0+1.2),P(a+L,y+Wd,z0+2.3),P(a-L,y+Wd,z0+2.3),'#FFFFFF');
+  for(let i=0;i<3;i++){const b=a-L+.4+i*1.2;quad(P(b,y+Wd+.01,z0+1.35),P(b+.9,y+Wd+.01,z0+1.35),P(b+.9,y+Wd+.01,z0+2.15),P(b,y+Wd+.01,z0+2.15),'#55505C')}
+  quad(P(a-L,y-Wd,z1),P(a+L,y-Wd,z1),P(a+L,y+Wd,z1),P(a-L,y+Wd,z1),col);
+  box(P,a-L*.6,a+L*.6,y-Wd*.6,y+Wd*.6,z1,z1+.35,'#FFFFFF',col,col);
+  if(me&&doorOpen>0){const p=P(a,y+Wd,z0+1);g.fillStyle='rgba(255,255,255,.9)';const w=sc*.9*doorOpen;g.fillRect(p[0]-w/2,p[1]-sc*2.1,w,sc*1.9)}
+  if(me){const p=P(a,y,z1+1.6);g.fillStyle='#FFFFFF';g.beginPath();g.moveTo(p[0],p[1]+sc*.9);g.lineTo(p[0]-sc*.6,p[1]);g.lineTo(p[0]+sc*.6,p[1]);g.fill()}}
+
+/* ================= 遊戲流程 ================= */
+const routeEl=$('route');
+function drawRoute(){routeEl.innerHTML=STATIONS.map((st,i)=>(i?`<div class="seg" data-i="${i}"><b></b></div>`:'')+`<div class="st${(i<next||phase==='done')?' done':''}"><i></i>${st[0]}</div>`).join('');updRoute()}
+function updRoute(){routeEl.querySelectorAll('.seg').forEach(sg=>{const i=+sg.dataset.i,a=STATIONS[i-1][1],b=STATIONS[i][1],p=Math.max(0,Math.min(1,(s-a)/(b-a)));sg.querySelector('b').style.width=p*100+'%';
+  let c=sg.querySelector('.car');if(s>=a&&s<=b+1&&(i===next||(phase==='atStation'&&i===next-1)||phase==='done'&&i===STATIONS.length-1)){if(!c){c=document.createElement('span');c.className='car';sg.appendChild(c)}c.style.background=COLORS[color][0];c.style.left=p*100+'%'}else if(c)c.remove()})}
+function setTip(t){tipEl.textContent=t}
+function pickScreen(){phase='pick';over.hidden=false;
+  over.innerHTML=`<h2>選一台天空電車</h2><p>沿著海邊的高架軌道開到終點站</p><div class="cars">${Object.keys(COLORS).map(k=>`<button class="pick" data-c="${k}" type="button" aria-label="${COLORS[k][1]}">${svgCar(COLORS[k][0])}</button>`).join('')}</div>`;
+  over.querySelectorAll('.pick').forEach(b=>b.onclick=()=>{A();S.tap();color=b.dataset.c;start()});setTip('')}
+function svgCar(c){return `<svg viewBox="0 0 60 80"><rect x="16" y="6" width="28" height="8" rx="2" fill="${c}"/><rect x="8" y="12" width="44" height="56" rx="6" fill="${c}"/><rect x="8" y="20" width="44" height="22" fill="#FFFFFF"/><rect x="14" y="23" width="32" height="17" rx="2" fill="#55505C"/><circle cx="30" cy="54" r="7" fill="#FFFFFF"/><rect x="14" y="68" width="32" height="6" rx="2" fill="#B9BEC5"/></svg>`}
+function start(){over.hidden=true;s=0;v=0;next=1;pax=0;phase='atStation';doorOpen=0;backTo=null;oncoming=[];beach=null;helpSaid=false;drawRoute();
+  setTip('在'+STATIONS[0][0]+',先按「開門」讓客人上車');$('door').disabled=false;$('door').classList.add('glow');talk(STATIONS[0][0]+'到了,請開門讓客人上車')}
+function openDoor(){if(phase!=='atStation'||doorT>0)return;A();S.door();S.chime();doorT=3.2;$('door').disabled=true;$('door').classList.remove('glow');
+  const st=STATIONS[next-1][0];setTip('開門囉,客人上下車');talk(next===1?'歡迎搭乘天空電車':st+',請小心上下車')}
+function depart(){phase='run';const nx=STATIONS[next];setTip('按住「前進」出發,下一站 '+nx[0]);talk('門要關了,下一站,'+nx[0]);S.bell()}
+function arrive(){phase='atStation';v=0;backTo=null;next++;drawRoute();S.bell();
+  const st=STATIONS[next-1][0];
+  if(next>=STATIONS.length){setTip('終點站 '+st+' 到了!按「開門」讓客人下車');talk('終點站,'+st+'到了')}else{setTip(st+'到了!按「開門」讓客人上下車');talk(st+'到了')}
+  $('door').disabled=false;$('door').classList.add('glow')}
+function finish(){phase='done';S.win();talk('平安到達終點,你是很棒的電車駕駛');drawRoute();over.hidden=false;
+  over.innerHTML=`<h2>平安抵達終點!</h2><div style="width:min(40vw,160px)">${svgCar(COLORS[color][0])}</div><p>從 ${STATIONS[0][0]} 開到 ${STATIONS[STATIONS.length-1][0]}</p><button class="big" id="again" type="button">再開一次</button>`;
+  $('again').onclick=()=>{S.tap();pickScreen()}}
+
+/* ================= 控制 ================= */
+function holdBtn(el,set){const on=e=>{e.preventDefault();A();el.setPointerCapture&&el.setPointerCapture(e.pointerId);set(true);el.classList.add('held')},off=()=>{set(false);el.classList.remove('held')};
+  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);el.addEventListener('pointercancel',off);el.addEventListener('lostpointercapture',off);el.addEventListener('contextmenu',e=>e.preventDefault())}
+holdBtn($('go'),x=>goHeld=x);holdBtn($('brake'),x=>brakeHeld=x);
+$('door').onclick=()=>openDoor();
+$('bell').onclick=()=>{A();S.bell()};
+$('view').onclick=()=>{S.tap();view=view==='fp'?'iso':'fp';$('viewT').textContent=view==='fp'?'換成俯視':'換成駕駛座'};
+
+/* ================= 主迴圈 ================= */
+function step(dt){
+  // 開門/關門
+  if(doorT>0){doorT-=dt;doorOpen=Math.min(1,doorOpen+dt*2);if(doorT<=1.2&&doorOpen>0)doorOpen=Math.max(0,doorOpen);if(doorT<=0){doorT=0;if(next>=STATIONS.length){doorOpen=0;finish();return}doorOpen=0;S.door();depart()}}
+  else if(doorOpen>0)doorOpen=Math.max(0,doorOpen-dt*2);
+  if(phase==='run'){const sp=STATIONS[next][1];
+    if(backTo!==null){v=0;s=Math.max(backTo,s-4*dt);if(s<=backTo+.05){s=backTo;arrive()}}
+    else{
+      if(goHeld&&!brakeHeld)v=Math.min(SPEEDMAX,v+1.1*dt);else if(brakeHeld)v=Math.max(0,v-2.6*dt);else v=Math.max(0,v-.35*dt);
+      // 接近車站自動提醒,過站太多就自動煞車再倒回月台
+      const d=sp-s;
+      if(d<70&&d>0&&v>2.2&&!brakeHeld)setTip('快到'+STATIONS[next][0]+'了,按住「煞車」慢慢停');
+      else if(d<70&&d>0)setTip('停在黃線的月台旁邊');
+      if(d<0)v=Math.max(0,v-3.2*dt);
+      s+=v*dt;
+      if(v===0&&Math.abs(sp-s)<12)arrive();
+      else if(v===0&&s>sp+12){backTo=sp;setTip('開過頭了,倒車回月台');talk('開過頭了,倒車回月台')}
+      else if(v===0&&d>12&&d<70&&!goHeld){/* 停在站前,提示再往前一點 */setTip('再往前一點點,停在月台旁邊')}}
+    if(!helpSaid&&s<3&&!goHeld&&phase==='run'){}
+  }
+  motorSet(phase==='run'?v:0);
+  // 對向膠囊、海灘列車
+  ambT-=dt;if(ambT<=0){ambT=10+Math.random()*10;const cs=Object.values(COLORS).map(c=>c[0]);oncoming.push({s:s+170,c:cs[Math.floor(Math.random()*cs.length)]})}
+  oncoming.forEach(o=>o.s-=3.2*dt);oncoming=oncoming.filter(o=>o.s>s-40);
+  ambT2-=dt;if(ambT2<=0&&!beach){ambT2=18+Math.random()*12;beach={s:s+140,dir:-1};S.far()}
+  if(beach){beach.s-=5*dt;if(beach.s<s-80)beach=null}
+  updRoute()}
+function frame(t){const dt=Math.min(.05,(t-lastT)/1000||0);lastT=t;if(phase!=='pick'&&phase!=='done')step(dt);
+  if(W<2)fit();g.clearRect(0,0,W,H);view==='fp'?drawFP():drawIso();requestAnimationFrame(frame)}
+fit();pickScreen();drawRoute();requestAnimationFrame(frame);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){goHeld=brakeHeld=false;motorSet(0)}});
+</script>
+</body>
+</html>
