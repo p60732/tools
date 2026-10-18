@@ -133,7 +133,7 @@ addEventListener('pointerup',release,true); addEventListener('pointercancel',rel
 let musicGain=null,sfxGain=null,musicOn=true,bgmTimer=null,nextT=0,step=0;
 try{musicOn=localStorage.getItem('toyMusic')!=='off'}catch(e){}
 function ac(){
-  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(!ctx){ctx=((()=>{try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}})(),new (window.AudioContext||window.webkitAudioContext)());
     musicGain=ctx.createGain();musicGain.gain.value=.078;musicGain.connect(ctx.destination);
     sfxGain=ctx.createGain();sfxGain.gain.value=.9;sfxGain.connect(ctx.destination);}
   if(ctx.state==='suspended')ctx.resume();

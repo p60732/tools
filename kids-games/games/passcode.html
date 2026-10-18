@@ -214,7 +214,7 @@ function pickSticker(){const fresh=STICKERS.filter(s=>!got.includes(s[0]));const
 
 /* ================= 聲音 ================= */
 let ctx=null,out=null;
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.6;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=((()=>{try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}})(),new (window.AudioContext||window.webkitAudioContext)());out=ctx.createGain();out.gain.value=.6;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.setValueAtTime(v,t+Math.max(.012,d-.04));g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.02)}catch(e){}}
 const T=()=>ac().currentTime;
@@ -241,7 +241,9 @@ const S={
   unlock(){const t=T();tone(1400,t,.05,{type:'square',v:.05});tone(900,t+.06,.08,{type:'triangle',v:.12});[72,76,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+.25+i*.12,.4,{type:'triangle',v:.12}))}
 };
 // 會說話:平板內建的語音(沒有也沒關係)
-function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1.05;u.pitch=1.5;speechSynthesis.speak(u)}catch(e){}}
+let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
+try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
+function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1.05;u.pitch=1.5;speechSynthesis.speak(u)}catch(e){}}
 function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
 
 /* ================= 時鐘 ================= */

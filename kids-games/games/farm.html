@@ -399,7 +399,7 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 <script>
 /* ================= 聲音 ================= */
 let ctx=null,out=null;
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();out=ctx.createGain();out.gain.value=.7;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=((()=>{try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}})(),new (window.AudioContext||window.webkitAudioContext)());out=ctx.createGain();out.gain.value=.7;out.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.03)}catch(e){}}
 function noise(t,d,{v=.1,f=900,q=1,type='bandpass'}={}){try{const c=ac(),b=c.createBuffer(1,Math.ceil(c.sampleRate*d),c.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;
@@ -438,7 +438,9 @@ const S={
   tick(){const t=T();for(let i=0;i<6;i++)tone(1200,t+i*.2,.04,{type:'square',v:.03})},
   no(){const t=T();tone(300,t,.15,{type:'triangle',v:.08,to:240})}
 };
-function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
+let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
+try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
+function talk(txt){try{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.3;speechSynthesis.speak(u)}catch(e){}}
 
 /* ================= 圖案 ================= */
 const K='#4A4552';

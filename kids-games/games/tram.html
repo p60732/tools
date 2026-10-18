@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&display=swap">
 <style>
-/* 天空電車:海邊高架雙管軌道上的小膠囊電車。兩種視角:駕駛座第一人稱、45 度俯視。按住前進/煞車,到站停好開門讓乘客上下車。 */
+/* 天空電車:海邊高架雙管軌道上的小膠囊電車。兩種視角:駕駛座第一人稱、45 度俯視。按一下出發會自動開到下一站,到站開門讓乘客上下車。 */
 :root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--ok:#7FB08A;--ok-d:#5E8F69;--red:#D88E87;--mute:#6E6876;
   --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
 html,body{height:100%;margin:0}
@@ -37,6 +37,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ctl.go{background:var(--ok);box-shadow:0 6px 0 var(--ok-d);flex:1.4;max-width:320px}
 .ctl.door{background:#E9C46A;box-shadow:0 6px 0 #C9A44A;color:var(--ink);flex:1;max-width:200px}
 .ctl[disabled]{opacity:.35}
+.ctl.go.glow{animation:glow 1s ease-in-out infinite}
 .ctl.held{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.2)}
 .ctl.door.glow{animation:glow 1s ease-in-out infinite}
 @keyframes glow{50%{transform:scale(1.06)}}
@@ -57,7 +58,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   <header>
     <h1>天空電車</h1>
     <div class="right">
-      <button class="pill" id="bell" type="button" aria-label="按鈴"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z" fill="#E9C46A"/><circle cx="12" cy="19" r="2.4" fill="#C9A44A"/></svg>噹噹</button>
+      <button class="pill" id="bell" type="button" aria-label="叮叮"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z" fill="#E9C46A"/><circle cx="12" cy="19" r="2.4" fill="#C9A44A"/></svg>叮叮</button>
       <button class="pill" id="view" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" fill="#A9CFDC"/><circle cx="12" cy="12" r="3.5" fill="#FFFFFF"/></svg><span id="viewT">換成俯視</span></button>
     </div>
   </header>
@@ -65,19 +66,19 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   <div class="tip" id="tip"></div>
   <div class="stage" id="stage"><canvas id="cv"></canvas><div class="over" id="over"></div></div>
   <div class="ctrls">
-    <button class="ctl brake" id="brake" type="button"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="4" fill="#FFFFFF"/></svg>煞車</button>
+    <button class="ctl brake" id="brake" type="button"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="4" fill="#FFFFFF"/></svg>停一下</button>
     <button class="ctl door" id="door" type="button" disabled><svg viewBox="0 0 24 24"><rect x="4" y="3" width="7" height="18" rx="1.5" fill="#FFFFFF"/><rect x="13" y="3" width="7" height="18" rx="1.5" fill="#FFFFFF"/><path d="M9 12h-3M15 12h3" stroke="#C9A44A" stroke-width="2"/></svg>開門</button>
-    <button class="ctl go" id="go" type="button"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#FFFFFF"/></svg>按住前進</button>
+    <button class="ctl go" id="go" type="button"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#FFFFFF"/></svg><span id="goT">出發</span></button>
   </div>
 </div>
 <script>
 /* ================= 聲音 ================= */
 let ac=null,out=null,motor=null,motorG=null;
-function A(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=.7;out.connect(ac.destination)}if(ac.state==='suspended')ac.resume();return ac}
+function A(){try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=.7;out.connect(ac.destination)}if(ac.state==='suspended')ac.resume();return ac}
 function tone(f,t,d,{type='sine',v=.15,to=null}={}){try{const c=A(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(out);o.start(t);o.stop(t+d+.03)}catch(e){}}
 const T=()=>A().currentTime;
 const S={
-  bell(){const t=T();[0,.28].forEach(d=>{tone(1320,t+d,.5,{v:.12});tone(1980,t+d,.35,{v:.05})})},
+  bell(){const t=T();[0,.3].forEach(d=>{tone(1046,t+d,1.1,{v:.32});tone(2093,t+d,.7,{v:.14});tone(2794,t+d,.4,{v:.07,type:'triangle'})})},
   chime(){const t=T();[76,72,79,84].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.22,.5,{type:'triangle',v:.1}))},
   door(){const t=T();tone(300,t,.5,{type:'triangle',v:.06,to:200})},
   win(){const t=T();[72,76,79,84,88].forEach((m,i)=>tone(440*Math.pow(2,(m-69)/12),t+i*.13,.6,{type:'triangle',v:.11}))},
@@ -86,7 +87,9 @@ const S={
 };
 function motorSet(v){try{const c=A();if(!motor){motor=c.createOscillator();motor.type='sawtooth';const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=380;motorG=c.createGain();motorG.gain.value=0;motor.connect(f).connect(motorG).connect(out);motor.start()}
   motor.frequency.setTargetAtTime(48+v*22,c.currentTime,.1);motorG.gain.setTargetAtTime(v>.05?.025+v*.006:0,c.currentTime,.15)}catch(e){}}
-function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';u.rate=1;u.pitch=1.2;speechSynthesis.speak(u)}catch(e){}}
+let twV=null;function pickV(){try{const vs=speechSynthesis.getVoices().filter(v=>/zh[-_]TW/i.test(v.lang));twV=vs.find(v=>/mei-?jia|美佳/i.test(v.name))||vs.find(v=>/hanhan|hsiaochen|hsiaoyu|yating|zhiwei|台灣|臺灣/i.test(v.name))||vs[0]||null}catch(e){}}
+try{pickV();speechSynthesis.addEventListener('voiceschanged',pickV)}catch(e){}
+function talk(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';if(!twV)pickV();if(twV)u.voice=twV;u.rate=1;u.pitch=1.2;speechSynthesis.speak(u)}catch(e){}}
 
 /* ================= 狀態 ================= */
 const $=id=>document.getElementById(id);
@@ -248,12 +251,13 @@ function pickScreen(){phase='pick';over.hidden=false;
   over.innerHTML=`<h2>選一台天空電車</h2><p>沿著海邊的高架軌道開到終點站</p><div class="cars">${Object.keys(COLORS).map(k=>`<button class="pick" data-c="${k}" type="button" aria-label="${COLORS[k][1]}">${svgCar(COLORS[k][0])}</button>`).join('')}</div>`;
   over.querySelectorAll('.pick').forEach(b=>b.onclick=()=>{A();S.tap();color=b.dataset.c;start()});setTip('')}
 function svgCar(c){return `<svg viewBox="0 0 60 80"><rect x="16" y="6" width="28" height="8" rx="2" fill="${c}"/><rect x="8" y="12" width="44" height="56" rx="6" fill="${c}"/><rect x="8" y="20" width="44" height="22" fill="#FFFFFF"/><rect x="14" y="23" width="32" height="17" rx="2" fill="#55505C"/><circle cx="30" cy="54" r="7" fill="#FFFFFF"/><rect x="14" y="68" width="32" height="6" rx="2" fill="#B9BEC5"/></svg>`}
-function start(){over.hidden=true;s=0;v=0;next=1;pax=0;phase='atStation';doorOpen=0;backTo=null;oncoming=[];beach=null;helpSaid=false;drawRoute();
-  setTip('在'+STATIONS[0][0]+',先按「開門」讓客人上車');$('door').disabled=false;$('door').classList.add('glow');talk(STATIONS[0][0]+'到了,請開門讓客人上車')}
+function start(){over.hidden=true;auto=false;slowSaid=false;s=0;v=0;next=1;pax=0;phase='atStation';doorOpen=0;backTo=null;oncoming=[];beach=null;helpSaid=false;drawRoute();
+  setTip('在'+STATIONS[0][0]+',先按「開門」讓客人上車');$('door').disabled=false;$('door').classList.add('glow');goUI();talk(STATIONS[0][0]+'到了,請開門讓客人上車')}
 function openDoor(){if(phase!=='atStation'||doorT>0)return;A();S.door();S.chime();doorT=3.2;$('door').disabled=true;$('door').classList.remove('glow');
   const st=STATIONS[next-1][0];setTip('開門囉,客人上下車');talk(next===1?'歡迎搭乘天空電車':st+',請小心上下車')}
-function depart(){phase='run';const nx=STATIONS[next];setTip('按住「前進」出發,下一站 '+nx[0]);talk('門要關了,下一站,'+nx[0]);S.bell()}
-function arrive(){phase='atStation';v=0;backTo=null;next++;drawRoute();S.bell();
+function depart(){phase='run';auto=false;goUI();const nx=STATIONS[next];setTip('按「出發」,下一站 '+nx[0]);talk('門要關了,下一站,'+nx[0]);S.bell()}
+let slowSaid=false;
+function arrive(){slowSaid=false;phase='atStation';v=0;auto=false;goUI();backTo=null;next++;drawRoute();S.bell();
   const st=STATIONS[next-1][0];
   if(next>=STATIONS.length){setTip('終點站 '+st+' 到了!按「開門」讓客人下車');talk('終點站,'+st+'到了')}else{setTip(st+'到了!按「開門」讓客人上下車');talk(st+'到了')}
   $('door').disabled=false;$('door').classList.add('glow')}
@@ -262,9 +266,10 @@ function finish(){phase='done';S.win();talk('平安到達終點,你是很棒的�
   $('again').onclick=()=>{S.tap();pickScreen()}}
 
 /* ================= 控制 ================= */
-function holdBtn(el,set){const on=e=>{e.preventDefault();A();el.setPointerCapture&&el.setPointerCapture(e.pointerId);set(true);el.classList.add('held')},off=()=>{set(false);el.classList.remove('held')};
-  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);el.addEventListener('pointercancel',off);el.addEventListener('lostpointercapture',off);el.addEventListener('contextmenu',e=>e.preventDefault())}
-holdBtn($('go'),x=>goHeld=x);holdBtn($('brake'),x=>brakeHeld=x);
+let auto=false;
+function goUI(){const g=$('go'),b=$('brake'),run=phase==='run';g.disabled=!run||auto;b.disabled=!run||!auto;g.classList.toggle('glow',run&&!auto);$('goT').textContent=auto?'開車中':(run&&s>STATIONS[next-1][1]+1?'繼續開':'出發')}
+$('go').onclick=()=>{if(phase!=='run'||auto)return;A();S.bell();auto=true;goUI();setTip('出發囉!電車會自己開到 '+STATIONS[next][0])};
+$('brake').onclick=()=>{if(phase!=='run'||!auto)return;A();S.tap();auto=false;goUI();setTip('停一下,按「繼續開」再出發')};
 $('door').onclick=()=>openDoor();
 $('bell').onclick=()=>{A();S.bell()};
 $('view').onclick=()=>{S.tap();view=view==='fp'?'iso':'fp';$('viewT').textContent=view==='fp'?'換成俯視':'換成駕駛座'};
@@ -277,17 +282,15 @@ function step(dt){
   if(phase==='run'){const sp=STATIONS[next][1];
     if(backTo!==null){v=0;s=Math.max(backTo,s-4*dt);if(s<=backTo+.05){s=backTo;arrive()}}
     else{
-      if(goHeld&&!brakeHeld)v=Math.min(SPEEDMAX,v+1.1*dt);else if(brakeHeld)v=Math.max(0,v-2.6*dt);else v=Math.max(0,v-.35*dt);
-      // 接近車站自動提醒,過站太多就自動煞車再倒回月台
+      // 自動駕駛:加速、巡航,快到站自己慢慢煞車停在月台
       const d=sp-s;
-      if(d<70&&d>0&&v>2.2&&!brakeHeld)setTip('快到'+STATIONS[next][0]+'了,按住「煞車」慢慢停');
-      else if(d<70&&d>0)setTip('停在黃線的月台旁邊');
-      if(d<0)v=Math.max(0,v-3.2*dt);
+      if(auto){const need=v*v/(2*Math.max(.3,d));
+        if(d<.4){s=sp;v=0;arrive();return}
+        if(need>.75)v=Math.max(.6,v-need*dt);else v=Math.min(SPEEDMAX,v+1.1*dt);
+        if(d<60&&!slowSaid){slowSaid=true;setTip('快到'+STATIONS[next][0]+'了,慢慢停下來');talk('快到'+STATIONS[next][0]+'了')}}
+      else v=Math.max(0,v-2.6*dt);
       s+=v*dt;
-      if(v===0&&Math.abs(sp-s)<12)arrive();
-      else if(v===0&&s>sp+12){backTo=sp;setTip('開過頭了,倒車回月台');talk('開過頭了,倒車回月台')}
-      else if(v===0&&d>12&&d<70&&!goHeld){/* 停在站前,提示再往前一點 */setTip('再往前一點點,停在月台旁邊')}}
-    if(!helpSaid&&s<3&&!goHeld&&phase==='run'){}
+      if(!auto&&v===0&&Math.abs(d)<12)arrive();}
   }
   motorSet(phase==='run'?v:0);
   // 對向膠囊、海灘列車
@@ -299,7 +302,7 @@ function step(dt){
 function frame(t){const dt=Math.min(.05,(t-lastT)/1000||0);lastT=t;if(phase!=='pick'&&phase!=='done')step(dt);
   if(W<2)fit();g.clearRect(0,0,W,H);view==='fp'?drawFP():drawIso();requestAnimationFrame(frame)}
 fit();pickScreen();drawRoute();requestAnimationFrame(frame);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){goHeld=brakeHeld=false;motorSet(0)}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){motorSet(0)}});
 </script>
 </body>
 </html>

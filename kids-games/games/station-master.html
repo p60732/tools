@@ -162,7 +162,7 @@ h1{margin:0;font-size:clamp(20px,5vw,30px);font-weight:900;color:var(--white);-w
 /* ================= 音效(即時合成) ================= */
 let ctx=null,musicGain=null,sfx=null,musicOn=true,bgm=null,nextT=0,stepN=0;
 try{musicOn=localStorage.getItem('stationMusic')!=='off'}catch(e){}
-function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();musicGain=ctx.createGain();musicGain.gain.value=.065;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
+function ac(){if(!ctx){ctx=((()=>{try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}})(),new (window.AudioContext||window.webkitAudioContext)());musicGain=ctx.createGain();musicGain.gain.value=.065;musicGain.connect(ctx.destination);sfx=ctx.createGain();sfx.gain.value=.9;sfx.connect(ctx.destination)}if(ctx.state==='suspended')ctx.resume();return ctx}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function env(g,t,v,d,a=.012){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+d)}
 function note(f,t,d,{type='sine',v=.25,to=null,bus=null,vib=0}={}){try{const c=ac(),o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
