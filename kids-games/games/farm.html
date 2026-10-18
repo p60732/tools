@@ -189,15 +189,22 @@ button:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
 .spk .price.so{color:#C97C76;font-size:18px}
 .big.gotoseed{position:absolute;left:50%;top:40%;transform:translateX(-50%);z-index:9}
 /* 加工坊 */
-.works .wcard{flex-direction:row;align-items:center;gap:6px;padding:8px}
-.wpic{width:clamp(56px,14vw,84px);aspect-ratio:1;flex:none}
+.wgroups .wg2{align-items:center;padding:12px 10px 14px;gap:4px;text-align:center}
+.gpics{display:flex;justify-content:center;flex-wrap:wrap;gap:2px;width:100%}
+.gpics i{width:clamp(40px,11vw,64px);aspect-ratio:1}
+.gpics svg{width:100%;height:100%}
+.wgroups .card b{padding:0;font-size:clamp(19px,4.8vw,26px)}
+.wgroups .card small{font-size:clamp(12px,3.2vw,15px);color:var(--mute);font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.works,.wgroups{grid-template-columns:repeat(auto-fill,minmax(min(46%,200px),1fr))!important;align-content:start!important;grid-auto-rows:max-content}
+.wgroups{grid-template-columns:repeat(auto-fill,minmax(min(46%,230px),1fr))!important}
+.works .wcard{align-items:center;padding:12px 8px 14px;gap:6px;text-align:center;min-width:0}
+.wpic{width:clamp(60px,18vw,96px);aspect-ratio:1;flex:none}
 .wpic svg{width:100%;height:100%}
-.wtxt{display:flex;flex-direction:column;min-width:0}
-.wtxt small{font-size:13px;color:var(--mute);font-weight:700}
-.works .card b{padding:0;font-size:clamp(17px,4.4vw,22px)}
-.need{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:13px;font-weight:900;color:var(--ok-d)}
-.need span{display:flex;align-items:center}
-.need svg{width:20px;height:20px}
+.works .card b{padding:0;font-size:clamp(18px,4.6vw,24px)}
+.need{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;font-size:clamp(12px,3.2vw,15px);font-weight:900;color:var(--ok-d);width:100%}
+.need span{display:flex;align-items:center;gap:1px;background:#F4EEE2;border-radius:999px;padding:1px 8px 1px 2px;white-space:nowrap}
+.need svg{width:22px;height:22px;flex:none}
+.need em{font-style:normal;color:var(--mute);margin-right:3px}
 .need .lack{color:#C97C76}
 .mk{flex:1;min-height:0;position:relative;border-radius:26px;overflow:hidden;background:#F4EEE2;cursor:pointer;touch-action:none}
 .mk>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -528,7 +535,7 @@ let screen='map',cleanup=null;
 const AREAS=[['garden','果菜園'],['barn','牧場'],['coop','雞舍'],['work','加工坊'],['ship','進貨出貨'],['shop','商店']];
 function go(k,arg){if(cleanup){cleanup();cleanup=null}screen=k;stage.innerHTML='';$('back').hidden=k==='map';const A=AREAS.find(a=>a[0]===k);$('title').textContent=k==='map'?'快樂農場':A?A[1]:'';
   ({map:showMap,garden:showGarden,seeds:showSeeds,plant:showPlant,barn:showBarn,coop:showCoop,work:showWork,make:showMake,ship:showShip,pack:showPack,shop:showShop})[k](arg);paint()}
-$('back').onclick=()=>{S.tap();go({plant:'garden',seeds:shopBack,make:'work',pack:'ship'}[screen]||'map')};
+$('back').onclick=()=>{S.tap();if(screen==='make'){go('work',curGroup);return}if(screen==='work'&&curGroup){go('work');return}go({plant:'garden',seeds:shopBack,pack:'ship'}[screen]||'map')};
 $('basketP').onclick=()=>{S.tap();if(screen!=='ship')go('ship')};
 $('coinP').onclick=()=>{S.coin();bump($('coinP'));talk('你有 '+G.coins+' 塊錢')};
 
@@ -1148,9 +1155,23 @@ Object.assign(RECIPES,{
 WORK_ORDER.push('ketchup','smilk','pancake','pudding','bread','pizza','pie');
 
 const haveAll=need=>Object.keys(need).every(k=>G.inv[k]>=need[k]);
-function showWork(){tipEl.textContent='要做什麼呢?材料不夠也可以先練習';const m=document.createElement('div');m.className='screen map works';stage.appendChild(m);
-  WORK_ORDER.forEach(id=>{const R=RECIPES[id],ok=haveAll(R.need),b=document.createElement('button');b.type='button';b.className='card wcard';
-    b.innerHTML=`<span class="wpic">${svg(ICON[R.out])}</span><span class="wtxt"><small>${R.shop}</small><b>${NAME[R.out]}</b><span class="need">${Object.keys(R.need).map(k=>`<span class="${G.inv[k]>=R.need[k]?'':'lack'}">${svg(ICON[k])}${G.inv[k]}/${R.need[k]}</span>`).join('')||'<span>不用材料</span>'}</span></span>${ok?'':'<span class="dot">練習</span>'}`;
+const WGROUPS=[
+ ['jam','果醬醬料坊',['jamS','jamG','ketchup']],
+ ['dairy','乳品飲料坊',['butter','cheese','smilk']],
+ ['bee','養蜂場',['honey']],
+ ['mill','磨坊製糖坊',['flour','sugar']],
+ ['bake','烘焙坊',['bread','cake','pie','pizza']],
+ ['sweet','點心坊',['pancake','pudding']]];
+WGROUPS.forEach(([g,n,ids])=>ids.forEach(id=>RECIPES[id].shop=n));
+let curGroup=null;
+function showWork(g){const m=document.createElement('div');stage.appendChild(m);
+  if(!g){curGroup=null;$('title').textContent='加工坊';tipEl.textContent='要去哪一間工坊呢?';m.className='screen map wgroups';
+    WGROUPS.forEach(([gid,gname,ids])=>{const can=ids.filter(id=>haveAll(RECIPES[id].need)&&Object.keys(RECIPES[id].need).length).length,b=document.createElement('button');b.type='button';b.className='card wg2';
+      b.innerHTML=`<span class="gpics">${ids.map(id=>`<i>${svg(ICON[RECIPES[id].out])}</i>`).join('')}</span><b>${gname}</b><small>${ids.map(id=>NAME[RECIPES[id].out]).join('、')}</small>${can?`<span class="dot">可以做 ${can} 種</span>`:''}`;
+      b.onclick=()=>{S.tap();go('work',gid)};m.appendChild(b)});return}
+  curGroup=g;const [,gname,ids]=WGROUPS.find(x=>x[0]===g);$('title').textContent=gname;tipEl.textContent='要做什麼呢?材料不夠也可以先練習';m.className='screen map works';
+  ids.forEach(id=>{const R=RECIPES[id],ok=haveAll(R.need),b=document.createElement('button');b.type='button';b.className='card wcard';
+    b.innerHTML=`<span class="wpic">${svg(ICON[R.out])}</span><b>${NAME[R.out]}</b><span class="need">${Object.keys(R.need).map(k=>`<span class="${G.inv[k]>=R.need[k]?'':'lack'}">${svg(ICON[k])}<em>${NAME[k]}</em>${G.inv[k]}/${R.need[k]}</span>`).join('')||'<span>不用材料</span>'}</span>${ok?'':'<span class="dot">練習</span>'}`;
     b.onclick=()=>{S.tap();go('make',id)};m.appendChild(b)})}
 function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').textContent=NAME[R.out];
   if(!practice){Object.keys(R.need).forEach(k=>G.inv[k]-=R.need[k]);save();paint()}
@@ -1174,7 +1195,7 @@ function showMake(id){const R=RECIPES[id],practice=!haveAll(R.need);$('title').t
   function finish(){S.win();const m=$('made');m.hidden=false;m.innerHTML=`${svg(ICON[R.out])}<b>${NAME[R.out]}做好了!</b><small>${practice?'練習完成!收集材料就能真的做喔':'點一下收進籃子'}</small>`;
     const r=mk.getBoundingClientRect();sparkAt(mk,r.width/2,r.height/2,8);talk(NAME[R.out]+'做好了'+(practice?',練習完成':''))}
   let got=false;
-  function collect(){busy=true;if(practice){S.tap();go('work');return}got=true;const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work'),900))}
+  function collect(){busy=true;if(practice){S.tap();go('work',curGroup);return}got=true;const r=$('made').querySelector('svg').getBoundingClientRect();toBasket(R.out,r);$('made').hidden=true;tm.push(setTimeout(()=>go('work',curGroup),900))}
   mk.addEventListener('pointerdown',e=>{e.preventDefault();step()});
   cleanup=()=>{tm.forEach(clearTimeout);if(practice||got)return;if(done)G.inv[R.out]++;else Object.keys(R.need).forEach(k=>G.inv[k]+=R.need[k]);save();paint()}}
 
