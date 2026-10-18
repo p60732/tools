@@ -57,6 +57,20 @@ h1 span:nth-child(4n+1){color:var(--red)}h1 span:nth-child(4n+2){color:var(--blu
 .player iframe{flex:1;width:100%;border:0;background:var(--white);display:block}
 body.playing{overflow:hidden}
 .player[hidden]{display:none}
+/* 我的最愛 */
+.cw{position:relative;display:flex;flex-direction:column}
+.cw>.card{flex:1}
+.fav{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;right:10px;top:10px;z-index:2;width:56px;height:56px;border-radius:50%;background:var(--white);border:4px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:grid;place-items:center}
+.fav svg{width:30px;height:30px}
+.fav path{fill:#FFFFFF;stroke:var(--ink);stroke-width:2.2;transition:fill .2s}
+.fav.on path{fill:var(--red)}
+.fav:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.fav:focus-visible{outline:4px dashed var(--ink);outline-offset:3px}
+.fav.pop{animation:favpop .45s}
+@keyframes favpop{40%{transform:scale(1.35)}}
+.sec{margin:6px 0 -8px;display:flex;align-items:center;gap:8px;font-size:clamp(22px,5.5vw,28px);font-weight:900}
+.sec svg{width:30px;height:30px}
+#favGrid:empty{display:none}
 @media (prefers-reduced-motion:reduce){.card,.sign{transition:none;transform:none}}
 </style>
 </head>
@@ -71,7 +85,10 @@ body.playing{overflow:hidden}
   <p class="sub">點一張圖開始玩,玩完按「關閉」回到這裡</p>
   <p class="offline" id="offline" hidden></p>
 
-  <div class="grid">
+  <h2 class="sec" id="favH" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C4 15 2 11 2 8a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 3-2 7-10 13z" fill="#D8796E" stroke="#4A4552" stroke-width="2"/></svg>我的最愛</h2>
+  <div class="grid" id="favGrid"></div>
+  <h2 class="sec" id="allH" hidden>全部遊戲</h2>
+  <div class="grid" id="allGrid">
     <button class="card c1" type="button" data-src="games/toy-tidy.html" data-name="玩具回家囉">
       <span class="pic"><svg viewBox="0 0 200 150" aria-hidden="true">
         <path d="M40 80h120v58H40z" fill="#6E91C7" stroke="#4A4552" stroke-width="6" stroke-linejoin="round"/><rect x="30" y="70" width="140" height="18" rx="6" fill="#6E91C7" stroke="#4A4552" stroke-width="6"/>
@@ -241,6 +258,20 @@ function closeGame(fromHistory){
   opener&&opener.focus();
 }
 document.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>openGame(c)));
+// 我的最愛:每張卡右上角一顆愛心,點了就移到最上面
+(function(){const favG=document.getElementById('favGrid'),allG=document.getElementById('allGrid');let fav=[];
+  try{fav=JSON.parse(localStorage.getItem('kidFav')||'[]')}catch(e){}if(!Array.isArray(fav))fav=[];
+  const HEART='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C4 15 2 11 2 8a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 3-2 7-10 13z"/></svg>';
+  const wraps=[...allG.querySelectorAll('.card')].map((c,i)=>{const w=document.createElement('div');w.className='cw';w.dataset.i=i;c.replaceWith(w);w.appendChild(c);
+    const b=document.createElement('button');b.type='button';b.className='fav';b.innerHTML=HEART;b.onclick=e=>{e.stopPropagation();toggle(c.dataset.src,b)};w.appendChild(b);return w});
+  function save(){try{localStorage.setItem('kidFav',JSON.stringify(fav))}catch(e){}}
+  function layout(){fav=fav.filter(src=>wraps.some(w=>w.firstChild.dataset.src===src));
+    wraps.forEach(w=>{const src=w.firstChild.dataset.src,on=fav.includes(src),b=w.querySelector('.fav');b.classList.toggle('on',on);b.setAttribute('aria-label',(on?'取消我的最愛:':'加入我的最愛:')+w.firstChild.dataset.name)});
+    fav.forEach(src=>{const w=wraps.find(x=>x.firstChild.dataset.src===src);favG.appendChild(w)});
+    wraps.filter(w=>!fav.includes(w.firstChild.dataset.src)).sort((a,b)=>a.dataset.i-b.dataset.i).forEach(w=>allG.appendChild(w));
+    document.getElementById('favH').hidden=!fav.length;document.getElementById('allH').hidden=!fav.length}
+  function toggle(src,b){const i=fav.indexOf(src);if(i<0)fav.push(src);else fav.splice(i,1);save();layout();b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');if(i<0)b.closest('.cw').scrollIntoView({behavior:'smooth',block:'nearest'})}
+  layout()})();
 closeBtn.addEventListener('click',()=>closeGame(false));
 addEventListener('keydown',e=>{if(e.key==='Escape')closeGame(false)});
 addEventListener('popstate',()=>closeGame(true));
@@ -248,7 +279,7 @@ addEventListener('popstate',()=>closeGame(true));
 const offEl=document.getElementById('offline');
 const GAMES=[...document.querySelectorAll('.card')].map(c=>c.dataset.src);
 async function checkOffline(){try{if(!('caches' in window))return;const keys=await caches.keys();const k=keys.find(x=>x.startsWith('kids-v'));if(!k)return;const c=await caches.open(k);
-  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/18j 版';offEl.hidden=false}}catch(e){}}
+  const ok=(await Promise.all(GAMES.map(g=>c.match(g)))).every(Boolean);if(ok){offEl.textContent='✓ 已存到這台裝置,沒有網路也可以玩 · 10/18k 版';offEl.hidden=false}}catch(e){}}
 if('serviceWorker' in navigator){let hadCtl=!!navigator.serviceWorker.controller,reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!reloaded){reloaded=true;location.reload()}});addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{try{r.update()}catch(e){}return navigator.serviceWorker.ready}).then(()=>setTimeout(checkOffline,500)).catch(()=>{})});checkOffline()}
 </script>
 
