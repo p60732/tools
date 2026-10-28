@@ -94,8 +94,8 @@ const CLOUDS=Array.from({length:14},(_,i)=>({x:(rnd()-.5)*1100,lv:7+rnd()*9,s:.7
 
 /* ================= 畫面 ================= */
 const cv=document.getElementById('cv'),g=cv.getContext('2d'),stage=document.getElementById('stage');
-let W=0,H=0,dpr=1,sc=1,camTop=-600;
-function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;sc=Math.min(H/620,W/440);}
+let W=0,H=0,dpr=1,sc=0,base=1,camTop=-600;
+function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;base=Math.min(H/620,W/440);if(!sc||sc>base)sc=base;}
 addEventListener('resize',fit);
 const SX=x=>W/2+x*sc,SY=y=>(y-camTop)*sc;
 function rr(x,y,w,h,r){g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h)}
@@ -156,21 +156,21 @@ function shapeVerts(sh,x,y){if(sh.k==='trap'){const t=sh.w*.32/2;return [{x:x-sh
 
 /* ================= 遊戲 ================= */
 const $=id=>document.getElementById(id);
-let blocks=[],hang=null,falling=null,hookX=0,hookY=-400,phase=0,towerTop=PED_TOP,lives=3,best=0,lastLossT=-9,over=false,reached=0,clock=0,count=0;
+let gameId=0,blocks=[],hang=null,falling=null,hookX=0,hookY=-400,phase=0,towerTop=PED_TOP,lives=3,best=0,lastLossT=-9,over=false,reached=0,clock=0,count=0;
 let badges={};try{best=+localStorage.getItem('towerBest')||0;badges=JSON.parse(localStorage.getItem('towerBadges')||'{}')}catch(e){}
 function saveB(){try{localStorage.setItem('towerBest',best);localStorage.setItem('towerBadges',JSON.stringify(badges))}catch(e){}}
 function paintHUD(){$('lv').textContent=onTower().length;$('best').textContent=best;$('hearts').textContent='❤️'.repeat(lives)+'🤍'.repeat(3-lives);
   const lv=Math.floor(yLv(towerTop)+.2);let z=ZONES[0];ZONES.forEach(q=>{if(lv>=q.lv)z=q});$('zone').textContent=z.e+' '+z.n}
 const onTower=()=>blocks.filter(b=>!b.plugin.fallen);
 function newHang(){const sh=pickShape(count);hang={sh,c:COLORS[count%COLORS.length]}}
-function start(){blocks.forEach(b=>Composite.remove(engine.world,b));blocks=[];falling=null;lives=3;towerTop=PED_TOP;over=false;reached=0;count=0;phase=0;
-  camTop=-(H-30)/sc;newHang();paintHUD();$('over').hidden=true;$('tip').textContent='看準時機,點一下畫面放下積木'}
+function start(){gameId++;blocks.forEach(b=>Composite.remove(engine.world,b));blocks=[];falling=null;lives=3;towerTop=PED_TOP;over=false;reached=0;count=0;phase=0;lastLossT=-9;clock=0;
+  sc=base;camTop=-(H-30)/sc;newHang();paintHUD();$('over').hidden=true;$('tip').textContent='看準時機,點一下畫面放下積木'}
 function drop(){A();if(over||!hang||falling)return;const sh=hang.sh;const b=makeBody(sh,hookX,hookY+26+sh.h/2);b.plugin={c:hang.c,w:sh.w,h:sh.h,rest:0,fallen:false,born:clock,hit:false};
   Composite.add(engine.world,b);blocks.push(b);falling=b;hang=null;count++;S.drop()}
 stage.addEventListener('pointerdown',e=>{if(!e.isPrimary)return;e.preventDefault();drop()});
 Events.on(engine,'collisionStart',ev=>{ev.pairs.forEach(p=>{[p.bodyA,p.bodyB].forEach(b=>{if(b.plugin&&b.plugin.c&&!b.plugin.hit&&b===falling){b.plugin.hit=true;S.thud(b.plugin.w/130)}})})});
-function lose(){if(clock-lastLossT<1.6)return;lastLossT=clock;lives--;S.fall();paintHUD();
-  if(lives<=0){over=true;setTimeout(gameOver,1400)}else{$('tip').textContent='掉下去了!還有 '+lives+' 次機會';talk('掉下去了,再試一次')}}
+function lose(){if(over||clock-lastLossT<1.6)return;lastLossT=clock;lives--;S.fall();paintHUD();
+  if(lives<=0){over=true;const id=gameId;setTimeout(()=>{if(id===gameId&&over)gameOver()},1400)}else{$('tip').textContent='掉下去了!還有 '+lives+' 次機會';talk('掉下去了,再試一次')}}
 function gameOver(){const n=reached;S.over();let z=ZONES[0];ZONES.forEach(q=>{if(n>=q.lv)z=q});
   $('over').hidden=false;$('over').innerHTML=`<h2>疊了 ${n} 層!</h2><p style="font-size:42px">${z.e}</p><p>最高到了「${z.n}」${n>=best&&n>0?' · 新紀錄!':''}</p><div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button class="big" id="again" type="button">再疊一次</button><button class="big alt" id="toB" type="button">🏅 到過的地方</button></div>`;
   $('again').onclick=()=>{S.tap();start()};$('toB').onclick=()=>{S.tap();showBadges(true)};talk('疊了'+n+'層,再疊一次吧')}
@@ -179,6 +179,11 @@ function showBadges(fromOver){$('over').hidden=false;$('over').innerHTML=`<h2>�
 $('badgeBtn').onclick=()=>{A();S.tap();showBadges(false)};
 
 let acc=0,last=0;
+function freeze(){const live=blocks.filter(b=>!b.plugin.fallen&&b!==falling).sort((a,b)=>b.position.y-a.position.y);
+  for(let i=0;i<live.length;i++){const b=live[i];if(b.isStatic)continue;
+    // 底下的都已固定、本身停穩、上面還有 3 塊以上,才固定
+    if(b.plugin.rest>1.2&&live.length-1-i>=3&&live.slice(i+1).every(u=>u.plugin.rest>.6))Body.setStatic(b,true);
+    break}}
 function step(dt){clock+=dt;
   // 吊車擺動:越高擺越快
   const lvNow=onTower().length;phase+=dt*(1.1+Math.min(.9,lvNow*.03));
@@ -191,8 +196,8 @@ function step(dt){clock+=dt;
     if(!p.fallen&&(b.position.y>PED_TOP+20||Math.abs(b.position.x)>900)){p.fallen=true;p.fallT=clock;if(b===falling)falling=null;lose()}
     if(p.fallen){p.fade=Math.max(0,1-(clock-p.fallT)/1.4);return}
     if(b.speed<.12&&b.angularSpeed<.01)p.rest+=dt;else p.rest=0;
-    if(!b.isStatic&&p.rest>1.2){const above=blocks.length-1-i;if(above>=3)Body.setStatic(b,true)}
     if(b!==falling||p.rest>.3)top=Math.min(top,b.bounds.min.y)});
+  freeze();
   blocks=blocks.filter(b=>{if(b.plugin.fallen&&b.plugin.fade<=0){Composite.remove(engine.world,b);return false}return true});
   if(falling&&(falling.plugin.rest>.45||clock-falling.plugin.born>4)){falling=null}
   towerTop=top;
@@ -203,6 +208,7 @@ function step(dt){clock+=dt;
   ZONES.forEach(z=>{if(z.lv>0&&lvTop>=z.lv&&!z.got){z.got=true;banner(z);if(!badges[z.lv]){badges[z.lv]=1;saveB()}}});
   hookY=Math.min(towerTop-230,-330);
   // 鏡頭
+  const need=30-(hookY-90),want=Math.max(base*.55,Math.min(base,H/need));sc+=(want-sc)*Math.min(1,dt*1.5);
   const target=Math.min(hookY-90,-(H-30)/sc);camTop+=(target-camTop)*Math.min(1,dt*2.2);
   paintHUD()}
 function banner(z){const d=document.createElement('div');d.className='banner';d.textContent=z.e+' '+z.n+'!';stage.appendChild(d);setTimeout(()=>d.remove(),2700);S.zone();talk(z.n);$('tip').textContent='疊到「'+z.n+'」了!繼續往上疊'}
