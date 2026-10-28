@@ -1,9 +1,9 @@
 /* 幼兒遊戲大全 離線快取:第一次打開就把全部遊戲存起來,之後沒網路也能玩 */
-const VERSION = "kids-v27";
+const VERSION = "kids-v28";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
   "./games/toy-tidy.html", "./games/station-master.html", "./games/fire-station.html", "./games/shape-match.html",
-  "./games/size-match.html", "./games/abc.html", "./games/zhuyin.html", "./games/rail.html", "./games/montessori.html", "./games/passcode.html", "./games/dig.html", "./games/farm.html", "./games/tram.html", "./games/ooxx.html", "./games/stories.html", "./games/studio.html", "./games/voice.js", "./voice/lines.json", "./voice/manifest.json"
+  "./games/size-match.html", "./games/abc.html", "./games/zhuyin.html", "./games/rail.html", "./games/montessori.html", "./games/passcode.html", "./games/dig.html", "./games/farm.html", "./games/tram.html", "./games/ooxx.html", "./games/stories.html", "./games/studio.html", "./games/sushi.html", "./games/voice.js", "./voice/lines.json", "./voice/manifest.json"
 ];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

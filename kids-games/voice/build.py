@@ -6,7 +6,7 @@ python3 build.py tts     → 用台灣口音語音(edge-tts)把台詞做成 mp3,
 import json, re, sys, hashlib, pathlib, asyncio
 HERE = pathlib.Path(__file__).resolve().parent
 GAMES = HERE.parent / 'games'
-NAMES = {'stories': '說故事', 'farm': '快樂農場', 'tram': '天空電車', 'ooxx': 'OOXX', 'dig': '挖寶沙坑', 'passcode': '密碼解鎖'}
+NAMES = {'stories': '說故事', 'farm': '快樂農場', 'tram': '天空電車', 'ooxx': 'OOXX', 'dig': '挖寶沙坑', 'passcode': '密碼解鎖', 'sushi': '迴轉壽司'}
 VOICE = 'zh-TW-HsiaoChenNeural'
 # 程式裡組出來的句子(站名、輪到誰),列出來才能錄
 EXTRA = {
@@ -32,6 +32,11 @@ def lines():
         for m in re.finditer(r"talk\('([^'\\]+)'\)", src):
             s = m.group(1)
             if s not in found: found.append(s)
+        if key == 'sushi':
+            for n in re.findall(r"\w+:\{n:'([^']+)'\}", src):
+                found.append(n + ',請慢用')
+            for m in re.finditer(r"\{id:'\w+',n:'([^']+)',w:\d+(,rare:1)?", src):
+                found.append(('哇,超稀有,' if m.group(2) else '恭喜中獎,') + '得到' + m.group(1))
         for s in EXTRA.get(key, []):
             if s not in found: found.append(s)
         if found: out.append({'name': name, 'lines': found})
