@@ -312,7 +312,7 @@ function gacha(){if(st.slot<5)return;busy=true;over_.hidden=false;
       setTimeout(()=>{const cp=$('cap').querySelector('.cap');cp.classList.remove('drop');cp.classList.add('shake')},950);
       let opened=false;$('cap').onclick=()=>{if(opened)return;opened=true;A();S.open();$('cap').querySelector('.cap').classList.remove('shake');$('cap').classList.add('open');setTimeout(()=>reveal(),650)}},1000)}}
 function pickPrize(){const tot=PRIZES.reduce((a,p)=>a+p.w,0);let r=Math.random()*tot;for(const p of PRIZES){r-=p.w;if(r<0)return p}return PRIZES[0]}
-function reveal(){st.slot=0;const win=Math.random()<.62;let html;
+function reveal(){st.slot=0;const win=Math.random()<.85;let html;
   if(win){const p=pickPrize(),isNew=!st.prizes[p.id];st.prizes[p.id]=(st.prizes[p.id]||0)+1;
     html=`<h2 class="${p.rare?'rare':''}">${p.rare?'✨ 超稀有!':'中獎了!'}</h2><div class="prize">${prizeSVG(p)}</div><p style="font-size:24px;color:var(--ink)">${p.n}${isNew?' · 新的!':' · 第 '+st.prizes[p.id]+' 個'}</p>`;
     (p.rare?S.rare:S.win)();sparks();talk((p.rare?'哇,超稀有,':'恭喜中獎,')+'得到'+p.n)}

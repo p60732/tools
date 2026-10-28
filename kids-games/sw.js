@@ -1,5 +1,5 @@
 /* 幼兒遊戲大全 離線快取:第一次打開就把全部遊戲存起來,之後沒網路也能玩 */
-const VERSION = "kids-v28";
+const VERSION = "kids-v29";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
   "./games/toy-tidy.html", "./games/station-master.html", "./games/fire-station.html", "./games/shape-match.html",
