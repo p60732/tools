@@ -6,12 +6,13 @@ python3 build.py tts     → 用台灣口音語音(edge-tts)把台詞做成 mp3,
 import json, re, sys, hashlib, pathlib, asyncio
 HERE = pathlib.Path(__file__).resolve().parent
 GAMES = HERE.parent / 'games'
-NAMES = {'stories': '說故事', 'farm': '快樂農場', 'tram': '天空電車', 'ooxx': 'OOXX', 'dig': '挖寶沙坑', 'passcode': '密碼解鎖', 'sushi': '迴轉壽司'}
+NAMES = {'stories': '說故事', 'farm': '快樂農場', 'tram': '天空電車', 'ooxx': 'OOXX', 'dig': '挖寶沙坑', 'passcode': '密碼解鎖', 'sushi': '迴轉壽司', 'tower': '疊疊高'}
 VOICE = 'zh-TW-HsiaoChenNeural'
 # 程式裡組出來的句子(站名、輪到誰),列出來才能錄
 EXTRA = {
   'tram': ['尾浦站到了,請開門讓客人上車', '歡迎搭乘天空電車', '海景站,請小心上下車', '青沙浦站,請小心上下車',
            '門要關了,下一站,海景站', '門要關了,下一站,青沙浦站', '快到海景站了', '快到青沙浦站了', '海景站到了', '終點站,青沙浦站到了'],
+  'tower': ['比房子高', '比大樹高', '碰到雲了', '飛機飛過', '熱氣球', '天空的盡頭', '外太空', '看到月亮', '土星', '銀河'],
   'ooxx': ['小朋友先下,點一個格子', '機器人先下', '大人先下', '換小朋友', '換大人', '機器人贏了,再來一次', '大人贏了,再來一次'],
 }
 

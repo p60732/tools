@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>疊疊高</title>
+<style>
+/* 疊疊高:吊車左右擺動,看準時機點一下放下積木。真的物理,疊歪會倒。疊越高背景從草地、雲、飛機一路到外太空。 */
+:root{--ink:#4A4552;--bg:#EFE6D8;--white:#FFFFFF;--mute:#6E6876;--ok:#7FB08A;--ok-d:#5E8F69;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+button{font-family:inherit}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(44px + env(safe-area-inset-bottom,0px));max-width:1300px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(20px,5vw,28px);font-weight:900;white-space:nowrap}
+.chip{background:var(--white);border-radius:999px;padding:6px 12px;font-weight:900;font-size:16px;box-shadow:0 3px 0 rgba(74,69,82,.12);white-space:nowrap}
+.chip b{font-size:20px}
+.pill{all:unset;cursor:pointer;margin-left:auto;background:var(--white);border-radius:999px;padding:7px 14px;font-weight:900;font-size:16px;box-shadow:0 3px 0 rgba(74,69,82,.15);white-space:nowrap}
+.pill:active,.big:active{transform:translateY(2px)}
+.hearts{letter-spacing:2px;font-size:18px}
+.tip{text-align:center;font-weight:900;font-size:clamp(15px,4vw,19px);color:var(--mute);min-height:1.3em}
+.stage{flex:1;min-height:0;position:relative;border-radius:24px;overflow:hidden;cursor:pointer;touch-action:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.zone{position:absolute;left:12px;top:10px;background:rgba(255,255,255,.88);border-radius:999px;padding:5px 12px;font-weight:900;font-size:15px;pointer-events:none}
+.banner{position:absolute;left:50%;top:22%;transform:translate(-50%,0);background:rgba(255,255,255,.95);border-radius:22px;padding:12px 24px;font-weight:900;font-size:clamp(22px,5.5vw,32px);pointer-events:none;box-shadow:0 5px 0 rgba(74,69,82,.15);white-space:nowrap;animation:ban 2.6s ease-in-out forwards}
+@keyframes ban{0%{opacity:0;transform:translate(-50%,20px) scale(.7)}15%{opacity:1;transform:translate(-50%,0) scale(1.05)}25%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px)}}
+.over{position:fixed;inset:0;z-index:20;background:rgba(239,230,216,.95);display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:14px;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(44px + env(safe-area-inset-bottom,0px));text-align:center;overflow-y:auto}
+.over h2{margin:0;font-size:clamp(28px,7vw,40px);font-weight:900}
+.over p{margin:0;font-weight:900;color:var(--mute);font-size:18px}
+.big{all:unset;cursor:pointer;font-weight:900;font-size:21px;padding:12px 28px;border-radius:999px;background:var(--ok);color:var(--white);box-shadow:0 5px 0 var(--ok-d)}
+.big.alt{background:var(--white);color:var(--ink);box-shadow:0 5px 0 rgba(74,69,82,.15)}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(30%,130px),1fr));gap:10px;width:min(100%,760px)}
+.bd{background:var(--white);border-radius:18px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:15px}
+.bd i{font-style:normal;font-size:40px;line-height:1.1}
+.bd small{color:var(--mute);font-weight:700;font-size:13px}
+.bd.no i{filter:grayscale(1);opacity:.25}
+.bd.no{color:#B9B4BE}
+@media (orientation:landscape) and (max-height:520px){.tip{font-size:14px;min-height:0}.chip{padding:4px 10px;font-size:14px}.chip b{font-size:16px}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>疊疊高</h1><span class="chip">第 <b id="lv">0</b> 層</span><span class="chip">最高 <b id="best">0</b></span><span class="chip hearts" id="hearts"></span><button class="pill" id="badgeBtn" type="button">🏅 到過的地方</button></header>
+  <div class="tip" id="tip">看準時機,點一下畫面放下積木</div>
+  <div class="stage" id="stage"><canvas id="cv"></canvas><div class="zone" id="zone">🌱 草地</div></div>
+</div>
+<div class="over" id="over" hidden></div>
+<script src="lib/matter.min.js"></script>
+<script src="voice.js"></script>
+<script>
+/* ================= 聲音 ================= */
+let ac=null;
+function A(){if(!ac){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();return ac}
+function tone(f,d,{type='triangle',v=.12,at=0,to=null}={}){const c=A();if(!c)return;try{const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.03)}catch(e){}}
+function noise(d,{at=0,v=.1,f=500,q=.8}={}){const c=A();if(!c)return;try{const t=c.currentTime+at,n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<n;i++)x[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();s.buffer=b;fl.type='bandpass';fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl).connect(g).connect(c.destination);s.start(t)}catch(e){}}
+const S={
+  drop(){tone(700,.3,{to:350,v:.07,type:'sine'})},
+  thud(sz=1){tone(150/sz,.18,{type:'sine',v:.2});noise(.12,{v:.12,f:300})},
+  fall(){tone(600,.8,{to:120,v:.1,type:'sine'});noise(.4,{at:.7,v:.15,f:250})},
+  zone(){[784,988,1175,1568].forEach((f,i)=>tone(f,.4,{at:i*.1}))},
+  over(){[523,440,392,330].forEach((f,i)=>tone(f,.4,{at:i*.18,v:.1}))},
+  tap(){tone(660,.08,{v:.1})}
+};
+function talk(x){if(window.KV)KV.say(x)}
+
+/* ================= 物理 ================= */
+const {Engine,Bodies,Body,Composite,Events}=Matter;
+const engine=Engine.create({gravity:{y:1},positionIterations:10,velocityIterations:8});
+const PED_TOP=-80,UNIT=40;
+Composite.add(engine.world,[Bodies.rectangle(0,-40,210,80,{isStatic:true,friction:1,label:'ped'}),Bodies.rectangle(0,200,4000,400,{isStatic:true,label:'ground'})]);
+const COLORS=['#D88E87','#6F9FC0','#E9C46A','#7FB08A','#C9B6E4','#E9A879','#8FB7CC'];
+const SHAPES=[
+  {k:'rect',w:150,h:40,p:30},{k:'rect',w:125,h:42,p:22},{k:'plank',w:190,h:30,p:14},{k:'small',w:100,h:46,p:14},
+  {k:'trap',w:150,h:46,p:10},{k:'square',w:70,h:70,p:10}];
+const OPTS={friction:.95,frictionStatic:1.4,restitution:0,density:.0018,frictionAir:.012,chamfer:{radius:6}};
+function makeBody(sh,x,y){const o={...OPTS,chamfer:sh.k==='trap'?undefined:{radius:6}};
+  return sh.k==='trap'?Bodies.trapezoid(x,y,sh.w,sh.h,.32,o):Bodies.rectangle(x,y,sh.w,sh.h,o)}
+function pickShape(n){const pool=n<2?SHAPES.slice(0,2):SHAPES;const tot=pool.reduce((a,s)=>a+s.p,0);let r=Math.random()*tot;for(const s of pool){r-=s.p;if(r<0)return s}return pool[0]}
+
+/* ================= 高度區 ================= */
+const ZONES=[
+  {lv:0,n:'草地',e:'🌱'},{lv:3,n:'比房子高',e:'🏠'},{lv:6,n:'比大樹高',e:'🌳'},{lv:9,n:'碰到雲了',e:'☁️'},{lv:13,n:'飛機飛過',e:'✈️'},
+  {lv:17,n:'熱氣球',e:'🎈'},{lv:21,n:'天空的盡頭',e:'🌌'},{lv:25,n:'外太空',e:'🚀'},{lv:30,n:'看到月亮',e:'🌙'},{lv:38,n:'土星',e:'🪐'},{lv:48,n:'銀河',e:'✨'}];
+const SKY=[[0,[207,228,236]],[9,[188,214,232]],[16,[150,182,214]],[21,[96,112,160]],[25,[52,58,98]],[32,[31,35,64]]];
+function skyAt(lv){if(lv<=SKY[0][0])return SKY[0][1];for(let i=1;i<SKY.length;i++){if(lv<=SKY[i][0]){const [a,ca]=SKY[i-1],[b,cb]=SKY[i],t=(lv-a)/(b-a);return ca.map((c,j)=>Math.round(c+(cb[j]-c)*t))}}return SKY[SKY.length-1][1]}
+const lvY=lv=>PED_TOP-lv*UNIT;
+const yLv=y=>(PED_TOP-y)/UNIT;
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const STARS=Array.from({length:260},()=>({x:(rnd()-.5)*1600,lv:18+rnd()*70,r:.8+rnd()*1.8,p:rnd()*6}));
+const CLOUDS=Array.from({length:14},(_,i)=>({x:(rnd()-.5)*1100,lv:7+rnd()*9,s:.7+rnd()*.8,v:(rnd()-.5)*8}));
+
+/* ================= 畫面 ================= */
+const cv=document.getElementById('cv'),g=cv.getContext('2d'),stage=document.getElementById('stage');
+let W=0,H=0,dpr=1,sc=1,camTop=-600;
+function fit(){const r=stage.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;sc=Math.min(H/620,W/440);}
+addEventListener('resize',fit);
+const SX=x=>W/2+x*sc,SY=y=>(y-camTop)*sc;
+function rr(x,y,w,h,r){g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h)}
+function drawBg(t){const lvTop=yLv(camTop),lvBot=yLv(camTop+H/sc);const c1=skyAt(lvTop),c2=skyAt(lvBot);
+  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,`rgb(${c1})`);gr.addColorStop(1,`rgb(${c2})`);g.fillStyle=gr;g.fillRect(0,0,W,H);
+  // 星星
+  const sa=Math.max(0,Math.min(1,(lvTop-17)/6));if(sa>0)STARS.forEach(s=>{const y=SY(lvY(s.lv));if(y<-5||y>H+5)return;g.globalAlpha=sa*(.55+.45*Math.sin(t*1.6+s.p));g.fillStyle='#F6E7B0';g.beginPath();g.arc(SX(s.x),y,s.r*sc*1.3,0,7);g.fill()});g.globalAlpha=1;
+  // 月亮、土星、銀河、衛星、太空人
+  deco(t)
+  // 雲
+  CLOUDS.forEach(c=>{let x=c.x+c.v*t;x=((x+700)%1400+1400)%1400-700;cloud(SX(x),SY(lvY(c.lv)),c.s*sc)});
+  // 地面
+  const gy=SY(0);if(gy<H+10){g.fillStyle='#A9C99A';g.beginPath();g.moveTo(0,gy-30*sc);for(let x=0;x<=W;x+=20)g.lineTo(x,gy-30*sc-Math.sin(x/W*6)*14*sc);g.lineTo(W,gy);g.lineTo(0,gy);g.fill();
+    g.fillStyle='#B9D2A8';g.fillRect(0,gy,W,H-gy+1);
+    [[-330,1],[330,.9]].forEach(([x,s])=>house(SX(x),gy,s*sc));[[-240,1],[250,1.1],[-420,.9],[430,1]].forEach(([x,s])=>treeD(SX(x),gy,s*sc));
+    // 底座
+    g.fillStyle='#B9B4BE';rr(SX(-105),SY(-80),210*sc,80*sc,10*sc);g.fill();g.fillStyle='#A6A1AC';g.fillRect(SX(-105),SY(-80)+ 12*sc,210*sc,4*sc);g.fillRect(SX(-105),SY(-40),210*sc,4*sc)}}
+function cloud(x,y,s){if(y<-80||y>H+80)return;g.fillStyle='rgba(255,255,255,.9)';g.beginPath();g.ellipse(x,y,60*s,22*s,0,0,7);g.ellipse(x-26*s,y-14*s,28*s,22*s,0,0,7);g.ellipse(x+20*s,y-18*s,32*s,26*s,0,0,7);g.fill()}
+function house(x,y,s){g.fillStyle='#E6DCCB';g.fillRect(x-50*s,y-90*s,100*s,90*s);g.fillStyle='#C97C6E';g.beginPath();g.moveTo(x-62*s,y-86*s);g.lineTo(x,y-140*s);g.lineTo(x+62*s,y-86*s);g.fill();g.fillStyle='#8FB7CC';g.fillRect(x-30*s,y-70*s,22*s,22*s);g.fillStyle='#8A6A4D';g.fillRect(x+8*s,y-46*s,22*s,46*s)}
+function treeD(x,y,s){g.fillStyle='#8A6A4D';g.fillRect(x-8*s,y-120*s,16*s,120*s);g.fillStyle='#7FA676';g.beginPath();g.arc(x,y-170*s,62*s,0,7);g.fill();g.fillStyle='#6E9A66';g.beginPath();g.arc(x+34*s,y-140*s,40*s,0,7);g.arc(x-36*s,y-138*s,38*s,0,7);g.fill()}
+function deco(t){
+  // 飛鳥
+  for(let i=0;i<3;i++){const x=((t*30+i*90)%1000)-500,y=SY(lvY(6+i*.6));if(y>-30&&y<H+30){g.strokeStyle='#6E6876';g.lineWidth=2.5;g.beginPath();const X=SX(x),f=Math.sin(t*8+i)*5;g.moveTo(X-12*sc,y-f*sc);g.quadraticCurveTo(X-5*sc,y-6*sc,X,y);g.quadraticCurveTo(X+5*sc,y-6*sc,X+12*sc,y-f*sc);g.stroke()}}
+  // 飛機
+  {const x=((t*45)%1400)-700,y=SY(lvY(13.5));if(y>-60&&y<H+60){const X=SX(x),s=sc;g.fillStyle='#FFFFFF';rr(X-50*s,y-9*s,100*s,18*s,9*s);g.fill();g.fillStyle='#8FB7CC';g.beginPath();g.moveTo(X-5*s,y);g.lineTo(X-25*s,y+28*s);g.lineTo(X+10*s,y);g.fill();g.beginPath();g.moveTo(X-40*s,y-4*s);g.lineTo(X-52*s,y-26*s);g.lineTo(X-30*s,y-6*s);g.fill();
+    g.fillStyle='#6F9FC0';for(let i=0;i<5;i++){g.beginPath();g.arc(X-20*s+i*12*s,y-2*s,3*s,0,7);g.fill()}}}
+  // 熱氣球
+  {const x=-200+Math.sin(t*.3)*40,y=SY(lvY(17))+Math.sin(t*.8)*6*sc;if(y>-120&&y<H+80){const X=SX(x),s=sc;g.fillStyle='#D88E87';g.beginPath();g.ellipse(X,y-60*s,40*s,48*s,0,0,7);g.fill();g.fillStyle='#E9C46A';g.fillRect(X-8*s,y-108*s,16*s,96*s);g.strokeStyle='#8A6A4D';g.lineWidth=2;g.beginPath();g.moveTo(X-20*s,y-20*s);g.lineTo(X-10*s,y+8*s);g.moveTo(X+20*s,y-20*s);g.lineTo(X+10*s,y+8*s);g.stroke();g.fillStyle='#B98A5E';g.fillRect(X-12*s,y+8*s,24*s,16*s)}}
+  // 衛星
+  {const y=SY(lvY(27)),X=SX(230+Math.sin(t*.2)*20);if(y>-60&&y<H+60){const s=sc;g.save();g.translate(X,y);g.rotate(Math.sin(t*.3)*.3);g.fillStyle='#B9BEC5';g.fillRect(-12*s,-12*s,24*s,24*s);g.fillStyle='#6F9FC0';g.fillRect(-48*s,-8*s,32*s,16*s);g.fillRect(16*s,-8*s,32*s,16*s);g.restore()}}
+  // 月亮
+  {const y=SY(lvY(31)),X=SX(-240);if(y>-120&&y<H+120){const s=sc;g.fillStyle='#F3E6B8';g.beginPath();g.arc(X,y,70*s,0,7);g.fill();g.fillStyle='#E3D3A0';[[-20,-15,14],[22,10,10],[-5,30,8],[30,-30,7]].forEach(([a,b,r])=>{g.beginPath();g.arc(X+a*s,y+b*s,r*s,0,7);g.fill()})}}
+  // 火箭
+  {const y=SY(lvY(35))-((t*20)%200)*sc,X=SX(-170);if(y>-120&&y<H+120){const s=sc;g.fillStyle='#F4EEE2';g.beginPath();g.moveTo(X,y-50*s);g.quadraticCurveTo(X+20*s,y-20*s,X+16*s,y+20*s);g.lineTo(X-16*s,y+20*s);g.quadraticCurveTo(X-20*s,y-20*s,X,y-50*s);g.fill();g.fillStyle='#D88E87';g.beginPath();g.moveTo(X-16*s,y+20*s);g.lineTo(X-28*s,y+34*s);g.lineTo(X-14*s,y);g.fill();g.beginPath();g.moveTo(X+16*s,y+20*s);g.lineTo(X+28*s,y+34*s);g.lineTo(X+14*s,y);g.fill();g.fillStyle='#8FB7CC';g.beginPath();g.arc(X,y-14*s,8*s,0,7);g.fill();g.fillStyle='#EFA36A';g.beginPath();g.moveTo(X-9*s,y+22*s);g.lineTo(X,y+(44+Math.sin(t*20)*6)*s);g.lineTo(X+9*s,y+22*s);g.fill()}}
+  // 土星
+  {const y=SY(lvY(39)),X=SX(250);if(y>-120&&y<H+120){const s=sc;g.fillStyle='#E9C08A';g.beginPath();g.arc(X,y,50*s,0,7);g.fill();g.strokeStyle='#D8B27A';g.lineWidth=5*s;g.beginPath();g.moveTo(X-46*s,y-10*s);g.lineTo(X+46*s,y-10*s);g.stroke();g.strokeStyle='#C9B6E4';g.lineWidth=8*s;g.beginPath();g.ellipse(X,y,92*s,20*s,-.25,0,7);g.stroke()}}
+  // 太空人
+  {const y=SY(lvY(44))+Math.sin(t*.7)*10*sc,X=SX(-230);if(y>-100&&y<H+100){const s=sc;g.save();g.translate(X,y);g.rotate(Math.sin(t*.4)*.4);g.fillStyle='#F4F4F6';rr(-22*s,-10*s,44*s,50*s,14*s);g.fill();g.beginPath();g.arc(0,-26*s,24*s,0,7);g.fill();g.fillStyle='#6F8FB0';rr(-15*s,-38*s,30*s,22*s,10*s);g.fill();g.fillStyle='#F4F4F6';rr(-36*s,0,16*s,30*s,8*s);g.fill();rr(20*s,-6*s,16*s,30*s,8*s);g.fill();g.restore()}}
+  // 銀河
+  {const y=SY(lvY(52)),X=SX(0);if(y>-200&&y<H+200){const s=sc;for(let i=0;i<120;i++){const a=i*.35+t*.05,r=i*1.5*s;g.fillStyle=['#C9B6E4','#8FB7CC','#F6E7B0'][i%3];g.globalAlpha=.7;g.beginPath();g.arc(X+Math.cos(a)*r*1.4,y+Math.sin(a)*r*.6,2.4*s,0,7);g.fill()}g.globalAlpha=1}}}
+function drawBlock(b){const v=b.vertices;g.beginPath();g.moveTo(SX(v[0].x),SY(v[0].y));for(let i=1;i<v.length;i++)g.lineTo(SX(v[i].x),SY(v[i].y));g.closePath();
+  g.globalAlpha=b.plugin.fade??1;g.fillStyle=b.plugin.c;g.fill();g.lineWidth=Math.max(2,3*sc);g.strokeStyle='rgba(74,69,82,.25)';g.stroke();
+  // 臉
+  g.save();g.translate(SX(b.position.x),SY(b.position.y));g.rotate(b.angle);const s=sc,scared=b.speed>5||b.plugin.fallen;
+  g.fillStyle='rgba(255,255,255,.28)';g.fillRect(-b.plugin.w*.42*s,-b.plugin.h*.38*s,b.plugin.w*.84*s,4*s);
+  g.fillStyle='#4A4552';g.beginPath();g.arc(-9*s,-3*s,3.2*s,0,7);g.arc(9*s,-3*s,3.2*s,0,7);g.fill();
+  if(scared){g.beginPath();g.ellipse(0,7*s,3.5*s,4.5*s,0,0,7);g.fill()}else{g.strokeStyle='#4A4552';g.lineWidth=2.4*s;g.lineCap='round';g.beginPath();g.arc(0,3*s,5*s,.2,Math.PI-.2);g.stroke()}
+  g.fillStyle='rgba(242,185,180,.8)';g.beginPath();g.arc(-17*s,4*s,3.5*s,0,7);g.arc(17*s,4*s,3.5*s,0,7);g.fill();g.restore();g.globalAlpha=1}
+function drawHanging(){if(!hang)return;const sh=hang.sh,x=hookX,y=hookY;
+  g.strokeStyle='#8E8791';g.lineWidth=3*sc;g.beginPath();g.moveTo(SX(x),0);g.lineTo(SX(x),SY(y));g.stroke();
+  g.fillStyle='#E9C46A';rr(SX(x)-16*sc,SY(y)-8*sc,32*sc,14*sc,6*sc);g.fill();
+  g.strokeStyle='#8E8791';g.lineWidth=2*sc;g.beginPath();g.moveTo(SX(x),SY(y)+6*sc);g.lineTo(SX(x-sh.w*.35),SY(y+26));g.moveTo(SX(x),SY(y)+6*sc);g.lineTo(SX(x+sh.w*.35),SY(y+26));g.stroke();
+  const fake={vertices:shapeVerts(sh,x,y+26+sh.h/2),position:{x,y:y+26+sh.h/2},angle:0,speed:0,plugin:{c:hang.c,w:sh.w,h:sh.h}};drawBlock(fake);
+  // 落點虛線
+  g.setLineDash([6*sc,8*sc]);g.strokeStyle='rgba(74,69,82,.25)';g.lineWidth=2*sc;g.beginPath();g.moveTo(SX(x),SY(y+26+sh.h));g.lineTo(SX(x),SY(towerTop));g.stroke();g.setLineDash([])}
+function shapeVerts(sh,x,y){if(sh.k==='trap'){const t=sh.w*.32/2;return [{x:x-sh.w/2+t,y:y-sh.h/2},{x:x+sh.w/2-t,y:y-sh.h/2},{x:x+sh.w/2,y:y+sh.h/2},{x:x-sh.w/2,y:y+sh.h/2}]}
+  return [{x:x-sh.w/2,y:y-sh.h/2},{x:x+sh.w/2,y:y-sh.h/2},{x:x+sh.w/2,y:y+sh.h/2},{x:x-sh.w/2,y:y+sh.h/2}]}
+
+/* ================= 遊戲 ================= */
+const $=id=>document.getElementById(id);
+let blocks=[],hang=null,falling=null,hookX=0,hookY=-400,phase=0,towerTop=PED_TOP,lives=3,best=0,lastLossT=-9,over=false,reached=0,clock=0,count=0;
+let badges={};try{best=+localStorage.getItem('towerBest')||0;badges=JSON.parse(localStorage.getItem('towerBadges')||'{}')}catch(e){}
+function saveB(){try{localStorage.setItem('towerBest',best);localStorage.setItem('towerBadges',JSON.stringify(badges))}catch(e){}}
+function paintHUD(){$('lv').textContent=onTower().length;$('best').textContent=best;$('hearts').textContent='❤️'.repeat(lives)+'🤍'.repeat(3-lives);
+  const lv=Math.floor(yLv(towerTop)+.2);let z=ZONES[0];ZONES.forEach(q=>{if(lv>=q.lv)z=q});$('zone').textContent=z.e+' '+z.n}
+const onTower=()=>blocks.filter(b=>!b.plugin.fallen);
+function newHang(){const sh=pickShape(count);hang={sh,c:COLORS[count%COLORS.length]}}
+function start(){blocks.forEach(b=>Composite.remove(engine.world,b));blocks=[];falling=null;lives=3;towerTop=PED_TOP;over=false;reached=0;count=0;phase=0;
+  camTop=-(H-30)/sc;newHang();paintHUD();$('over').hidden=true;$('tip').textContent='看準時機,點一下畫面放下積木'}
+function drop(){A();if(over||!hang||falling)return;const sh=hang.sh;const b=makeBody(sh,hookX,hookY+26+sh.h/2);b.plugin={c:hang.c,w:sh.w,h:sh.h,rest:0,fallen:false,born:clock,hit:false};
+  Composite.add(engine.world,b);blocks.push(b);falling=b;hang=null;count++;S.drop()}
+stage.addEventListener('pointerdown',e=>{if(!e.isPrimary)return;e.preventDefault();drop()});
+Events.on(engine,'collisionStart',ev=>{ev.pairs.forEach(p=>{[p.bodyA,p.bodyB].forEach(b=>{if(b.plugin&&b.plugin.c&&!b.plugin.hit&&b===falling){b.plugin.hit=true;S.thud(b.plugin.w/130)}})})});
+function lose(){if(clock-lastLossT<1.6)return;lastLossT=clock;lives--;S.fall();paintHUD();
+  if(lives<=0){over=true;setTimeout(gameOver,1400)}else{$('tip').textContent='掉下去了!還有 '+lives+' 次機會';talk('掉下去了,再試一次')}}
+function gameOver(){const n=reached;S.over();let z=ZONES[0];ZONES.forEach(q=>{if(n>=q.lv)z=q});
+  $('over').hidden=false;$('over').innerHTML=`<h2>疊了 ${n} 層!</h2><p style="font-size:42px">${z.e}</p><p>最高到了「${z.n}」${n>=best&&n>0?' · 新紀錄!':''}</p><div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button class="big" id="again" type="button">再疊一次</button><button class="big alt" id="toB" type="button">🏅 到過的地方</button></div>`;
+  $('again').onclick=()=>{S.tap();start()};$('toB').onclick=()=>{S.tap();showBadges(true)};talk('疊了'+n+'層,再疊一次吧')}
+function showBadges(fromOver){$('over').hidden=false;$('over').innerHTML=`<h2>🏅 到過的地方</h2><p>疊越高,就能到越遠的地方</p><div class="badges">${ZONES.map(z=>`<div class="bd${badges[z.lv]||z.lv===0?'':' no'}"><i>${z.e}</i>${z.n}<small>${z.lv} 層</small></div>`).join('')}</div><button class="big" id="bk" type="button">${fromOver?'再疊一次':'回去疊積木'}</button>`;
+  $('bk').onclick=()=>{S.tap();if(fromOver||over)start();else $('over').hidden=true}}
+$('badgeBtn').onclick=()=>{A();S.tap();showBadges(false)};
+
+let acc=0,last=0;
+function step(dt){clock+=dt;
+  // 吊車擺動:越高擺越快
+  const lvNow=onTower().length;phase+=dt*(1.1+Math.min(.9,lvNow*.03));
+  const halfView=W/2/sc,amp=Math.min(160,halfView-60);hookX=Math.sin(phase)*amp;
+  // 物理
+  acc+=dt;while(acc>=1/60){Engine.update(engine,1000/60);acc-=1/60}
+  // 狀態
+  let top=PED_TOP;
+  blocks.forEach((b,i)=>{const p=b.plugin;
+    if(!p.fallen&&(b.position.y>PED_TOP+20||Math.abs(b.position.x)>900)){p.fallen=true;p.fallT=clock;if(b===falling)falling=null;lose()}
+    if(p.fallen){p.fade=Math.max(0,1-(clock-p.fallT)/1.4);return}
+    if(b.speed<.12&&b.angularSpeed<.01)p.rest+=dt;else p.rest=0;
+    if(!b.isStatic&&p.rest>1.2){const above=blocks.length-1-i;if(above>=3)Body.setStatic(b,true)}
+    if(b!==falling||p.rest>.3)top=Math.min(top,b.bounds.min.y)});
+  blocks=blocks.filter(b=>{if(b.plugin.fallen&&b.plugin.fade<=0){Composite.remove(engine.world,b);return false}return true});
+  if(falling&&(falling.plugin.rest>.45||clock-falling.plugin.born>4)){falling=null}
+  towerTop=top;
+  if(!falling&&!hang&&!over){newHang()}
+  // 高度紀錄
+  const lvTop=Math.max(0,Math.floor(yLv(towerTop)+.2)),n=onTower().filter(b=>b!==falling).length;
+  if(n>reached){reached=n;if(reached>best){best=reached;saveB()}}
+  ZONES.forEach(z=>{if(z.lv>0&&lvTop>=z.lv&&!z.got){z.got=true;banner(z);if(!badges[z.lv]){badges[z.lv]=1;saveB()}}});
+  hookY=Math.min(towerTop-230,-330);
+  // 鏡頭
+  const target=Math.min(hookY-90,-(H-30)/sc);camTop+=(target-camTop)*Math.min(1,dt*2.2);
+  paintHUD()}
+function banner(z){const d=document.createElement('div');d.className='banner';d.textContent=z.e+' '+z.n+'!';stage.appendChild(d);setTimeout(()=>d.remove(),2700);S.zone();talk(z.n);$('tip').textContent='疊到「'+z.n+'」了!繼續往上疊'}
+function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(W<2)fit();if(!document.hidden)step(dt);
+  g.setTransform(dpr,0,0,dpr,0,0);drawBg(t/1000);blocks.forEach(drawBlock);if(!over)drawHanging();requestAnimationFrame(frame)}
+fit();start();requestAnimationFrame(frame);
+const _start=start;start=function(){ZONES.forEach(z=>z.got=false);_start()};
+talk('看準時機,點一下放下積木');
+</script>
+</body>
+</html>
